@@ -1,5 +1,5 @@
 # Exynos FMP makefile
-ccflags-y += -I$(srctree)/drivers/scsi/ufs/$(TARGET_SOC)
+ccflags-y += -I$(srctree)/drivers/scsi/ufs/s5e8825
 
 fmp-core-y += fmp.o
 
