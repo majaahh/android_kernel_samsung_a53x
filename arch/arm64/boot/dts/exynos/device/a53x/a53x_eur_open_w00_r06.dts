@@ -4250,7 +4250,6 @@
 				tsp_avdd_ldo-supply = <0x4a>;
 				sec,irq_gpio = <0xffffffff 0x03 0x00>;
 				sec,irq_flag = <0x2002>;
-				support_dex_mode;
 				sec,enable_sysinput_enabled;
 				support_open_short_test;
 				not_support_io_ldo;

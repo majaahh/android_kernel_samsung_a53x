@@ -2718,7 +2718,6 @@
 				pinctrl-1 = <0x3a>;
 				tsp_avdd_ldo-supply = <0x3b>;
 				sec,irq_gpio = <0xffffffff 0x03 0x00>;
-				support_dex_mode;
 				sec,enable_sysinput_enabled;
 				support_open_short_test;
 				not_support_io_ldo;
@@ -4108,7 +4107,6 @@
 				pinctrl-1 = <0x46>;
 				tsp_avdd_ldo-supply = <0x3b>;
 				sec,irq_gpio = <0xffffffff 0x03 0x02>;
-				support_dex_mode;
 				sec,enable_sysinput_enabled;
 				support_open_short_test;
 				not_support_io_ldo;

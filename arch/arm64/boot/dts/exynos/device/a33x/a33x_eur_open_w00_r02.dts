@@ -2028,7 +2028,6 @@
 				tsp_avdd_ldo-supply = <0x2d>;
 				sec,irq_gpio = <0xffffffff 0x03 0x02>;
 				sec,irq_flag = <0x2002>;
-				support_dex_mode;
 				sec,enable_sysinput_enabled;
 				support_open_short_test;
 				not_support_io_ldo;
@@ -3245,7 +3244,6 @@
 				sec,area-size = <0x85 0x10a 0x155>;
 				sec,max_coords = <0x1000 0x1000>;
 				enable_settings_aot;
-				support_dex_mode;
 				support_fod;
 				support_fod_lp_mode;
 				support_mis_calibration_test;
@@ -3557,7 +3555,6 @@
 				tsp_avdd_ldo-supply = <0x2d>;
 				sec,irq_gpio = <0xffffffff 0x03 0x00>;
 				sec,irq_flag = <0x2002>;
-				support_dex_mode;
 				sec,enable_sysinput_enabled;
 				support_open_short_test;
 				not_support_io_ldo;

@@ -2779,7 +2779,6 @@
 				pinctrl-1 = <0x39>;
 				tsp_avdd_ldo-supply = <0x3a>;
 				sec,irq_gpio = <0xffffffff 0x03 0x00>;
-				support_dex_mode;
 				sec,enable_sysinput_enabled;
 				support_open_short_test;
 				not_support_io_ldo;
