@@ -7038,6 +7038,18 @@ CONFIG_SUPPORT_HV_CTRL=y
 # CONFIG_MFC_CHARGER is not set
 # CONFIG_MST_TEEGRIS is not set
 # CONFIG_MST_DUMMY_DRV is not set
+# CONFIG_CHARGER_SM5451 is not set
+# CONFIG_CHARGER_SM5714 is not set
+# CONFIG_FUELGAUGE_SM5714 is not set
+# CONFIG_MUIC_SM5714 is not set
+# CONFIG_MFD_SM5714 is not set
+
+#
+# SM5714 configs
+#
+# CONFIG_PDIC_SM5714 is not set
+# CONFIG_SM5714_WATER_DETECTION_ENABLE is not set
+# CONFIG_SM5714_SUPPORT_SBU is not set
 # end of Device Drivers
 
 #
