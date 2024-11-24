@@ -7054,6 +7054,13 @@ CONFIG_SUPPORT_HV_CTRL=y
 # CONFIG_PDIC_SM5714 is not set
 # CONFIG_SM5714_WATER_DETECTION_ENABLE is not set
 # CONFIG_SM5714_SUPPORT_SBU is not set
+# CONFIG_FUELGAUGE_S2MU106_USE_5MILLIOHM is not set
+
+#
+# PDIC configs
+#
+# CONFIG_PDIC_S2MU106 is not set
+# CONFIG_MFD_S2MU106 is not set
 # end of Device Drivers
 
 #
