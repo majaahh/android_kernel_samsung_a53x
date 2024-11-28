@@ -251,3 +251,4 @@ obj-y += usb/typec/slsi/s2mu106/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += mfd/slsi/s2mu106/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += muic/slsi/s2mu106/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += input/sec_input/stm/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
+obj-y += gpu/drm/samsung/panel_decon/tft_common/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
