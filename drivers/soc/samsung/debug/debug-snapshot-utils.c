@@ -72,6 +72,9 @@ static struct pt_regs __percpu **dss_core_reg;
 static struct dbg_snapshot_mmu_reg __percpu **dss_mmu_reg;
 static struct dbg_snapshot_helper_ops dss_soc_ops;
 
+// disable watchdog expiration if set to true (read-mostly)
+static bool __read_mostly dbg_snapshot_disable_expire_wdt = true;
+
 void cache_flush_all(void)
 {
 	flush_cache_all();
@@ -496,6 +499,9 @@ int dbg_snapshot_expire_watchdog(void)
 {
 	unsigned long addr;
 
+	if (dbg_snapshot_disable_expire_wdt)
+		return -ENODEV;
+
 	if (!dss_soc_ops.expire_watchdog) {
 		dev_emerg(dss_desc.dev, "There is no wdt functions!\n");
 		return -ENODEV;
@@ -516,6 +522,9 @@ EXPORT_SYMBOL_GPL(dbg_snapshot_expire_watchdog);
 int dbg_snapshot_expire_watchdog_safely(void)
 {
 	unsigned long addr;
+
+	if (dbg_snapshot_disable_expire_wdt)
+		return -ENODEV;
 
 	if (!dss_soc_ops.expire_watchdog) {
 		dev_emerg(dss_desc.dev, "There is no wdt functions!\n");
@@ -543,6 +552,9 @@ int dbg_snapshot_expire_watchdog_timeout(int tick)
 {
 	unsigned long addr;
 
+	if (dbg_snapshot_disable_expire_wdt)
+		return -ENODEV;
+
 	if (!dss_soc_ops.expire_watchdog) {
 		dev_emerg(dss_desc.dev, "There is no wdt functions!\n");
 		return -ENODEV;
@@ -562,6 +574,9 @@ EXPORT_SYMBOL_GPL(dbg_snapshot_expire_watchdog_timeout);
 int dbg_snapshot_expire_watchdog_timeout_safely(int tick)
 {
 	unsigned long addr;
+
+	if (dbg_snapshot_disable_expire_wdt)
+		return -ENODEV;
 
 	if (!dss_soc_ops.expire_watchdog) {
 		dev_emerg(dss_desc.dev, "There is no wdt functions!\n");
