@@ -2597,6 +2597,10 @@ static int ear_detect_enable_save(void *device_data)
 		return SEC_ERROR;
 	}
 
+	// Force ed3
+	if (sec->cmd_param[0] == 1)
+		sec->cmd_param[0] = 3;
+
 	if (sec->cmd_param[0])
 		ts_data->power_mode |= FTS_POWER_MODE_EAR_DETECT;
 	else
