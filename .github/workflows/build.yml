@@ -1,0 +1,43 @@
+name: Build UN1CA Kernel
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - 'sixteen'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Setup SSH Key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_RO_BUILD_KERNEL }}
+
+      - name: Checkout build repository
+        run: |
+          git clone --depth=1 "git@github.com:majaahh/build-kernel.git" "build"
+
+      - name: Free disk space
+        uses: rokibhasansagar/slimhub_actions@main
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
+              brotli zip zstd tar lz4 cpio xz-utils flex \
+              bc kmod ccache binutils-aarch64-linux-gnu
+
+      - name: Build
+        run: |
+          [[ -f "./build/build.sh" ]] && ./build/build.sh || exit 1
