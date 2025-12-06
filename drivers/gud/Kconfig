@@ -1,0 +1,5 @@
+#
+# Mobicore Configuration
+#
+
+source "drivers/gud/gud-s5e8825/Kconfig"
