@@ -143,6 +143,7 @@ void __put_cred(struct cred *cred)
 	cred->magic = CRED_MAGIC_DEAD;
 	cred->put_addr = __builtin_return_address(0);
 #endif
+
 	BUG_ON(cred == current->cred);
 	BUG_ON(cred == current->real_cred);
 
@@ -569,6 +570,16 @@ const struct cred *override_creds(const struct cred *new)
 	 */
 	get_new_cred((struct cred *)new);
 	alter_cred_subscribers(new, 1);
+#ifdef CONFIG_KDP_CRED
+	if (kdp_enable) {
+		volatile unsigned int kdp_use_count = kdp_get_usecount((struct cred *)new);
+		struct cred *new_ro;
+
+		new_ro = prepare_ro_creds((struct cred *)new, CMD_OVRD_CREDS, kdp_use_count);
+		GET_ROCRED_RCU(new_ro)->reflected_cred = (void *)new;
+		rcu_assign_pointer(current->cred, new_ro);
+	} else
+#endif
 	rcu_assign_pointer(current->cred, new);
 	trace_android_vh_override_creds(current, new);
 	alter_cred_subscribers(old, -1);
@@ -601,6 +612,15 @@ void revert_creds(const struct cred *old)
 	rcu_assign_pointer(current->cred, old);
 	trace_android_vh_revert_creds(current, old);
 	alter_cred_subscribers(override, -1);
+#ifdef CONFIG_KDP_CRED
+	if (kdp_enable) {
+		if (is_kdp_protect_addr((unsigned long)override)){
+			if(GET_ROCRED_RCU(override)->reflected_cred)
+				put_cred((struct cred *)GET_ROCRED_RCU(override)->reflected_cred);
+			put_cred(override);
+		}
+	}
+#endif
 	put_cred(override);
 }
 EXPORT_SYMBOL(revert_creds);
@@ -667,6 +687,9 @@ void __init cred_init(void)
 	/* allocate a slab in which we can store credentials */
 	cred_jar = kmem_cache_create("cred_jar", sizeof(struct cred), 0,
 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT, NULL);
+#ifdef CONFIG_KDP_CRED
+	kdp_cred_init();
+#endif
 }
 
 /**
