@@ -9710,16 +9710,6 @@
 		cpu_offset = <0x00 0x80 0x100 0x180 0x200 0x280 0x500 0x580>;
 	};
 
-	exynos_flexpmu_dbg {
-		compatible = "samsung,exynos-flexpmu-dbg";
-		#address-cells = <0x02>;
-		#size-cells = <0x01>;
-		data-base = <0x2069900>;
-		data-size = <0x600>;
-		reg = <0x00 0x11a20000 0x1000>;
-		disable_mifdown = <0x00>;
-	};
-
 	system-controller@11860000 {
 		compatible = "samsung,s5e8825-pmu\0syscon";
 		reg = <0x00 0x11860000 0x10000>;

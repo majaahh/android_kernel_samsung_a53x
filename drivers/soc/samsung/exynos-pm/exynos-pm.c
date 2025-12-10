@@ -307,7 +307,9 @@ static int exynos_pm_syscore_suspend(void)
 			EXYNOS_PM_PREFIX, pm_dbg->mifdn_cnt_prev,
 			pm_info->apdn_cnt_prev, pm_dbg->mifdn_early_wakeup_prev);
 
+#ifdef CONFIG_EXYNOS_FLEXPMU_DBG
 	exynos_flexpmu_dbg_set_sleep_req();
+#endif
 
 	return 0;
 }
@@ -346,7 +348,9 @@ static void exynos_pm_syscore_resume(void)
 
 	print_dbg_subsystem();
 	exynos_show_wakeup_reason(pm_info->is_early_wakeup);
+#ifdef CONFIG_EXYNOS_FLEXPMU_DBG
 	exynos_flexpmu_dbg_clr_wakeup_req();
+#endif
 
 	if (!pm_info->is_early_wakeup)
 		pr_debug("%s %s: post sleep, preparing to return\n",
