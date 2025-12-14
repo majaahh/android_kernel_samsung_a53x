@@ -43,5 +43,3 @@ obj-$(CONFIG_KZT) += kzt/
 # KNOX DAR
 obj-$(CONFIG_SDP) += sdp/
 obj-$(CONFIG_SDP) += sdp/built-in.a
-obj-y += samsung/mz/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
-obj-y += samsung/mz_tee_driver/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
