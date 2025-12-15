@@ -25,10 +25,6 @@
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
 
-#ifdef CONFIG_FSCRYPT_SDP
-#include <linux/fscrypto_sdp_cache.h>
-#endif
-
 const struct file_operations generic_ro_fops = {
 	.llseek		= generic_file_llseek,
 	.read_iter	= generic_file_read_iter,
@@ -603,25 +599,12 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 	if (count > MAX_RW_COUNT)
 		count =  MAX_RW_COUNT;
 	file_start_write(file);
-#ifdef CONFIG_FSCRYPT_SDP
-	if (fscrypt_sdp_file_not_writable(file))
-		ret = -EINVAL;
-	else if (file->f_op->write)
-		ret = file->f_op->write(file, buf, count, pos);
-	else if (file->f_op->write_iter)
-		ret = new_sync_write(file, buf, count, pos);
-	else
-		ret = -EINVAL;
-
-	fscrypt_sdp_unset_file_io_ongoing(file);
-#else
 	if (file->f_op->write)
 		ret = file->f_op->write(file, buf, count, pos);
 	else if (file->f_op->write_iter)
 		ret = new_sync_write(file, buf, count, pos);
 	else
 		ret = -EINVAL;
-#endif
 	if (ret > 0) {
 		fsnotify_modify(file);
 		add_wchar(current, ret);

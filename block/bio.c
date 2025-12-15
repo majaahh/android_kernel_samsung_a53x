@@ -25,10 +25,6 @@
 #include "blk.h"
 #include "blk-rq-qos.h"
 
-#ifdef CONFIG_DDAR
-extern int fscrypt_dd_encrypted(struct bio *bio);
-#endif
-
 /*
  * Test patch to inline a certain number of bi_io_vec's inside the bio
  * itself, to shrink a bio data allocation from two mempool calls to one
@@ -884,11 +880,6 @@ bool __bio_try_merge_page(struct bio *bio, struct page *page,
 		struct bio_vec *bv = &bio->bi_io_vec[bio->bi_vcnt - 1];
 
 		if (page_is_mergeable(bv, page, len, off, same_page)) {
-#ifdef CONFIG_DDAR
-			if ((*same_page == false) && fscrypt_dd_encrypted(bio)) {
-				return false;
-			}
-#endif
 			if (bio->bi_iter.bi_size > BIO_MAX_BYTES - len) {
 				*same_page = false;
 				return false;
