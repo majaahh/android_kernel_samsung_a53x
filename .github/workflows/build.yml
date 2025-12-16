@@ -39,5 +39,31 @@ jobs:
               bc kmod ccache binutils-aarch64-linux-gnu
 
       - name: Build
+        id: build
         run: |
           [[ -f "./build/build.sh" ]] && ./build/build.sh || exit 1
+          git pull origin ${{github.ref}} --ff-only
+          FILE=$(ls build/UN1CA_Kernel-*-a53x.tar | head -n 1)
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "tag=${FILE#build/}" | sed 's/\.tar$//' >> "$GITHUB_OUTPUT"
+          git tag "${FILE%.tar}"
+
+      - name: Push changes to repo
+        uses: ad-m/github-push-action@master
+        with:
+          tags: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.build.outputs.tag }}
+          name: ${{ steps.build.outputs.tag }}
+          body: |
+            - Branch: `${{ github.ref_name }}`
+            - Commit: `${{ github.sha }}`
+          files: |
+            ${{ steps.build.outputs.file }}
