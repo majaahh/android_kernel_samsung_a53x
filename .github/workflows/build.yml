@@ -26,7 +26,7 @@ jobs:
 
       - name: Checkout build repository
         run: |
-          git clone --depth=1 "git@github.com:majaahh/build-kernel.git" "build"
+          git clone --depth=1 --recurse-submodules "git@github.com:majaahh/build-kernel.git" "build"
 
       - name: Free disk space
         uses: rokibhasansagar/slimhub_actions@main
@@ -43,9 +43,9 @@ jobs:
         run: |
           [[ -f "./build/build.sh" ]] && ./build/build.sh || exit 1
           git pull origin ${{github.ref}} --ff-only
-          FILE=$(ls build/UN1CA_Kernel-*-a53x.tar | head -n 1)
+          FILE=$(ls build/builds/UN1CA_Kernel-*-a53x.tar | head -n 1)
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
-          echo "tag=${FILE#build/}" | sed 's/\.tar$//' >> "$GITHUB_OUTPUT"
+          echo "tag=${FILE#build/builds/}" | sed 's/\.tar$//' >> "$GITHUB_OUTPUT"
           git tag "${FILE%.tar}"
 
       - name: Push changes to repo
