@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
+        with:
+          submodules: 'true'
 
       - name: Setup SSH Key
         uses: webfactory/ssh-agent@v0.9.1
@@ -42,11 +44,16 @@ jobs:
         id: build
         run: |
           [[ -f "./build/build.sh" ]] && ./build/build.sh || exit 1
+          [[ -f "./build/build.sh" ]] && ./build/build.sh -k || exit 1
           git pull origin ${{github.ref}} --ff-only
-          FILE=$(ls build/builds/UN1CA_Kernel-*-a53x.tar | head -n 1)
-          echo "file=$FILE" >> "$GITHUB_OUTPUT"
-          echo "tag=${FILE#build/builds/}" | sed 's/\.tar$//' >> "$GITHUB_OUTPUT"
-          git tag "${FILE%.tar}"
+          TAR=$(ls build/builds/UN1CA_Kernel-*-a53x.tar | head -n 1)
+          TAR_KSU=$(ls build/builds/UN1CA_Kernel-*KernelSU-a53x.tar | head -n 1)
+          TAG="${TAR#build/builds/}"
+          TAG="${TAG%.tar}"
+          echo "tar=$TAR" >> "$GITHUB_OUTPUT"
+          echo "tar_ksu=$TAR_KSU" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          git tag "$TAG"
 
       - name: Push changes to repo
         uses: ad-m/github-push-action@master
@@ -66,4 +73,5 @@ jobs:
             - Branch: `${{ github.ref_name }}`
             - Commit: `${{ github.sha }}`
           files: |
-            ${{ steps.build.outputs.file }}
+            ${{ steps.build.outputs.tar }}
+            ${{ steps.build.outputs.tar_ksu }}
