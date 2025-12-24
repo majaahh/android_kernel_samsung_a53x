@@ -2,6 +2,13 @@
 dtb-$(CONFIG_ARCH_EXYNOS) += s5e8825.dtb
 
 dtbo-$(CONFIG_ARCH_EXYNOS) += \
+    samsung/a33x/a33x_eur_open_w00_r00.dts \
+    samsung/a33x/a33x_eur_open_w00_r03.dts \
+    samsung/a33x/a33x_eur_open_w00_r04.dts \
+    samsung/a33x/a33x_eur_open_w00_r02.dts \
+    samsung/a33x/a33x_eur_open_w00_r01.dts
+
+dtbo-$(CONFIG_ARCH_EXYNOS) += \
     samsung/a53x/a53x_eur_open_w00_r00.dtbo \
     samsung/a53x/a53x_eur_open_w00_r01.dtbo \
     samsung/a53x/a53x_eur_open_w00_r02.dtbo \
