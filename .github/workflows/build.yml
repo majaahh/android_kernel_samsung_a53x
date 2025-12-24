@@ -15,6 +15,11 @@ jobs:
   build:
     runs-on: ubuntu-24.04
 
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [a53x]
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -43,5 +48,5 @@ jobs:
 
       - name: Build
         run: |
-          [[ -f "./build/build.sh" ]] && ./build/build.sh -u || exit 1
-          [[ -f "./build/build.sh" ]] && ./build/build.sh -k -u || exit 1
+          [[ -f "./build/build.sh" ]] && ./build/build.sh -u ${{ matrix.target }} || exit 1
+          [[ -f "./build/build.sh" ]] && ./build/build.sh -k -u ${{ matrix.target }} || exit 1
