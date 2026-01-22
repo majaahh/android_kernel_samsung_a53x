@@ -22,7 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
 
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #include <linux/usb/typec/slsi/common/usbpd_ext.h>
 
 #define CONTROL_I2C	0

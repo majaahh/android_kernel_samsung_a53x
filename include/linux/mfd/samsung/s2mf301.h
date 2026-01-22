@@ -26,7 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/power_supply.h>
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 
 #define MFD_DEV_NAME_ "s2mf301"
 

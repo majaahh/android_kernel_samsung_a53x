@@ -10,7 +10,7 @@
  *
  */
 
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #if IS_ENABLED(CONFIG_IF_CB_MANAGER)
 #include <linux/usb/typec/manager/if_cb_manager.h>
 #endif

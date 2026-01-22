@@ -21,7 +21,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include <linux/muic/common/muic_param.h>
+#include <linux/muic/common_slsi/muic_param.h>
 
 static int muic_param_pmic_info = -1;
 module_param(muic_param_pmic_info, int, 0444);

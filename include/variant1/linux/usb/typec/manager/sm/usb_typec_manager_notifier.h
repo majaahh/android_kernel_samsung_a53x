@@ -22,8 +22,8 @@
 #ifndef __USB_TYPEC_MANAGER_NOTIFIER_H__
 #define __USB_TYPEC_MANAGER_NOTIFIER_H__
 
-#include <linux/muic/common/muic.h>
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #if IS_ENABLED(CONFIG_VBUS_NOTIFIER_SM5714)
 #include <linux/vbus_notifier.h>
 #endif

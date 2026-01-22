@@ -24,7 +24,7 @@
 #include <linux/switch.h>
 
 #if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #endif
 
 #if IS_ENABLED(CONFIG_BATTERY_SAMSUNG) && !defined(CONFIG_BATTERY_GKI)
@@ -40,8 +40,8 @@
 #endif
 
 #if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
-#include <linux/muic/common/muic_notifier.h>
-#include <linux/muic/common/muic_param.h>
+#include <linux/muic/common_sm/muic_notifier.h>
+#include <linux/muic/common_sm/muic_param.h>
 #endif /* CONFIG_MUIC_NOTIFIER */
 
 #if IS_ENABLED(CONFIG_PDIC_NOTIFIER)
@@ -54,7 +54,7 @@
 #include <linux/vbus_notifier.h>
 #endif /* CONFIG_VBUS_NOTIFIER */
 
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #include <linux/mfd/sm/sm5714/sm5714.h>
 #include <linux/mfd/sm/sm5714/sm5714-private.h>
 #include <linux/muic/sm/sm5714/sm5714-muic.h>

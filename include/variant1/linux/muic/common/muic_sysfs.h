@@ -1,7 +1,7 @@
 #ifndef MUIC_SYSFS_H
 #define MUIC_SYSFS_H
 
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 
 #ifdef CONFIG_MUIC_COMMON_SYSFS
 extern int muic_sysfs_init(struct muic_platform_data *pdata);

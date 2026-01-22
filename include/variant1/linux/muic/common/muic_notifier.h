@@ -1,5 +1,5 @@
 /*
- * include/linux/muic/common/muic_notifier.h
+ * include/linux/muic/common_sm/muic_notifier.h
  *
  * header file supporting MUIC notifier call chain information
  *
@@ -24,7 +24,7 @@
 #ifndef __MUIC_NOTIFIER_H__
 #define __MUIC_NOTIFIER_H__
 
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #if IS_ENABLED(CONFIG_PDIC_NOTIFIER)
 #include <linux/usb/typec/common/sm/pdic_notifier.h>
 #endif

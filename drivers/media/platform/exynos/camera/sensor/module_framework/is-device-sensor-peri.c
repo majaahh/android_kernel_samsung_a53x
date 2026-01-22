@@ -25,7 +25,7 @@
 #endif
 
 #if defined(USE_LEDS_FLASH_CHARGING_VOLTAGE_CONTROL)
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #include <linux/usb/typec/slsi/common/usbpd_ext.h>
 #endif
 

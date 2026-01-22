@@ -28,9 +28,9 @@
 #include <linux/types.h>
 #include <linux/device.h>
 #include <linux/delay.h>
-#include <linux/muic/common/muic_notifier.h>
-#include <linux/muic/common/muic.h>
-#include <linux/muic/common/muic_sysfs.h>
+#include <linux/muic/common_sm/muic_notifier.h>
+#include <linux/muic/common_sm/muic.h>
+#include <linux/muic/common_sm/muic_sysfs.h>
 #include <linux/sec_class.h>
 #if IS_ENABLED(CONFIG_BATTERY_SAMSUNG)
 #include <linux/battery/sec_battery_common.h>

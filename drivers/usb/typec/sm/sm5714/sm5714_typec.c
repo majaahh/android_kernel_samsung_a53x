@@ -30,7 +30,7 @@
 #else
 #include <linux/battery/sec_pd.h>
 #endif
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #include <linux/usb/typec/sm/sm5714/sm5714_pd.h>
 #include <linux/usb/typec/sm/sm5714/sm5714_typec.h>
 #include <linux/mfd/sm/sm5714/sm5714-private.h>

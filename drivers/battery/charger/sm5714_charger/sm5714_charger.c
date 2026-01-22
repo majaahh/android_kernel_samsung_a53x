@@ -15,7 +15,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/power_supply.h>
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #include <linux/of_gpio.h>
 #include "../../common/sec_charging_common.h"
 #include "sm5714_charger.h"

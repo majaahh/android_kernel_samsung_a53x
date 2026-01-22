@@ -21,7 +21,7 @@
 #include <linux/usb/typec/common/pdic_core.h>
 #include <linux/usb/typec/common/pdic_notifier.h>
 #include <linux/usb/typec/common/pdic_param.h>
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #include <linux/power_supply.h>
 #if IS_MODULE(CONFIG_BATTERY_SAMSUNG) || IS_MODULE(CONFIG_BATTERY_SAMSUNG_MODULE)
 #include <linux/battery/sec_battery_common.h>

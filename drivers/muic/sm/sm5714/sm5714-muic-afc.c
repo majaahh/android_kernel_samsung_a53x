@@ -34,12 +34,12 @@
 #include <linux/mfd/sm/sm5714/sm5714-private.h>
 
 /* MUIC header file */
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #include <linux/muic/sm/sm5714/sm5714-muic.h>
 
 
 #if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #endif /* CONFIG_MUIC_NOTIFIER */
 
 static struct sm5714_muic_data *afc_init_data;

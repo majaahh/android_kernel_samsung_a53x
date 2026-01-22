@@ -37,8 +37,8 @@
 #include <linux/usb/typec/manager/usb_typec_manager_notifier.h>
 #else
 #if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
-#include <linux/muic/common/muic.h>
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #endif
 #endif
 #include <linux/battery/sec_pd.h>

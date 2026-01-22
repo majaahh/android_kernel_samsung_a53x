@@ -23,9 +23,9 @@
 #if defined(CONFIG_USB_HW_PARAM)
 #include <linux/usb_notify.h>
 #endif
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #endif /* CONFIG_MUIC_NOTIFIER */
 
 extern struct muic_platform_data muic_pdata;

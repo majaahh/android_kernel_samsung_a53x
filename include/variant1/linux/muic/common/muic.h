@@ -1,5 +1,5 @@
 /*
- * include/linux/muic/common/muic.h
+ * include/linux/muic/common_sm/muic.h
  *
  * header file supporting MUIC common information
  *
@@ -28,7 +28,7 @@
 #ifdef CONFIG_IFCONN_NOTIFIER
 #include <linux/ifconn/ifconn_notifier.h>
 #endif
-#include <linux/muic/common/muic_param.h>
+#include <linux/muic/common_sm/muic_param.h>
 
 #define MUIC_CORE "MUIC_CORE"
 /* Status of IF PMIC chip (suspend and resume) */

@@ -28,13 +28,13 @@
 #include <linux/host_notify.h>
 #include <linux/string.h>
 
-#include <linux/muic/common/muic.h>
+#include <linux/muic/common_sm/muic.h>
 #if defined(CONFIG_SEC_FACTORY)
 #include <linux/mfd/sm/sm5714/sm5714-private.h>
 #endif
 #include <linux/muic/sm/sm5714/sm5714-muic.h>
 #if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
-#include <linux/muic/common/muic_notifier.h>
+#include <linux/muic/common_sm/muic_notifier.h>
 #endif
 
 #if IS_ENABLED(CONFIG_MUIC_SUPPORT_PDIC)
