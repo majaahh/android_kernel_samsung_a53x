@@ -40,4 +40,5 @@ jobs:
       - name: Build
         run: |
           source env.sh
-          ./scripts/build.sh ${{ matrix.target }} -u {,-k}
+          ./scripts/build.sh -u ${{ matrix.target }}
+          ./scripts/build.sh -k -u ${{ matrix.target }}
