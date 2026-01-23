@@ -21,10 +21,16 @@ jobs:
         target: [a53x]
 
     steps:
-      - name: Checkout repo
+      - name: Checkout build repository
         uses: actions/checkout@v6
         with:
             repository: 'majaahh/build-kernel'
+
+      - name: Checkout kernel repository
+        uses: actions/checkout@v6
+        with:
+            path: 'out/kernel'
+            submodules: 'true'
 
       - name: Free disk space
         uses: rokibhasansagar/slimhub_actions@main
@@ -40,4 +46,5 @@ jobs:
       - name: Build
         run: |
           source env.sh
-          ./scripts/build.sh ${{ matrix.target }} -u {,-k}
+          ./scripts/build.sh -u ${{ matrix.target }}
+          ./scripts/build.sh -k -u ${{ matrix.target }}
