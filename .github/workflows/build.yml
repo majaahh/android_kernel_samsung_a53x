@@ -24,16 +24,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v6
         with:
-          submodules: 'true'
-
-      - name: Setup SSH Key
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_RO_BUILD_KERNEL }}
-
-      - name: Checkout build repository
-        run: |
-          git clone --depth=1 --recurse-submodules "git@github.com:majaahh/build-kernel.git" "build"
+            repository: 'majaahh/build-kernel'
 
       - name: Free disk space
         uses: rokibhasansagar/slimhub_actions@main
@@ -48,5 +39,5 @@ jobs:
 
       - name: Build
         run: |
-          [[ -f "./build/build.sh" ]] && ./build/build.sh -u ${{ matrix.target }} || exit 1
-          [[ -f "./build/build.sh" ]] && ./build/build.sh -k -u ${{ matrix.target }} || exit 1
+          source env.sh
+          ./scripts/build.sh ${{ matrix.target }} -u {,-k}
