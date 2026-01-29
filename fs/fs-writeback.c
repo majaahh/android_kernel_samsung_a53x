@@ -2359,6 +2359,7 @@ void __mark_inode_dirty(struct inode *inode, int flags)
 				wb_wakeup_delayed(wb);
 
 			spin_unlock(&wb->list_lock);
+      spin_unlock(&inode->i_lock);
 			trace_writeback_dirty_inode_enqueue(inode);
 
 			return;
