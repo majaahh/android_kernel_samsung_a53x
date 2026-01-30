@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.10.246 Kernel Configuration
+# Linux/arm64 5.10.247 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="Android (14488419, +pgo, +bolt, +lto, +mlgo, based on r584948) clang version 22.0.0 (https://android.googlesource.com/toolchain/llvm-project 2d65e4108033380e6fe8e08b1f1826cd2bfb0c99)"
 CONFIG_GCC_VERSION=0
@@ -5447,7 +5447,6 @@ CONFIG_STAGING=y
 # CONFIG_RTL8192U is not set
 # CONFIG_RTLLIB is not set
 # CONFIG_RTL8723BS is not set
-# CONFIG_R8712U is not set
 # CONFIG_R8188EU is not set
 # CONFIG_RTS5208 is not set
 
