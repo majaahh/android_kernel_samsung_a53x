@@ -2641,7 +2641,7 @@ static void get_tcp4_sock(struct sock *sk, struct seq_file *f, int i)
 		jiffies_to_clock_t(icsk->icsk_rto),
 		jiffies_to_clock_t(icsk->icsk_ack.ato),
 		(icsk->icsk_ack.quick << 1) | inet_csk_in_pingpong_mode(sk),
-		tp->snd_cwnd,
+		tcp_snd_cwnd(tp),
 		state == TCP_LISTEN ?
 		    fastopenq->max_qlen :
 		    (tcp_in_initial_slowstart(tp) ? -1 : tp->snd_ssthresh));
@@ -2815,6 +2815,7 @@ struct proto tcp_prot = {
 	.shutdown		= tcp_shutdown,
 	.setsockopt		= tcp_setsockopt,
 	.getsockopt		= tcp_getsockopt,
+	.bpf_bypass_getsockopt	= tcp_bpf_bypass_getsockopt,
 	.keepalive		= tcp_set_keepalive,
 	.recvmsg		= tcp_recvmsg,
 	.sendmsg		= tcp_sendmsg,
@@ -3025,6 +3026,20 @@ static const struct bpf_iter_seq_info tcp_seq_info = {
 	.seq_priv_size		= sizeof(struct tcp_iter_state),
 };
 
+static const struct bpf_func_proto *
+bpf_iter_tcp_get_func_proto(enum bpf_func_id func_id,
+			    const struct bpf_prog *prog)
+{
+	switch (func_id) {
+	case BPF_FUNC_setsockopt:
+		return &bpf_sk_setsockopt_proto;
+	case BPF_FUNC_getsockopt:
+		return &bpf_sk_getsockopt_proto;
+	default:
+		return NULL;
+	}
+}
+
 static struct bpf_iter_reg tcp_reg_info = {
 	.target			= "tcp",
 	.ctx_arg_info_size	= 1,
@@ -3032,6 +3047,7 @@ static struct bpf_iter_reg tcp_reg_info = {
 		{ offsetof(struct bpf_iter__tcp, sk_common),
 		  PTR_TO_BTF_ID_OR_NULL },
 	},
+	.get_func_proto		= bpf_iter_tcp_get_func_proto,
 	.seq_info		= &tcp_seq_info,
 };
 

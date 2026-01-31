@@ -16,7 +16,6 @@ typedef __u16 __sum16;
 #include <linux/if_packet.h>
 #include <linux/ip.h>
 #include <linux/ipv6.h>
-#include <netinet/tcp.h>
 #include <linux/filter.h>
 #include <linux/perf_event.h>
 #include <linux/socket.h>
@@ -66,6 +65,7 @@ struct test_env {
 	enum verbosity verbosity;
 
 	bool jit_enabled;
+	bool has_testmod;
 	bool get_test_cnt;
 	bool list_test_names;
 

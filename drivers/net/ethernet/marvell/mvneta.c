@@ -2126,7 +2126,7 @@ mvneta_xdp_xmit(struct net_device *dev, int num_frame,
 {
 	struct mvneta_port *pp = netdev_priv(dev);
 	struct mvneta_pcpu_stats *stats = this_cpu_ptr(pp->stats);
-	int i, nxmit_byte = 0, nxmit = num_frame;
+	int i, nxmit_byte = 0, nxmit = 0;
 	int cpu = smp_processor_id();
 	struct mvneta_tx_queue *txq;
 	struct netdev_queue *nq;
@@ -2144,12 +2144,11 @@ mvneta_xdp_xmit(struct net_device *dev, int num_frame,
 	__netif_tx_lock(nq, cpu);
 	for (i = 0; i < num_frame; i++) {
 		ret = mvneta_xdp_submit_frame(pp, txq, frames[i], true);
-		if (ret == MVNETA_XDP_TX) {
-			nxmit_byte += frames[i]->len;
-		} else {
-			xdp_return_frame_rx_napi(frames[i]);
-			nxmit--;
-		}
+		if (ret != MVNETA_XDP_TX)
+			break;
+
+		nxmit_byte += frames[i]->len;
+		nxmit++;
 	}
 
 	if (unlikely(flags & XDP_XMIT_FLUSH))
@@ -2254,11 +2253,8 @@ mvneta_swbm_rx_frame(struct mvneta_port *pp,
 
 	/* Prefetch header */
 	prefetch(data);
-
-	xdp->data_hard_start = data;
-	xdp->data = data + pp->rx_offset_correction + MVNETA_MH_SIZE;
-	xdp->data_end = xdp->data + data_len;
-	xdp_set_data_meta_invalid(xdp);
+	xdp_prepare_buff(xdp, data, pp->rx_offset_correction + MVNETA_MH_SIZE,
+			 data_len, false);
 
 	sinfo = xdp_get_shared_info_from_buff(xdp);
 	sinfo->nr_frags = 0;

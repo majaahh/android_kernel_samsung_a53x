@@ -507,7 +507,7 @@ static void *bpf_obj_do_get(const char __user *pathname,
 		return ERR_PTR(ret);
 
 	inode = d_backing_inode(path.dentry);
-	ret = inode_permission(inode, ACC_MODE(flags));
+	ret = path_permission(&path, ACC_MODE(flags));
 	if (ret)
 		goto out;
 
@@ -647,12 +647,22 @@ static int bpf_parse_param(struct fs_context *fc, struct fs_parameter *param)
 	int opt;
 
 	opt = fs_parse(fc, bpf_fs_parameters, param, &result);
-	if (opt < 0)
+	if (opt < 0) {
 		/* We might like to report bad mount options here, but
 		 * traditionally we've ignored all mount options, so we'd
 		 * better continue to ignore non-existing options for bpf.
 		 */
-		return opt == -ENOPARAM ? 0 : opt;
+		if (opt == -ENOPARAM) {
+			opt = vfs_parse_fs_param_source(fc, param);
+			if (opt != -ENOPARAM)
+				return opt;
+
+			return 0;
+		}
+
+		if (opt < 0)
+			return opt;
+	}
 
 	switch (opt) {
 	case OPT_MODE:
@@ -814,8 +824,6 @@ static struct file_system_type bpf_fs_type = {
 static int __init bpf_init(void)
 {
 	int ret;
-
-	mutex_init(&bpf_preload_lock);
 
 	ret = sysfs_create_mount_point(fs_kobj, "bpf");
 	if (ret)

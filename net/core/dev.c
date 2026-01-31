@@ -4655,67 +4655,38 @@ static struct netdev_rx_queue *netif_get_rxqueue(struct sk_buff *skb)
 	return rxqueue;
 }
 
-static u32 netif_receive_generic_xdp(struct sk_buff *skb,
-				     struct xdp_buff *xdp,
-				     struct bpf_prog *xdp_prog)
+u32 bpf_prog_run_generic_xdp(struct sk_buff *skb, struct xdp_buff *xdp,
+			     struct bpf_prog *xdp_prog)
 {
+	void *orig_data, *orig_data_end, *hard_start;
 	struct netdev_rx_queue *rxqueue;
-	void *orig_data, *orig_data_end;
-	u32 metalen, act = XDP_DROP;
+	u32 mac_len, frame_sz;
 	__be16 orig_eth_type;
 	struct ethhdr *eth;
 	bool orig_bcast;
-	int hlen, off;
-	u32 mac_len;
-
-	/* Reinjected packets coming from act_mirred or similar should
-	 * not get XDP generic processing.
-	 */
-	if (skb_is_redirected(skb))
-		return XDP_PASS;
-
-	/* XDP packets must be linear and must have sufficient headroom
-	 * of XDP_PACKET_HEADROOM bytes. This is the guarantee that also
-	 * native XDP provides, thus we need to do it here as well.
-	 */
-	if (skb_cloned(skb) || skb_is_nonlinear(skb) ||
-	    skb_headroom(skb) < XDP_PACKET_HEADROOM) {
-		int hroom = XDP_PACKET_HEADROOM - skb_headroom(skb);
-		int troom = skb->tail + skb->data_len - skb->end;
-
-		/* In case we have to go down the path and also linearize,
-		 * then lets do the pskb_expand_head() work just once here.
-		 */
-		if (pskb_expand_head(skb,
-				     hroom > 0 ? ALIGN(hroom, NET_SKB_PAD) : 0,
-				     troom > 0 ? troom + 128 : 0, GFP_ATOMIC))
-			goto do_drop;
-		if (skb_linearize(skb))
-			goto do_drop;
-	}
+	u32 metalen, act;
+	int off;
 
 	/* The XDP program wants to see the packet starting at the MAC
 	 * header.
 	 */
 	mac_len = skb->data - skb_mac_header(skb);
-	hlen = skb_headlen(skb) + mac_len;
-	xdp->data = skb->data - mac_len;
-	xdp->data_meta = xdp->data;
-	xdp->data_end = xdp->data + hlen;
-	xdp->data_hard_start = skb->data - skb_headroom(skb);
+	hard_start = skb->data - skb_headroom(skb);
 
 	/* SKB "head" area always have tailroom for skb_shared_info */
-	xdp->frame_sz  = (void *)skb_end_pointer(skb) - xdp->data_hard_start;
-	xdp->frame_sz += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+	frame_sz = (void *)skb_end_pointer(skb) - hard_start;
+	frame_sz += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+
+	rxqueue = netif_get_rxqueue(skb);
+	xdp_init_buff(xdp, frame_sz, &rxqueue->xdp_rxq);
+	xdp_prepare_buff(xdp, hard_start, skb_headroom(skb) - mac_len,
+			 skb_headlen(skb) + mac_len, true);
 
 	orig_data_end = xdp->data_end;
 	orig_data = xdp->data;
 	eth = (struct ethhdr *)xdp->data;
 	orig_bcast = is_multicast_ether_addr_64bits(eth->h_dest);
 	orig_eth_type = eth->h_proto;
-
-	rxqueue = netif_get_rxqueue(skb);
-	xdp->rxq = &rxqueue->xdp_rxq;
 
 	act = bpf_prog_run_xdp(xdp_prog, xdp);
 
@@ -4746,6 +4717,13 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
 		skb->protocol = eth_type_trans(skb, skb->dev);
 	}
 
+	/* Redirect/Tx gives L2 packet, code that will reuse skb must __skb_pull
+	 * before calling us again on redirect path. We do not call do_redirect
+	 * as we leave that up to the caller.
+	 *
+	 * Caller is responsible for managing lifetime of skb (i.e. calling
+	 * kfree_skb in response to actions it cannot handle/XDP_DROP).
+	 */
 	switch (act) {
 	case XDP_REDIRECT:
 	case XDP_TX:
@@ -4755,6 +4733,49 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
 		metalen = xdp->data - xdp->data_meta;
 		if (metalen)
 			skb_metadata_set(skb, metalen);
+		break;
+	}
+
+	return act;
+}
+
+static u32 netif_receive_generic_xdp(struct sk_buff *skb,
+				     struct xdp_buff *xdp,
+				     struct bpf_prog *xdp_prog)
+{
+	u32 act = XDP_DROP;
+
+	/* Reinjected packets coming from act_mirred or similar should
+	 * not get XDP generic processing.
+	 */
+	if (skb_is_redirected(skb))
+		return XDP_PASS;
+
+	/* XDP packets must be linear and must have sufficient headroom
+	 * of XDP_PACKET_HEADROOM bytes. This is the guarantee that also
+	 * native XDP provides, thus we need to do it here as well.
+	 */
+	if (skb_cloned(skb) || skb_is_nonlinear(skb) ||
+	    skb_headroom(skb) < XDP_PACKET_HEADROOM) {
+		int hroom = XDP_PACKET_HEADROOM - skb_headroom(skb);
+		int troom = skb->tail + skb->data_len - skb->end;
+
+		/* In case we have to go down the path and also linearize,
+		 * then lets do the pskb_expand_head() work just once here.
+		 */
+		if (pskb_expand_head(skb,
+				     hroom > 0 ? ALIGN(hroom, NET_SKB_PAD) : 0,
+				     troom > 0 ? troom + 128 : 0, GFP_ATOMIC))
+			goto do_drop;
+		if (skb_linearize(skb))
+			goto do_drop;
+	}
+
+	act = bpf_prog_run_generic_xdp(skb, xdp, xdp_prog);
+	switch (act) {
+	case XDP_REDIRECT:
+	case XDP_TX:
+	case XDP_PASS:
 		break;
 	default:
 		bpf_warn_invalid_xdp_action(act);
@@ -5222,7 +5243,6 @@ another_round:
 			ret = NET_RX_DROP;
 			goto out;
 		}
-		skb_reset_mac_len(skb);
 	}
 
 	if (skb->protocol == cpu_to_be16(ETH_P_8021Q) ||
@@ -5548,25 +5568,6 @@ static int generic_xdp_install(struct net_device *dev, struct netdev_bpf *xdp)
 	struct bpf_prog *old = rtnl_dereference(dev->xdp_prog);
 	struct bpf_prog *new = xdp->prog;
 	int ret = 0;
-
-	if (new) {
-		u32 i;
-
-		mutex_lock(&new->aux->used_maps_mutex);
-
-		/* generic XDP does not work with DEVMAPs that can
-		 * have a bpf_prog installed on an entry
-		 */
-		for (i = 0; i < new->aux->used_map_cnt; i++) {
-			if (dev_map_can_have_prog(new->aux->used_maps[i]) ||
-			    cpu_map_prog_allowed(new->aux->used_maps[i])) {
-				mutex_unlock(&new->aux->used_maps_mutex);
-				return -EINVAL;
-			}
-		}
-
-		mutex_unlock(&new->aux->used_maps_mutex);
-	}
 
 	switch (xdp->command) {
 	case XDP_SETUP_PROG:
@@ -9069,7 +9070,7 @@ static struct bpf_prog *dev_xdp_prog(struct net_device *dev,
 	return dev->xdp_state[mode].prog;
 }
 
-static u8 dev_xdp_prog_count(struct net_device *dev)
+u8 dev_xdp_prog_count(struct net_device *dev)
 {
 	u8 count = 0;
 	int i;
@@ -9079,6 +9080,7 @@ static u8 dev_xdp_prog_count(struct net_device *dev)
 			count++;
 	return count;
 }
+EXPORT_SYMBOL_GPL(dev_xdp_prog_count);
 
 u32 dev_xdp_prog_id(struct net_device *dev, enum bpf_xdp_mode mode)
 {
@@ -9172,6 +9174,8 @@ static int dev_xdp_attach(struct net_device *dev, struct netlink_ext_ack *extack
 {
 	unsigned int num_modes = hweight32(flags & XDP_FLAGS_MODES);
 	struct bpf_prog *cur_prog;
+	struct net_device *upper;
+	struct list_head *iter;
 	enum bpf_xdp_mode mode;
 	bpf_op_t bpf_op;
 	int err;
@@ -9208,6 +9212,14 @@ static int dev_xdp_attach(struct net_device *dev, struct netlink_ext_ack *extack
 	if (dev_xdp_link(dev, mode)) {
 		NL_SET_ERR_MSG(extack, "Can't replace active BPF XDP link");
 		return -EBUSY;
+	}
+
+	/* don't allow if an upper device already has a program */
+	netdev_for_each_upper_dev_rcu(dev, upper, iter) {
+		if (dev_xdp_prog_count(upper) > 0) {
+			NL_SET_ERR_MSG(extack, "Cannot attach when an upper device already has a program");
+			return -EEXIST;
+		}
 	}
 
 	cur_prog = dev_xdp_prog(dev, mode);

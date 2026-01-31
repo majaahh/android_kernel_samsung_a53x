@@ -1294,8 +1294,7 @@ static int tun_xdp_xmit(struct net_device *dev, int n,
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_file *tfile;
 	u32 numqueues;
-	int drops = 0;
-	int cnt = n;
+	int nxmit = 0;
 	int i;
 
 	if (unlikely(flags & ~XDP_XMIT_FLAGS_MASK))
@@ -1325,9 +1324,9 @@ resample:
 
 		if (__ptr_ring_produce(&tfile->tx_ring, frame)) {
 			this_cpu_inc(tun->pcpu_stats->tx_dropped);
-			xdp_return_frame_rx_napi(xdp);
-			drops++;
+			break;
 		}
+		nxmit++;
 	}
 	spin_unlock(&tfile->tx_ring.producer_lock);
 
@@ -1335,17 +1334,21 @@ resample:
 		__tun_xdp_flush_tfile(tfile);
 
 	rcu_read_unlock();
-	return cnt - drops;
+	return nxmit;
 }
 
 static int tun_xdp_tx(struct net_device *dev, struct xdp_buff *xdp)
 {
 	struct xdp_frame *frame = xdp_convert_buff_to_frame(xdp);
+	int nxmit;
 
 	if (unlikely(!frame))
 		return -EOVERFLOW;
 
-	return tun_xdp_xmit(dev, 1, &frame, XDP_XMIT_FLUSH);
+	nxmit = tun_xdp_xmit(dev, 1, &frame, XDP_XMIT_FLUSH);
+	if (!nxmit)
+		xdp_return_frame_rx_napi(frame);
+	return nxmit;
 }
 
 static const struct net_device_ops tap_netdev_ops = {
@@ -1714,12 +1717,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		struct xdp_buff xdp;
 		u32 act;
 
-		xdp.data_hard_start = buf;
-		xdp.data = buf + pad;
-		xdp_set_data_meta_invalid(&xdp);
-		xdp.data_end = xdp.data + len;
-		xdp.rxq = &tfile->xdp_rxq;
-		xdp.frame_sz = buflen;
+		xdp_init_buff(&xdp, buflen, &tfile->xdp_rxq);
+		xdp_prepare_buff(&xdp, buf, pad, len, false);
 
 		act = bpf_prog_run_xdp(xdp_prog, &xdp);
 		if (act == XDP_REDIRECT || act == XDP_TX) {
@@ -2481,9 +2480,9 @@ static int tun_xdp_one(struct tun_struct *tun,
 			skb_xdp = true;
 			goto build;
 		}
+
+		xdp_init_buff(xdp, buflen, &tfile->xdp_rxq);
 		xdp_set_data_meta_invalid(xdp);
-		xdp->rxq = &tfile->xdp_rxq;
-		xdp->frame_sz = buflen;
 
 		act = bpf_prog_run_xdp(xdp_prog, xdp);
 		err = tun_xdp_act(tun, xdp_prog, xdp, act);

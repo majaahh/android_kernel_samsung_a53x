@@ -267,6 +267,7 @@
 #include <linux/slab.h>
 #include <linux/errqueue.h>
 #include <linux/static_key.h>
+#include <linux/btf.h>
 
 #include <net/icmp.h>
 #include <net/inet_common.h>
@@ -430,7 +431,7 @@ void tcp_init_sock(struct sock *sk)
 	 * algorithms that we must have the following bandaid to talk
 	 * efficiently to them.  -DaveM
 	 */
-	tp->snd_cwnd = TCP_INIT_CWND;
+	tcp_snd_cwnd_set(tp, TCP_INIT_CWND);
 
 	/* There's a bubble in the pipe until at least the first ACK. */
 	tp->app_limited = ~0U;
@@ -2409,6 +2410,17 @@ void tcp_set_state(struct sock *sk, int state)
 	BUILD_BUG_ON((int)BPF_TCP_NEW_SYN_RECV != (int)TCP_NEW_SYN_RECV);
 	BUILD_BUG_ON((int)BPF_TCP_MAX_STATES != (int)TCP_MAX_STATES);
 
+	/* bpf uapi header bpf.h defines an anonymous enum with values
+	 * BPF_TCP_* used by bpf programs. Currently gcc built vmlinux
+	 * is able to emit this enum in DWARF due to the above BUILD_BUG_ON.
+	 * But clang built vmlinux does not have this enum in DWARF
+	 * since clang removes the above code before generating IR/debuginfo.
+	 * Let us explicitly emit the type debuginfo to ensure the
+	 * above-mentioned anonymous enum in the vmlinux DWARF and hence BTF
+	 * regardless of which compiler is used.
+	 */
+	BTF_TYPE_EMIT_ENUM(BPF_TCP_ESTABLISHED);
+
 	if (BPF_SOCK_OPS_TEST_FLAG(tcp_sk(sk), BPF_SOCK_OPS_STATE_CB_FLAG))
 		tcp_call_bpf_2arg(sk, BPF_SOCK_OPS_STATE_CB, oldstate, state);
 
@@ -2810,7 +2822,7 @@ int tcp_disconnect(struct sock *sk, int flags)
 	icsk->icsk_rto_min = TCP_RTO_MIN;
 	icsk->icsk_delack_max = TCP_DELACK_MAX;
 	tp->snd_ssthresh = TCP_INFINITE_SSTHRESH;
-	tp->snd_cwnd = TCP_INIT_CWND;
+	tcp_snd_cwnd_set(tp, TCP_INIT_CWND);
 	tp->snd_cwnd_cnt = 0;
 	tp->is_cwnd_limited = 0;
 	tp->max_packets_out = 0;
@@ -3151,6 +3163,21 @@ int tcp_sock_set_keepcnt(struct sock *sk, int val)
 }
 EXPORT_SYMBOL(tcp_sock_set_keepcnt);
 
+int tcp_set_window_clamp(struct sock *sk, int val)
+{
+	struct tcp_sock *tp = tcp_sk(sk);
+
+	if (!val) {
+		if (sk->sk_state != TCP_CLOSE)
+			return -EINVAL;
+		tp->window_clamp = 0;
+	} else {
+		tp->window_clamp = val < SOCK_MIN_RCVBUF / 2 ?
+			SOCK_MIN_RCVBUF / 2 : val;
+	}
+	return 0;
+}
+
 /*
  *	Socket option code for TCP.
  */
@@ -3371,15 +3398,7 @@ static int do_tcp_setsockopt(struct sock *sk, int level, int optname,
 		break;
 
 	case TCP_WINDOW_CLAMP:
-		if (!val) {
-			if (sk->sk_state != TCP_CLOSE) {
-				err = -EINVAL;
-				break;
-			}
-			tp->window_clamp = 0;
-		} else
-			tp->window_clamp = val < SOCK_MIN_RCVBUF / 2 ?
-						SOCK_MIN_RCVBUF / 2 : val;
+		err = tcp_set_window_clamp(sk, val);
 		break;
 
 	case TCP_QUICKACK:
@@ -3524,7 +3543,7 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 	info->tcpi_max_pacing_rate = rate64;
 
 	info->tcpi_reordering = tp->reordering;
-	info->tcpi_snd_cwnd = tp->snd_cwnd;
+	info->tcpi_snd_cwnd = tcp_snd_cwnd(tp);
 
 	if (info->tcpi_state == TCP_LISTEN) {
 		/* listeners aliased fields :
@@ -3680,7 +3699,7 @@ struct sk_buff *tcp_get_timestamping_opt_stats(const struct sock *sk,
 	rate64 = tcp_compute_delivery_rate(tp);
 	nla_put_u64_64bit(stats, TCP_NLA_DELIVERY_RATE, rate64, TCP_NLA_PAD);
 
-	nla_put_u32(stats, TCP_NLA_SND_CWND, tp->snd_cwnd);
+	nla_put_u32(stats, TCP_NLA_SND_CWND, tcp_snd_cwnd(tp));
 	nla_put_u32(stats, TCP_NLA_REORDERING, tp->reordering);
 	nla_put_u32(stats, TCP_NLA_MIN_RTT, tcp_min_rtt(tp));
 
@@ -3980,6 +3999,8 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 			return -EFAULT;
 		lock_sock(sk);
 		err = tcp_zerocopy_receive(sk, &zc);
+		err = BPF_CGROUP_RUN_PROG_GETSOCKOPT_KERN(sk, level, optname,
+							  &zc, &len, err);
 		release_sock(sk);
 		if (len >= offsetofend(struct tcp_zerocopy_receive, err))
 			goto zerocopy_rcv_sk_err;
@@ -4013,6 +4034,18 @@ zerocopy_rcv_out:
 		return -EFAULT;
 	return 0;
 }
+
+bool tcp_bpf_bypass_getsockopt(int level, int optname)
+{
+	/* TCP do_tcp_getsockopt has optimized getsockopt implementation
+	 * to avoid extra socket lock for TCP_ZEROCOPY_RECEIVE.
+	 */
+	if (level == SOL_TCP && optname == TCP_ZEROCOPY_RECEIVE)
+		return true;
+
+	return false;
+}
+EXPORT_SYMBOL(tcp_bpf_bypass_getsockopt);
 
 int tcp_getsockopt(struct sock *sk, int level, int optname, char __user *optval,
 		   int __user *optlen)

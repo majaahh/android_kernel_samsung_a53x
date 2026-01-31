@@ -2327,7 +2327,7 @@ static void i40e_inc_ntc(struct i40e_ring *rx_ring)
  **/
 static int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget)
 {
-	unsigned int total_rx_bytes = 0, total_rx_packets = 0;
+	unsigned int total_rx_bytes = 0, total_rx_packets = 0, frame_sz = 0;
 	struct sk_buff *skb = rx_ring->skb;
 	u16 cleaned_count = I40E_DESC_UNUSED(rx_ring);
 	unsigned int xdp_xmit = 0;
@@ -2336,9 +2336,9 @@ static int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget)
 	int xdp_res = 0;
 
 #if (PAGE_SIZE < 8192)
-	xdp.frame_sz = i40e_rx_frame_truesize(rx_ring, 0);
+	frame_sz = i40e_rx_frame_truesize(rx_ring, 0);
 #endif
-	xdp.rxq = &rx_ring->xdp_rxq;
+	xdp_init_buff(&xdp, frame_sz, &rx_ring->xdp_rxq);
 
 	while (likely(total_rx_packets < (unsigned int)budget)) {
 		struct i40e_rx_buffer *rx_buffer;
@@ -2390,12 +2390,12 @@ static int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget)
 
 		/* retrieve a buffer from the ring */
 		if (!skb) {
-			xdp.data = page_address(rx_buffer->page) +
-				   rx_buffer->page_offset;
-			xdp.data_meta = xdp.data;
-			xdp.data_hard_start = xdp.data -
-					      i40e_rx_offset(rx_ring);
-			xdp.data_end = xdp.data + size;
+			unsigned int offset = i40e_rx_offset(rx_ring);
+			unsigned char *hard_start;
+
+			hard_start = page_address(rx_buffer->page) +
+				     rx_buffer->page_offset - offset;
+			xdp_prepare_buff(&xdp, hard_start, offset, size, true);
 #if (PAGE_SIZE > 4096)
 			/* At larger PAGE_SIZE, frame_sz depend on len size */
 			xdp.frame_sz = i40e_rx_frame_truesize(rx_ring, size);
@@ -3768,8 +3768,8 @@ netdev_tx_t i40e_lan_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
  * @frames: array of XDP buffer pointers
  * @flags: XDP extra info
  *
- * Returns number of frames successfully sent. Frames that fail are
- * free'ed via XDP return API.
+ * Returns number of frames successfully sent. Failed frames
+ * will be free'ed by XDP core.
  *
  * For error cases, a negative errno code is returned and no-frames
  * are transmitted (caller must handle freeing frames).
@@ -3782,7 +3782,7 @@ int i40e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames,
 	struct i40e_vsi *vsi = np->vsi;
 	struct i40e_pf *pf = vsi->back;
 	struct i40e_ring *xdp_ring;
-	int drops = 0;
+	int nxmit = 0;
 	int i;
 
 	if (test_bit(__I40E_VSI_DOWN, vsi->state))
@@ -3802,14 +3802,13 @@ int i40e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames,
 		int err;
 
 		err = i40e_xmit_xdp_ring(xdpf, xdp_ring);
-		if (err != I40E_XDP_TX) {
-			xdp_return_frame_rx_napi(xdpf);
-			drops++;
-		}
+		if (err != I40E_XDP_TX)
+			break;
+		nxmit++;
 	}
 
 	if (unlikely(flags & XDP_XMIT_FLUSH))
 		i40e_xdp_ring_update_tail(xdp_ring);
 
-	return n - drops;
+	return nxmit;
 }

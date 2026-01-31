@@ -3410,7 +3410,7 @@ mvpp2_xdp_xmit(struct net_device *dev, int num_frame,
 	       struct xdp_frame **frames, u32 flags)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
-	int i, nxmit_byte = 0, nxmit = num_frame;
+	int i, nxmit_byte = 0, nxmit = 0;
 	struct mvpp2_pcpu_stats *stats;
 	u16 txq_id;
 	u32 ret;
@@ -3428,12 +3428,11 @@ mvpp2_xdp_xmit(struct net_device *dev, int num_frame,
 
 	for (i = 0; i < num_frame; i++) {
 		ret = mvpp2_xdp_submit_frame(port, txq_id, frames[i], true);
-		if (ret == MVPP2_XDP_TX) {
-			nxmit_byte += frames[i]->len;
-		} else {
-			xdp_return_frame_rx_napi(frames[i]);
-			nxmit--;
-		}
+		if (ret != MVPP2_XDP_TX)
+			break;
+
+		nxmit_byte += frames[i]->len;
+		nxmit++;
 	}
 
 	if (likely(nxmit > 0))
@@ -3613,17 +3612,17 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 			frag_size = bm_pool->frag_size;
 
 		if (xdp_prog) {
-			xdp.data_hard_start = data;
-			xdp.data = data + MVPP2_MH_SIZE + MVPP2_SKB_HEADROOM;
-			xdp.data_end = xdp.data + rx_bytes;
-			xdp.frame_sz = PAGE_SIZE;
+			struct xdp_rxq_info *xdp_rxq;
 
 			if (bm_pool->pkt_size == MVPP2_BM_SHORT_PKT_SIZE)
-				xdp.rxq = &rxq->xdp_rxq_short;
+				xdp_rxq = &rxq->xdp_rxq_short;
 			else
-				xdp.rxq = &rxq->xdp_rxq_long;
+				xdp_rxq = &rxq->xdp_rxq_long;
 
-			xdp_set_data_meta_invalid(&xdp);
+			xdp_init_buff(&xdp, PAGE_SIZE, xdp_rxq);
+			xdp_prepare_buff(&xdp, data,
+					 MVPP2_MH_SIZE + MVPP2_SKB_HEADROOM,
+					 rx_bytes, false);
 
 			ret = mvpp2_run_xdp(port, rxq, xdp_prog, &xdp, pp, &ps);
 

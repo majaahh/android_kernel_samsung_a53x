@@ -648,8 +648,8 @@ static int xennet_xdp_xmit(struct net_device *dev, int n,
 	struct netfront_info *np = netdev_priv(dev);
 	struct netfront_queue *queue = NULL;
 	unsigned long irq_flags;
-	int drops = 0;
-	int i, err;
+	int nxmit = 0;
+	int i;
 
 	if (unlikely(np->broken))
 		return -ENODEV;
@@ -664,15 +664,13 @@ static int xennet_xdp_xmit(struct net_device *dev, int n,
 
 		if (!xdpf)
 			continue;
-		err = xennet_xdp_xmit_one(dev, queue, xdpf);
-		if (err) {
-			xdp_return_frame_rx_napi(xdpf);
-			drops++;
-		}
+		if (xennet_xdp_xmit_one(dev, queue, xdpf))
+			break;
+		nxmit++;
 	}
 	spin_unlock_irqrestore(&queue->tx_lock, irq_flags);
 
-	return n - drops;
+	return nxmit;
 }
 
 struct sk_buff *bounce_skb(const struct sk_buff *skb)
@@ -975,12 +973,10 @@ static u32 xennet_run_xdp(struct netfront_queue *queue, struct page *pdata,
 	u32 act;
 	int err;
 
-	xdp->data_hard_start = page_address(pdata);
-	xdp->data = xdp->data_hard_start + XDP_PACKET_HEADROOM;
-	xdp_set_data_meta_invalid(xdp);
-	xdp->data_end = xdp->data + len;
-	xdp->rxq = &queue->xdp_rxq;
-	xdp->frame_sz = XEN_PAGE_SIZE - XDP_PACKET_HEADROOM;
+	xdp_init_buff(xdp, XEN_PAGE_SIZE - XDP_PACKET_HEADROOM,
+		      &queue->xdp_rxq);
+	xdp_prepare_buff(xdp, page_address(pdata), XDP_PACKET_HEADROOM,
+			 len, false);
 
 	act = bpf_prog_run_xdp(prog, xdp);
 	switch (act) {
@@ -988,7 +984,9 @@ static u32 xennet_run_xdp(struct netfront_queue *queue, struct page *pdata,
 		get_page(pdata);
 		xdpf = xdp_convert_buff_to_frame(xdp);
 		err = xennet_xdp_xmit(queue->info->netdev, 1, &xdpf, 0);
-		if (unlikely(err < 0))
+		if (unlikely(!err))
+			xdp_return_frame_rx_napi(xdpf);
+		else if (unlikely(err < 0))
 			trace_xdp_exception(queue->info->netdev, prog, act);
 		break;
 	case XDP_REDIRECT:

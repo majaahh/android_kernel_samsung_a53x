@@ -335,21 +335,15 @@ static void cpsw_rx_handler(void *token, int len, int status)
 	}
 
 	if (priv->xdp_prog) {
+		int headroom = CPSW_HEADROOM, size = len;
+
+		xdp_init_buff(&xdp, PAGE_SIZE, &priv->xdp_rxq[ch]);
 		if (status & CPDMA_RX_VLAN_ENCAP) {
-			xdp.data = pa + CPSW_HEADROOM +
-				   CPSW_RX_VLAN_ENCAP_HDR_SIZE;
-			xdp.data_end = xdp.data + len -
-				       CPSW_RX_VLAN_ENCAP_HDR_SIZE;
-		} else {
-			xdp.data = pa + CPSW_HEADROOM;
-			xdp.data_end = xdp.data + len;
+			headroom += CPSW_RX_VLAN_ENCAP_HDR_SIZE;
+			size -= CPSW_RX_VLAN_ENCAP_HDR_SIZE;
 		}
 
-		xdp_set_data_meta_invalid(&xdp);
-
-		xdp.data_hard_start = pa;
-		xdp.rxq = &priv->xdp_rxq[ch];
-		xdp.frame_sz = PAGE_SIZE;
+		xdp_prepare_buff(&xdp, pa, headroom, size, false);
 
 		ret = cpsw_run_xdp(priv, ch, &xdp, page, priv->emac_port);
 		if (ret != CPSW_XDP_PASS)
@@ -1101,24 +1095,22 @@ static int cpsw_ndo_xdp_xmit(struct net_device *ndev, int n,
 {
 	struct cpsw_priv *priv = netdev_priv(ndev);
 	struct xdp_frame *xdpf;
-	int i, drops = 0;
+	int i, nxmit = 0;
 
 	if (unlikely(flags & ~XDP_XMIT_FLAGS_MASK))
 		return -EINVAL;
 
 	for (i = 0; i < n; i++) {
 		xdpf = frames[i];
-		if (xdpf->len < READ_ONCE(priv->tx_packet_min)) {
-			xdp_return_frame_rx_napi(xdpf);
-			drops++;
-			continue;
-		}
+		if (xdpf->len < READ_ONCE(priv->tx_packet_min))
+			break;
 
 		if (cpsw_xdp_tx_frame(priv, xdpf, NULL, priv->emac_port))
-			drops++;
+			break;
+		nxmit++;
 	}
 
-	return n - drops;
+	return nxmit;
 }
 
 static int cpsw_get_port_parent_id(struct net_device *ndev,

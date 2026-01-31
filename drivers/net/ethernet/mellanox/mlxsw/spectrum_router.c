@@ -4177,6 +4177,7 @@ mlxsw_sp_fib4_entry_hw_flags_set(struct mlxsw_sp *mlxsw_sp,
 	fri.type = fib4_entry->type;
 	fri.offload = should_offload;
 	fri.trap = !should_offload;
+	fri.offload_failed = false;
 	fib_alias_hw_flags_set(mlxsw_sp_net(mlxsw_sp), &fri);
 }
 
@@ -4200,9 +4201,11 @@ mlxsw_sp_fib4_entry_hw_flags_clear(struct mlxsw_sp *mlxsw_sp,
 	fri.type = fib4_entry->type;
 	fri.offload = false;
 	fri.trap = false;
+	fri.offload_failed = false;
 	fib_alias_hw_flags_set(mlxsw_sp_net(mlxsw_sp), &fri);
 }
 
+#if IS_ENABLED(CONFIG_IPV6)
 static void
 mlxsw_sp_fib6_entry_hw_flags_set(struct mlxsw_sp *mlxsw_sp,
 				 struct mlxsw_sp_fib_entry *fib_entry)
@@ -4219,10 +4222,18 @@ mlxsw_sp_fib6_entry_hw_flags_set(struct mlxsw_sp *mlxsw_sp,
 	fib6_entry = container_of(fib_entry, struct mlxsw_sp_fib6_entry,
 				  common);
 	list_for_each_entry(mlxsw_sp_rt6, &fib6_entry->rt6_list, list)
-		fib6_info_hw_flags_set(mlxsw_sp_rt6->rt, should_offload,
-				       !should_offload);
+		fib6_info_hw_flags_set(mlxsw_sp_net(mlxsw_sp), mlxsw_sp_rt6->rt,
+				       should_offload, !should_offload, false);
 }
+#else
+static void
+mlxsw_sp_fib6_entry_hw_flags_set(struct mlxsw_sp *mlxsw_sp,
+				 struct mlxsw_sp_fib_entry *fib_entry)
+{
+}
+#endif
 
+#if IS_ENABLED(CONFIG_IPV6)
 static void
 mlxsw_sp_fib6_entry_hw_flags_clear(struct mlxsw_sp *mlxsw_sp,
 				   struct mlxsw_sp_fib_entry *fib_entry)
@@ -4233,8 +4244,16 @@ mlxsw_sp_fib6_entry_hw_flags_clear(struct mlxsw_sp *mlxsw_sp,
 	fib6_entry = container_of(fib_entry, struct mlxsw_sp_fib6_entry,
 				  common);
 	list_for_each_entry(mlxsw_sp_rt6, &fib6_entry->rt6_list, list)
-		fib6_info_hw_flags_set(mlxsw_sp_rt6->rt, false, false);
+		fib6_info_hw_flags_set(mlxsw_sp_net(mlxsw_sp), mlxsw_sp_rt6->rt,
+				       false, false, false);
 }
+#else
+static void
+mlxsw_sp_fib6_entry_hw_flags_clear(struct mlxsw_sp *mlxsw_sp,
+				   struct mlxsw_sp_fib_entry *fib_entry)
+{
+}
+#endif
 
 static void
 mlxsw_sp_fib_entry_hw_flags_set(struct mlxsw_sp *mlxsw_sp,
