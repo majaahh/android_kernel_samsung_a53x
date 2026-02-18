@@ -46,5 +46,11 @@ jobs:
       - name: Build
         run: |
           source env.sh
-          ./scripts/build.sh -u ${{ matrix.target }}
-          ./scripts/build.sh -k -u ${{ matrix.target }}
+
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+              ./scripts/build.sh ${{ matrix.target }}
+              ./scripts/build.sh -k ${{ matrix.target }}
+          else
+              ./scripts/build.sh -u ${{ matrix.target }}
+              ./scripts/build.sh -k -u ${{ matrix.target }}
+          fi
