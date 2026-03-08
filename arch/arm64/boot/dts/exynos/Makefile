@@ -11,7 +11,7 @@ dtbo-$(CONFIG_ARCH_EXYNOS) += \
 dtbo-$(CONFIG_ARCH_EXYNOS) += \
     samsung/a53x/a53x_jpn_dcm_w00_r00.dtbo \
     samsung/a53x/a53x_jpn_dcm_w00_r01.dtbo \
-    samsung/a53x/a53x_jpn_dcm_w00_r02.dtbo
+    samsung/a53x/a53x_jpn_dcm_w00_r04.dtbo
 
 targets += dtbs
 DTB_LIST  := $(dtb-y) $(dtbo-y)
