@@ -9959,9 +9959,14 @@
 					rear_single_video_fhd480_mif = <0x00>;
 					rear_single_video_fhd480_int = <0x00>;
 					rear_single_video_fhd480_cpu = "0-5";
-					rear_single_video_hd30_mif = <0x03>;
-					rear_single_video_hd30_int = <0x05>;
+					rear_single_video_hd30_isp = <0x03>;
+					rear_single_video_hd30_mif = <0x01>;
+					rear_single_video_hd30_int = <0x02>;
 					rear_single_video_hd30_cpu = "0-5";
+					rear_single_video_hd120_isp = <0x03>;
+					rear_single_video_hd120_mif = <0x01>;
+					rear_single_video_hd120_int = <0x02>;
+					rear_single_video_hd120_cpu = "0-5";
 					rear_single_video_hd240_mif = <0x00>;
 					rear_single_video_hd240_int = <0x01>;
 					rear_single_video_hd240_hpg = <0x08>;
