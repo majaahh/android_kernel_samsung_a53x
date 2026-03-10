@@ -1274,7 +1274,11 @@ evaluate:
 		 *  just before the actual freeing.
 		 *
 		 */
-		if ((r == -ENOSPC) && (slsi_tx_get_packet_type(skb) == SLSI_CTRL_PKT)) {
+#ifdef CONFIG_SCSC_TX_PKT_TYPE
+      if ((r == -ENOSPC) && (slsi_tx_get_packet_type(skb) == SLSI_CTRL_PKT)) {
+#else
+      if (r == -ENOSPC) {
+#endif
 			/* NETDEV_TX_BUSY should be returned to upper layers:
 			 * this will cause the SKB (THAT MUST NOT HAVE BEEN FREED BY LOWER LAYERS !)
 			 *  to be requeued ...
