@@ -66,10 +66,6 @@ struct scsc_lerna_cmd_header {
 	uint8_t group_index;     /* Group index, or 0 for default (group not assigned). */
 };
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_lerna.c"
-#endif
-
 static int scsc_lerna_chardev_open(struct inode *inodep, struct file *filep)
 {
 	(void)inodep;

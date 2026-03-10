@@ -89,10 +89,6 @@ struct mx_mmap_dev {
 #endif
 };
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mx_mmap.c"
-#endif
-
 /**
  * SCSC User Space mmap interface (singleton)
  */

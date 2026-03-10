@@ -13,10 +13,6 @@
 #include "baaw.h"
 #include "regmap_register.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "../kunit/kunit_platform_mif_regmap_api.c"
-#endif
-
 #define COMP_RET(x, y) do { \
 	if (x != y) {\
 		pr_err("%s failed at L%d", __FUNCTION__, __LINE__); \

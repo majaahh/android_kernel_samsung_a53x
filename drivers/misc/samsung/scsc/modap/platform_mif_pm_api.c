@@ -5,10 +5,6 @@
 #include <soc/samsung/exynos/exynos-s2mpu.h>
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "../kunit/kunit_platform_mif_pm_api.c"
-#endif
-
 static bool disable_apm_setup = true;
 module_param(disable_apm_setup, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(disable_apm_setup, "Disable host APM setup");

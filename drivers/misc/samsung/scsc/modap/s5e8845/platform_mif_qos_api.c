@@ -7,10 +7,6 @@
 
 #include "scsc_mif_abs.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "../../kunit/kunit_platform_mif_qos_api.c"
-#endif
-
 /* 533Mhz / 1152Mhz / 1824Mhz for cpucl0 */
 static uint qos_cpucl0_lv[] = {0, 0, 6, 13};
 module_param_array(qos_cpucl0_lv, uint, NULL, 0644);

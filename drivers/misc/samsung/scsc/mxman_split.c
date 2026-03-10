@@ -94,10 +94,6 @@ static struct work_struct wlbtd_work;
 
 #include <scsc/scsc_warn.h>
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxman_split.c"
-#endif
-
 #include "wlbt_ramsd.h"
 
 #define STRING_BUFFER_MAX_LENGTH 512

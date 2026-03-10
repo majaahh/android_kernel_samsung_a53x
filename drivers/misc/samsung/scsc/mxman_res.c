@@ -62,10 +62,6 @@
 #include "scsc_log_in_dram.h"
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxman_res.c"
-#endif
-
 /* This values should be defined in the DTS.. so we may need to
  * provision some calls to platform driver */
 #define MX_DRAM_SIZE_SECTION_1 (8 * 1024 * 1024)

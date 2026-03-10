@@ -13,10 +13,6 @@
 #include <scsc/scsc_log_collector.h>
 #include "scsc_log_collector_mmap.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_log_collector_mmap.c"
-#endif
-
 #define DEVICE_NAME "scsc_log_collector"
 #define N_MINORS	1
 

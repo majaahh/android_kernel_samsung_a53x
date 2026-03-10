@@ -15,10 +15,6 @@
 #include <scsc/scsc_logring.h>
 #include <scsc/scsc_mx.h>
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_client_test.c"
-#endif
-
 struct scsc_mx_test {
 	/* scsc_service_client has to be the first */
 	struct scsc_service_client test_service_client;

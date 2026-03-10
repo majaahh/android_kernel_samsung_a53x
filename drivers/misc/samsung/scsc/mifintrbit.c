@@ -15,10 +15,6 @@
 /* Implements */
 #include "mifintrbit.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mifintrbit.c"
-#endif
-
 const char *wlbt_irq_types[48] = {
 	"DEFAULT_IRQ_TYPE",
 	"GDB_TRANSPORT_FXM_1_INPUT_TYPE",

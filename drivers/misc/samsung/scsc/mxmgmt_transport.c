@@ -17,9 +17,6 @@
 #include <linux/module.h>
 #include "mxmgmt_transport_format.h"
 #include "mifintrbit.h"
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxmgmt_transport.c"
-#endif
 
 /* Flag that an error has occurred so the I/O thread processing should stop */
 void mxmgmt_transport_set_error(struct mxmgmt_transport *mxmgmt_transport)

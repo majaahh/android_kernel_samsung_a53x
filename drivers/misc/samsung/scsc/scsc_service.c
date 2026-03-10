@@ -88,10 +88,6 @@ struct scsc_service {
 #endif
 };
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_service.c"
-#endif
-
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 enum scsc_subsystem scsc_service_id_subsystem_mapping(enum scsc_service_id id)
 {

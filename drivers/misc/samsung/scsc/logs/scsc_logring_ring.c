@@ -6,10 +6,6 @@
 
 #include "scsc_logring_ring.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "kunit/kunit_scsc_logring_ring.c"
-#endif
-
 #ifdef CONFIG_SCSC_STATIC_RING_SIZE
 static char a_ring[CONFIG_SCSC_STATIC_RING_SIZE + BASE_SPARE_SZ] __aligned(4);
 #endif

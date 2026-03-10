@@ -14,10 +14,6 @@
 #include "mxlog.h"
 #include "srvman.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxlog.c"
-#endif
-
 /*
  * Receive handler for messages from the FW along the maxwell management transport
  */

@@ -436,20 +436,6 @@ config SCSC_WLAN_TPUT_MONITOR
 	help
 	This option enables throughput monitor in Host
 
-config SCSC_WLAN_KUNIT_TEST
-	bool "Enable Kunit test"
-	default n
-	depends on KUNIT
-	help
-	  This option enables kunit test
-
-config RPS
-	bool "Enable RPS config"
-	default n
-	depends on SCSC_WLAN_KUNIT_TEST
-	help
-	  This option enables RPS configuration
-
 config SCSC_WLAN_TAS
 	bool "Enable WLAN TAS"
 	default n

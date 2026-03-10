@@ -9,10 +9,6 @@
 #include <scsc/scsc_log_collector.h>
 #include "scsc_log_collector_proc.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_log_collector_proc.c"
-#endif
-
 static struct proc_dir_entry *procfs_dir;
 
 static int log_collect_procfs_open_file_generic(struct inode *inode, struct file *file)

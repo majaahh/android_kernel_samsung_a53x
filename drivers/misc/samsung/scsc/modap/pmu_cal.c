@@ -8,10 +8,6 @@
 #include "modap/platform_mif_irq_api.h"
 #include "modap/platform_mif_regmap_api.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_pmu_cal.c"
-#endif
-
 /*  structure of pmucal_data */
 /*	struct pmucal_data{
  *		int accesstype;

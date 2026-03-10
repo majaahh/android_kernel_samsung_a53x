@@ -1,9 +1,5 @@
 #include "platform_mif_property_api.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "../kunit/kunit_platform_mif_property_api.c"
-#endif
-
 static bool platform_mif_wlbt_property_read_bool(struct scsc_mif_abs *interface, const char *propname)
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);

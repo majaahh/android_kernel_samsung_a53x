@@ -301,13 +301,6 @@ endif
 obj-$(CONFIG_SCSC_DBG_SAMPLER) += scsc_dbg_sampler.o
 scsc_dbg_sampler-y += mx_dbg_sampler.o
 
-ifeq ($(CONFIG_KUNIT),y)
-obj-$(CONFIG_WLBT_KUNIT)	+= kunit/
-ifeq ($(CONFIG_WLBT_KUNIT), y)
-export GCOV_PROFILE := y
-endif
-endif
-
 endif
 
 ifneq ($(CONFIG_SCSC_SEP_VERSION),0)

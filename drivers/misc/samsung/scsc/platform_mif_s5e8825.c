@@ -87,9 +87,6 @@
 #include "pmu_cal.h"
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_platform_mif_s5e8825.c"
-#endif
 static unsigned long sharedmem_base;
 static size_t sharedmem_size;
 
@@ -310,10 +307,6 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 		"PM QoS update request: %u. MIF %u INT %u CL0 %u CL1 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1);
 
 #if (KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE)
-#ifndef CONFIG_KUNIT
-	exynos_pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
-	exynos_pm_qos_update_request(&qos_req->pm_qos_req_int, table.freq_int);
-#endif
 	freq_qos_update_request(&qos_req->pm_qos_req_cl0, table.freq_cl0);
 	freq_qos_update_request(&qos_req->pm_qos_req_cl1, table.freq_cl1);
 #else
@@ -342,10 +335,6 @@ static int platform_mif_pm_qos_remove_request(struct scsc_mif_abs *interface, st
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS remove request\n");
 #if (KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE)
-#ifndef CONFIG_KUNIT
-	exynos_pm_qos_remove_request(&qos_req->pm_qos_req_mif);
-	exynos_pm_qos_remove_request(&qos_req->pm_qos_req_int);
-#endif
 	freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl0);
 	freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl1);
 #else
@@ -1751,11 +1740,6 @@ static int platform_mif_reset(struct scsc_mif_abs *interface, bool reset)
 	if (enable_platform_mif_arm_reset || !reset) {
 		if (!reset) { /* Release from reset */
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
-#ifndef CONFIG_KUNIT
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
-				"SOC_VERSION: product_id 0x%x, rev 0x%x\n",
-				exynos_soc_info.product_id, exynos_soc_info.revision);
-#endif
 #endif
 			power_supplies_on(platform);
 			ret = platform_mif_pmu_reset_release(interface);

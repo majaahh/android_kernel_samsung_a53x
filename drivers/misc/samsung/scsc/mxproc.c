@@ -32,10 +32,6 @@
 #endif
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxproc.c"
-#endif
-
 #ifndef AID_MXPROC
 #define AID_MXPROC 0
 #endif

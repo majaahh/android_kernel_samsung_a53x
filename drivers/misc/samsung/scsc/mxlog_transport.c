@@ -13,9 +13,6 @@
 #include "mifintrbit.h"
 /** Implements */
 #include "mxlog_transport.h"
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxlog_transport.c"
-#endif
 
 #define MXLOG_TRANSPORT_BUF_LENGTH (16 * 1024)
 #define MXLOG_TRANSPORT_PACKET_SIZE (4)

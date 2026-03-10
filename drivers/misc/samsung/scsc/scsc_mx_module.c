@@ -16,10 +16,6 @@
 #include "scsc_wlbtd.h"
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_mx_module.c"
-#endif
-
 #define SCSC_MX_CORE_MODDESC "mx140 Core Driver"
 
 struct clients_node {

@@ -30,10 +30,6 @@ MODULE_PARM_DESC(pmu_cmd_timeout, "PMU command timeout in seconds, default 1");
 /* Implements */
 #include "mifpmuman.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mifpmuman.c"
-#endif
-
 #if IS_ENABLED(CONFIG_SOC_S5E8825) || IS_ENABLED(CONFIG_SOC_S5E5515) \
 	|| IS_ENABLED(CONFIG_SOC_S5E8535) || IS_ENABLED(CONFIG_SOC_S5E8835) \
 	|| IS_ENABLED(CONFIG_SCSC_PCIE_CHIP) || IS_ENABLED(CONFIG_SOC_S5E8845) \

@@ -12,9 +12,6 @@
 #include <linux/slab.h>
 #include <scsc/scsc_logring.h>
 #include "mifintrbit.h"
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_gdb_transport.c"
-#endif
 
 struct clients_node {
 	struct list_head            list;

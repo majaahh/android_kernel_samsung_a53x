@@ -24,9 +24,6 @@
 #include "miframman.h"
 #include "mifintrbit.h"
 #include "mxmgmt_transport.h"
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxlogger_split.c"
-#endif
 
 static bool mxlogger_disabled;
 module_param(mxlogger_disabled, bool, S_IRUGO | S_IWUSR);

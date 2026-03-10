@@ -98,10 +98,6 @@ struct whdr {
 	struct delayed_work fw_crc_work;
 };
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_whdr.c"
-#endif
-
 /*
  * This function calulates and checks two or three (depending on crc32_over_binary flag)
  * crc32 values in the firmware header. The function will check crc32 over the firmware binary

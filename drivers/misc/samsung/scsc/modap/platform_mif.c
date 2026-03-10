@@ -17,10 +17,6 @@
 
 #include "linux/pm_qos.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "../kunit/kunit_platform_mif.c"
-#endif
-
 static bool fw_compiled_in_kernel;
 module_param(fw_compiled_in_kernel, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(fw_compiled_in_kernel, "Use FW compiled in kernel");

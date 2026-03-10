@@ -329,13 +329,6 @@ config WLBT_QOS_CPUFREQ_POLICY
 	help
 		check whether qos use cpufreq_policy struct
 
-config WLBT_KUNIT
-	tristate "Kunit test for Samsung WLBT"
-	depends on KUNIT
-	default n
-	help
-		Kunit test for Samsung WLBT.
-
 config SCSC_64KB_ALLIGNED_MEMLOG
 	bool "Enable this if memlog need to be 64KB address alligned."
 	default n

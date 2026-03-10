@@ -8,10 +8,6 @@
 #include "scsc_logring_main.h"
 #include "scsc_logring_debugfs.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_logring_debugfs.c"
-#endif
-
 static int  scsc_max_records_per_read = SCSC_DEFAULT_MAX_RECORDS_PER_READ;
 module_param(scsc_max_records_per_read, int, S_IRUGO | S_IWUSR);
 SCSC_MODPARAM_DESC(scsc_max_records_per_read,

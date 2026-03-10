@@ -3,10 +3,6 @@
 #include "modap/platform_mif_regmap_api.h"
 #include "mif_reg.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "../kunit/kunit_platform_mif_irq_api.c"
-#endif
-
 inline void platform_mif_reg_write(struct platform_mif *platform, u16 offset, u32 value)
 {
 	writel(value, platform->base + offset);

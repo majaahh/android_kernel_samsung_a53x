@@ -34,12 +34,6 @@ ifeq ($(CONFIG_SCSC_WLAN_HIP4_PROFILING),m)
 ccflags-y += -DCONFIG_SCSC_WLAN_HIP4_PROFILING
 endif
 
-ifeq ($(CONFIG_SCSC_WLAN_KUNIT_TEST),y)
-export GCOV_PROFILE := y
-
-obj-$(CONFIG_SCSC_WLAN_KUNIT_TEST) += ./kunit/
-
-else
 obj-$(CONFIG_SCSC_WLAN) += scsc_wlan.o
 
 ifeq ($(CONFIG_SCSC_WLAN_HIP5),y)
@@ -150,8 +144,6 @@ endif
 
 ifeq ($(CONFIG_SCSC_WLAN_GSCAN_ENABLE),y)
 scsc_wlan-$(CONFIG_SCSC_WLAN) += nl80211_vendor.o
-endif
-
 endif
 
 scsc_wifilogger-$(CONFIG_SCSC_WIFILOGGER_DEBUGFS) += scsc_wifilogger_debugfs.o

@@ -123,22 +123,6 @@ struct scsc_mx {
 #endif
 };
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_mx_impl.c"
-
-void scsc_mx_alloc(struct mxman *mxman)
-{
-	struct scsc_mx *mx = kzalloc(sizeof(*mx), GFP_KERNEL);
-	mxman->mx = mx;
-}
-
-void srvman_reset(struct scsc_mx *mx)
-{
-	pr_info("srvman : 0x%x\n", mx->srvman);
-	mx->srvman.error = true;
-}
-#endif
-
 struct scsc_mx *scsc_mx_create(struct scsc_mif_abs *mif)
 {
 	struct scsc_mx *mx;

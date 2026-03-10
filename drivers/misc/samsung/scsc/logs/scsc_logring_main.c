@@ -18,10 +18,6 @@
 #endif
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "kunit/kunit_scsc_logring_main.c"
-#endif
-
 /* Global module parameters */
 static int              cached_enable;
 static int              enable = DEFAULT_ENABLE_LOGRING;

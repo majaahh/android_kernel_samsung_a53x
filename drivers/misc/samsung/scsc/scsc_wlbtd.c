@@ -15,10 +15,6 @@
 
 #include "scsc_wlbtd.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_wlbtd.c"
-#endif
-
 /* In case of Morion2, cpu clock speed is lower than others */
 #if IS_ENABLED(CONFIG_SOC_S5E5515)
 #define MAX_TIMEOUT		100000 /* in milisecounds */

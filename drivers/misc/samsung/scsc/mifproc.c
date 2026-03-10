@@ -12,10 +12,6 @@
 #include "miframman.h"
 #include <scsc/scsc_warn.h>
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mifproc.c"
-#endif
-
 #define MX_MAX_PROC_RAMMAN 2	/* Number of RAMMANs to track */
 
 static struct proc_dir_entry *procfs_dir;

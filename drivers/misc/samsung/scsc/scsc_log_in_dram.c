@@ -15,10 +15,6 @@
 #include <scsc/scsc_mx.h>
 #include "scsc_log_in_dram.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_scsc_log_in_dram.c"
-#endif
-
 #define DEVICE_NAME "scsc_log_in_dram"
 #define N_MINORS 1
 #define SCSC_LOG_IN_DRAM_TIMEOUT 2000

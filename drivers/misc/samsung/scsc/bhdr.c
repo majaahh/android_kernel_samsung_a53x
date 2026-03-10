@@ -114,10 +114,6 @@ struct bhdr {
 
 #define bhdr_from_fwhdr_if(FWHDR_IF_PTR) container_of(FWHDR_IF_PTR, struct bhdr, fw_if)
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_bhdr.c"
-#endif
-
 /** Return the next item after a given item and decrement the remaining length */
 static const struct bhdr_tag_length *bhdr_next_item(const struct bhdr_tag_length *item, uint32_t *bhdr_length)
 {

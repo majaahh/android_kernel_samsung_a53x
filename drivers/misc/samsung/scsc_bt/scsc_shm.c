@@ -42,11 +42,6 @@
 #include "../scsc/mxlogger.h"
 #include "../scsc/srvman.h"
 
-#ifdef CONFIG_SCSC_BT_KUNIT_TEST
-#define copy_to_user(d, s, l)           (memcpy(d, s, l) != d)
-#define copy_from_user(d, s, l)         (memcpy(d, s, l) != d)
-#endif
-
 static struct scsc_bt_service *bt_svc = NULL;
 
 #define NUMBER_OF_HCI_EVT       (BSMHCP_USED_ENTRIES(bt_svc->mailbox_hci_evt_write, bt_svc->mailbox_hci_evt_read, BSMHCP_TRANSFER_RING_EVT_SIZE))

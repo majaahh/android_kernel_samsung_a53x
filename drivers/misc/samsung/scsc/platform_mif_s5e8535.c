@@ -90,10 +90,6 @@
 
 #include <soc/samsung/exynos/exynos-hvc.h>
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_platform_mif_s5e8535.c"
-#endif
-
 static unsigned long sharedmem_base;
 static size_t sharedmem_size;
 
@@ -1754,11 +1750,6 @@ static int platform_mif_reset(struct scsc_mif_abs *interface, bool reset)
 	if (enable_platform_mif_arm_reset || !reset) {
 		if (!reset) { /* Release from reset */
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
-#ifndef CONFIG_KUNIT
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
-				"SOC_VERSION: product_id 0x%x, rev 0x%x\n",
-				exynos_soc_info.product_id, exynos_soc_info.revision);
-#endif
 #endif
 			power_supplies_on(platform);
 			ret = platform_mif_pmu_reset_release(interface);

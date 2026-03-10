@@ -13,10 +13,6 @@
 /* Implements */
 #include "mifqos.h"
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit-test-mifqos.c"
-#endif
-
 int mifqos_init(struct mifqos *qos, struct scsc_mif_abs *mif)
 {
 	u8 i;

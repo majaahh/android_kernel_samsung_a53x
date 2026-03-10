@@ -17,10 +17,6 @@
 #include <scsc/scsc_log_collector.h>
 #endif
 
-#ifdef CONFIG_WLBT_KUNIT
-#include "./kunit/kunit_mxfwconfig.c"
-#endif
-
 #define MXFWCONFIG_CFG_SUBDIR	"common"
 #define MXFWCONFIG_CFG_FILE_HW	"common.hcf"
 #define MXFWCONFIG_CFG_FILE_SW	"common_sw.hcf"
