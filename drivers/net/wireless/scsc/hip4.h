@@ -69,14 +69,22 @@
 #define HIP4_WLAN_TX_SIZE	(HIP4_WLAN_TX_DAT_SIZE + HIP4_WLAN_TX_CTL_SIZE)
 /*** RX POOL ***/
 #define HIP4_WLAN_RX_OFFSET	(HIP4_WLAN_TX_CTL_OFFSET +  HIP4_WLAN_TX_CTL_SIZE)
-#ifdef CONFIG_SCSC_PCIE
-#define HIP4_WLAN_RX_SIZE	0x80000  /* 512 kB */
-#else
 #define HIP4_WLAN_RX_SIZE	0x100000 /* 1 MB */
-#endif
+
+#ifdef CONFIG_SCSC_WLAN_HOST_DPD
+#define HIP4_WLAN_DPD_BUF_OFFSET	(HIP4_WLAN_RX_OFFSET +  HIP4_WLAN_RX_SIZE)
+#define HIP4_WLAN_DPD_BUF_SIZE		0x80000 /* 512 KB */
+
 /*** TOTAL : CONFIG POOL + TX POOL + RX POOL ***/
 #define HIP4_WLAN_TOTAL_MEM	(HIP4_WLAN_CONFIG_SIZE + HIP4_WLAN_MIB_SIZE + \
-				 HIP4_WLAN_TX_SIZE + HIP4_WLAN_RX_SIZE) /* 2 MB + 104 KB*/
+				 HIP4_WLAN_TX_SIZE + HIP4_WLAN_RX_SIZE + HIP4_WLAN_DPD_BUF_SIZE) /* 2 MB + 104 KB + 512 KB */
+#else
+
+/*** TOTAL : CONFIG POOL + TX POOL + RX POOL ***/
+#define HIP4_WLAN_TOTAL_MEM	(HIP4_WLAN_CONFIG_SIZE + HIP4_WLAN_MIB_SIZE + \
+				 HIP4_WLAN_TX_SIZE + HIP4_WLAN_RX_SIZE) /* 2 MB + 104 KB */
+
+#endif
 
 #define HIP4_POLLING_MAX_PACKETS 512
 
@@ -84,6 +92,9 @@
 #define HIP4_DAT_SLOTS		(HIP4_WLAN_TX_DAT_SIZE / HIP4_DAT_MBULK_SIZE)
 #define HIP4_CTL_MBULK_SIZE	(2 * 1024)
 #define HIP4_CTL_SLOTS		(HIP4_WLAN_TX_CTL_SIZE / HIP4_CTL_MBULK_SIZE)
+
+/* external */
+#define SLSI_HIP_TX_DATA_SLOTS_NUM HIP4_DAT_SLOTS
 
 #define MIF_HIP_CFG_Q_NUM       6
 
@@ -160,7 +171,15 @@ struct hip4_hip_config_version_4 {
 #else
 	u8  reserved_nosmapper[99];
 #endif
+#ifdef CONFIG_SCSC_WLAN_HOST_DPD
+	u32 dpd_buf_loc;	 /* Host allocated DPD buffer Location in MIF_ADDR */
+	u32 dpd_buf_sz; 	 /* Host allocated DPD buffer Size in MIF_ADDR */
+	u8 intr_from_host_dpd;
+	u8 intr_to_host_dpd;
+	u8 reserved4[6];
+#else
 	u8  reserved4[16];
+#endif
 } __packed;
 
 struct hip4_hip_config_version_5 {
@@ -238,23 +257,37 @@ struct hip4_hip_control {
 	struct hip4_hip_q                q[MIF_HIP_CFG_Q_NUM] __aligned(64);
 } __aligned(4096);
 
-struct slsi_hip4;
-
+struct slsi_hip;
+#ifdef CONFIG_SCSC_WLAN_LOAD_BALANCE_MANAGER
+struct bh_struct;
+#endif
 /* This struct is private to the HIP implementation */
-struct hip4_priv {
+struct hip_priv {
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	/* NAPI CPU switch lock */
 	spinlock_t                   napi_cpu_lock;
+#ifndef CONFIG_SCSC_WLAN_LOAD_BALANCE_MANAGER
 	struct work_struct           intr_wq_napi_cpu_switch;
 	struct work_struct           intr_wq_ctrl;
 	struct tasklet_struct	     intr_tl_fb;
 	struct napi_struct           napi;
+#else
+	struct bh_struct	     *bh_dat;
+	struct bh_struct	     *bh_ctl;
+	struct bh_struct	     *bh_rfb;
+#ifdef CONFIG_SCSC_WLAN_LPC
+	struct bh_struct            *bh_lpc;
+#endif
+#endif
 	unsigned long                napi_state;
 	bool                         napi_perf_mode;
 	u8                           napi_rx_full_cnt;
 	u8                           napi_rx_saturated;
 #else
 	struct work_struct           intr_wq;
+#ifdef CONFIG_SCSC_WLAN_LOAD_BALANCE_MANAGER
+	struct bh_struct	     *bh_wq;
+#endif
 #endif
 	/* Interrupts cache < v4 */
 	/* TOHOST */
@@ -266,7 +299,7 @@ struct hip4_priv {
 	u32                          intr_fromhost;
 
 	/* For workqueue */
-	struct slsi_hip4             *hip;
+	struct slsi_hip             *hip;
 
 	/* Pool for data frames*/
 	u8                           host_pool_id_dat;
@@ -355,6 +388,12 @@ struct hip4_priv {
 	struct hip4_smapper_bank     smapper_banks[HIP4_SMAPPER_TOTAL_BANKS];
 	struct hip4_smapper_control  smapper_control;
 #endif
+
+#ifdef CONFIG_SCSC_WLAN_HOST_DPD
+	u8 intr_from_host_dpd;
+	u8 intr_to_host_dpd;
+#endif
+
 #ifdef CONFIG_SCSC_QOS
 	/* PM QoS control */
 	struct work_struct           pm_qos_work;
@@ -372,28 +411,6 @@ struct hip4_priv {
 };
 
 struct scsc_service;
-
-struct slsi_hip4 {
-	struct hip4_priv        *hip_priv;
-	struct hip4_hip_control *hip_control;
-	scsc_mifram_ref         hip_ref;
-};
-
-/* Public functions */
-int hip4_init(struct slsi_hip4 *hip);
-int hip4_setup(struct slsi_hip4 *hip);
-void hip4_suspend(struct slsi_hip4 *hip);
-void hip4_resume(struct slsi_hip4 *hip);
-void hip4_freeze(struct slsi_hip4 *hip);
-void hip4_deinit(struct slsi_hip4 *hip);
-int hip4_free_ctrl_slots_count(struct slsi_hip4 *hip);
-void hip4_set_napi_cpu(struct slsi_hip4 *hip, u8 napi_cpu, bool perf_mode);
-int scsc_wifi_transmit_frame(struct slsi_hip4 *hip, struct sk_buff *skb, bool ctrl_packet, u8 vif_index, u8 peer_index, u8 priority);
-#ifdef CONFIG_SCSC_WLAN_RX_NAPI
-void hip4_sched_wq_ctrl(struct slsi_hip4 *hip);
-#else
-void hip4_sched_wq(struct slsi_hip4 *hip);
-#endif
 
 /* Macros for accessing information stored in the hip_config struct */
 #define scsc_wifi_get_hip_config_version_4_u8(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_4 *)(buff_ptr))->member))

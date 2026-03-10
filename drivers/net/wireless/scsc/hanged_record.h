@@ -11,7 +11,7 @@
 #define HANGED_HOST_VERSION_SIZE	(64)
 #define HANGED_VERSION_SIZE		(4)
 #define HANGED_FW_PANIC_SIZE		(4)
-#define HANGED_OFFSET_SIZE		(4)
+#define HANGED_OFFSET_SIZE		(5)
 #define HANGED_RESERVED			(3)
 #define HANGED_PANIC_RECORD_COUNT       (145)
 #define HANGED_PANIC_RECORD_SIZE        ((HANGED_PANIC_RECORD_COUNT) * sizeof(scsc_fw_record_t))

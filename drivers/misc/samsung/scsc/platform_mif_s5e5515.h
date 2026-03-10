@@ -10,6 +10,12 @@
 #include <scsc/scsc_logring.h>
 #include "platform_mif.h"
 
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
+#include <soc/samsung/exynos-itmon.h>
+#endif
+
+#include <soc/samsung/debug-snapshot.h>
+
 struct platform_mif {
 	struct scsc_mif_abs    interface;
 	struct scsc_mbox_s     *mbox;
@@ -103,6 +109,11 @@ struct platform_mif {
 
 	uintptr_t remap_addr_wlan;
 	uintptr_t remap_addr_wpan;
+
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
+        struct notifier_block itmon_nb;
+#endif
+
 };
 
 void platform_cfg_req_irq_clean_pending(struct platform_mif *platform);

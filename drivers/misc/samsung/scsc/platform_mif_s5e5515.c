@@ -10,6 +10,9 @@
 
 /* Interfaces it Uses */
 
+#include <linux/mfd/samsung/s2mpw03.h>
+#include <linux/i2c.h>
+
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -62,7 +65,13 @@
 #endif
 
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/debug-snapshot.h>
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 #include <soc/samsung/debug-snapshot.h>
+#else
+#include <linux/debug-snapshot.h>
+#endif
 #endif
 
 #ifdef CONFIG_SCSC_WLBT_CFG_REQ_WQ
@@ -70,9 +79,12 @@
 #endif
 
 #if IS_ENABLED(CONFIG_SCSC_MEMLOG)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/memlogger.h>
+#else
 #include <soc/samsung/memlogger.h>
 #endif
-
+#endif
 
 #ifdef CONFIG_WLBT_AUTOGEN_PMUCAL
 #include "pmu_cal.h"
@@ -170,7 +182,7 @@ static int platform_mif_parse_qos(struct platform_mif *platform, struct device_n
 	platform->qos_enabled = false;
 
 	len = of_property_count_u32_elems(np, "qos_table");
-	if (!(len == 15)) {
+	if (!(len == 9)) {
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 			  "No qos table for wlbt, or incorrect size\n");
 		return -ENOENT;
@@ -182,7 +194,7 @@ static int platform_mif_parse_qos(struct platform_mif *platform, struct device_n
 
 	of_property_read_u32_array(np, "qos_table", (unsigned int *)platform->qos, len);
 
-	for (i = 0; i < len / 4; i++) {
+	for (i = 0; i < len * 4 / sizeof(struct qos_table); i++) {
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "QoS Table[%d] mif : %u int : %u cl0 : %u\n", i,
 			platform->qos[i].freq_mif,
 			platform->qos[i].freq_int,
@@ -275,7 +287,7 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 		return -ENODEV;
 
 	if (!platform->qos_enabled) {
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS not configured\n");
+		SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "PM QoS not configured\n");
 		return -EOPNOTSUPP;
 	}
 
@@ -456,9 +468,36 @@ irqreturn_t platform_wdog_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void wlbt_regdump(struct platform_mif *platform)
+static void platform_wlbt_regdump(struct scsc_mif_abs *interface)
 {
+	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
+
 	u32 val = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&platform->mif_spinlock, flags);
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR0 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR0)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR0 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR0)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR0 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR0)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR0 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR0)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR0 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR0)));
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR1 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR1 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR1 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR1 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR1 0x%08x\n",
+			platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR1)));
 
 	regmap_read(platform->pmureg, WLBT_STAT, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "WLBT_STAT 0x%x\n", val);
@@ -502,11 +541,31 @@ static void wlbt_regdump(struct platform_mif *platform)
 	regmap_read(platform->pmureg, WLBT_INT_DIR, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "WLBT_INT_DIR 0x%x\n", val);
 
+	regmap_read(platform->pmureg, WLBT_BT_OUT, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "BT_OUT 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_BT_INT_IN, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_BT_INT_IN 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_BT_INT_EN, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_BT_INT_EN 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_BT_INT_TYPE, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_BT_INT_TYPE 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_BT_INT_DIR, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_BT_INT_DIR 0x%x\n", val);
+
 	regmap_read(platform->pmureg, SYSTEM_OUT, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "SYSTEM_OUT 0x%x\n", val);
 
-	regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+	regmap_read(platform->pmureg, MIF_OUT, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "MIF_OUT 0x%x\n", val);
+
+	regmap_read(platform->pmureg, VGPIO_TX_MONITOR, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "VGPIO_TX_MONITOR 0x%x\n", val);
+
+	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
 }
 
 /*
@@ -1949,6 +2008,93 @@ uint32_t ka_patch[] = {
 	0x00000001
 };
 
+static void wlbt_karam_dump(struct platform_mif *platform)
+{
+	unsigned int ka_addr = PMU_BOOT_RAM_START;
+	unsigned int val;
+	unsigned int ka_addr_end;
+
+	if (platform->ka_patch_fw && !fw_compiled_in_kernel)
+		ka_addr_end = ka_addr + platform->ka_patch_len;
+	else
+		ka_addr_end = ka_addr + sizeof(ka_patch);
+
+	SCSC_TAG_INFO(PLAT_MIF, "Print KARAM area START:0x%p END:0x%p\n", ka_addr, ka_addr_end);
+
+	regmap_write(platform->boot_cfg, PMU_BOOT, PMU_BOOT_AP_ACC);
+
+	while (ka_addr < ka_addr_end) {
+		regmap_read(platform->boot_cfg, ka_addr, &val);
+		SCSC_TAG_INFO(PLAT_MIF, "0x%08x: 0x%08x\n", ka_addr, val);
+		ka_addr += (unsigned int)sizeof(*ka_patch);
+	}
+
+	regmap_write(platform->boot_cfg, PMU_BOOT, PMU_BOOT_PMU_ACC);
+}
+
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
+static int wlbt_itmon_notifier(struct notifier_block *nb,
+		unsigned long action, void *nb_data)
+{
+	struct platform_mif *platform = container_of(nb, struct platform_mif, itmon_nb);
+	int ret = NOTIFY_DONE;
+	struct itmon_notifier *itmon_data = (struct itmon_notifier *)nb_data;
+
+	if(!itmon_data) {
+		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "itmon_data is NULL");
+		goto error_exit;
+	}
+
+	if (itmon_data->dest &&
+		(!strncmp("WLBT", itmon_data->dest, sizeof("WLBT") - 1))) {
+		platform_wlbt_regdump(&platform->interface);
+		if((itmon_data->target_addr >= PMU_BOOT_RAM_START)
+			&& (itmon_data->target_addr <= PMU_BOOT_RAM_END))
+			wlbt_karam_dump(platform);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+		ret = ITMON_S2D_MASK;
+#else
+		ret = NOTIFY_BAD;
+#endif
+	} else if (itmon_data->port &&
+		(!strncmp("WLBT", itmon_data->port, sizeof("WLBT") - 1))) {
+		platform_wlbt_regdump(&platform->interface);
+		if (platform->mem_start)
+			SCSC_TAG_INFO(PLAT_MIF, "Physical mem_start addr: 0x%lx\n", platform->mem_start);
+#if IS_ENABLED(CONFIG_SCSC_MEMLOG)
+        	if (platform->paddr)
+			SCSC_TAG_INFO(PLAT_MIF, "Physical memlog_start addr: 0x%lx\n", platform->paddr);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+		SCSC_TAG_INFO(PLAT_MIF, "ITMON Type: %d, Error code: %d\n", itmon_data->read, itmon_data->errcode);
+		ret = ((!itmon_data->read) && (itmon_data->errcode == ITMON_ERRCODE_DECERR)) ? ITMON_SKIP_MASK : NOTIFY_OK;
+#else
+		ret = NOTIFY_OK;
+#endif
+	} else if (itmon_data->master &&
+		(!strncmp("WLBT", itmon_data->master, sizeof("WLBT") - 1))) {
+		platform_wlbt_regdump(&platform->interface);
+		if (platform->mem_start)
+			SCSC_TAG_INFO(PLAT_MIF, "Physical mem_start addr: 0x%lx\n", platform->mem_start);
+#if IS_ENABLED(CONFIG_SCSC_MEMLOG)
+        	if (platform->paddr)
+			SCSC_TAG_INFO(PLAT_MIF, "Physical memlog_start addr: 0x%lx\n", platform->paddr);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+		SCSC_TAG_INFO(PLAT_MIF, "ITMON Type: %d, Error code: %d\n", itmon_data->read, itmon_data->errcode);
+		ret = ((!itmon_data->read) && (itmon_data->errcode == ITMON_ERRCODE_DECERR)) ? ITMON_SKIP_MASK : NOTIFY_OK;
+#else
+		ret = NOTIFY_OK;
+#endif
+	}
+
+error_exit:
+	return ret;
+}
+#endif
+
+
+
 void platform_cfg_req_irq_clean_pending(struct platform_mif *platform)
 {
 	int irq;
@@ -2259,24 +2405,7 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 	struct platform_mif *platform = (struct platform_mif *)data;
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INT received, boot_state = %u\n", platform->boot_state);
-#if 0
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "disable_irq\n");
 
-	/* mask the irq */
-	disable_irq_nosync(platform->wlbt_irq[PLATFORM_MIF_CFG_REQ].irq_num);
-	/* Was the CFG_REQ irq received from WLBT before we expected it?
-	 * Typically this indicates an issue returning WLBT HW to reset.
-	 */
-	if (platform->boot_state != WLBT_BOOT_WAIT_CFG_REQ) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Spurious CFG_REQ IRQ from WLBT!\n");
-		wlbt_regdump(platform);
-
-		//reset_failed = true; /* prevent further interaction with HW */
-
-		goto cfg_error;
-	}
-#endif
 	if (platform->boot_state == WLBT_BOOT_WAIT_CFG_REQ) {
 #ifdef CONFIG_SCSC_WLBT_CFG_REQ_WQ
 		/* it is executed on process context. */
@@ -2286,13 +2415,15 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 		platform_set_wlbt_regs(platform);
 #endif
 	} else {
-		/* platform->boot_state = WLBT_BOOT_CFG_DONE; */
-		if (platform->pmu_handler != platform_mif_irq_default_handler)
-			platform->pmu_handler(irq, platform->irq_dev_pmu);
-		else
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "MIF PMU Interrupt Handler not registered\n");
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Updated BOOT_CFG_ACK\n");
-		regmap_write(platform->boot_cfg, PMU_BOOT_ACK, PMU_BOOT_COMPLETE);
+		if (platform->boot_state != WLBT_BOOT_IN_RESET) {
+			/* platform->boot_state = WLBT_BOOT_CFG_DONE; */
+			if (platform->pmu_handler != platform_mif_irq_default_handler)
+				platform->pmu_handler(irq, platform->irq_dev_pmu);
+			else
+				SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "MIF PMU Interrupt Handler not registered\n");
+			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Updated BOOT_CFG_ACK\n");
+			regmap_write(platform->boot_cfg, PMU_BOOT_ACK, PMU_BOOT_COMPLETE);
+		}
 	}
 #if 0
 cfg_error:
@@ -2411,7 +2542,7 @@ static int platform_mif_start_wait_for_cfg_ack_completion(struct scsc_mif_abs *i
 	/* At this point WLBT should assert the CFG_REQ IRQ, so wait for it */
 	if (wait_for_completion_timeout(&platform->cfg_ack, WLBT_BOOT_TIMEOUT) == 0) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Timeout waiting for CFG_REQ IRQ\n");
-		wlbt_regdump(platform);
+		platform_wlbt_regdump(interface);
 		return -ETIMEDOUT;
 	}
 
@@ -2613,7 +2744,7 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 		regmap_read(platform->pmureg, WLBT_STATES, &v);
 		SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for power on time-out: "
 					"WLBT_STATUS 0x%x, WLBT_STATES 0x%x\n", val, v);
-		wlbt_regdump(platform);
+		platform_wlbt_regdump(interface);
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT) && defined(GO_S2D_ID)
 		if (enable_scandump_wlbt_status_timeout) {
 			SCSC_TAG_ERR(PLAT_MIF, "Triggers SCAN2DRAM");
@@ -2903,6 +3034,7 @@ static int platform_mif_reset(struct scsc_mif_abs *interface, bool reset)
 	} else
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Not resetting ARM Cores - enable_platform_mif_arm_reset: %d\n",
 			 enable_platform_mif_arm_reset);
+
 	return ret;
 }
 
@@ -2924,7 +3056,7 @@ static void __iomem *platform_mif_map_region(unsigned long phys_addr, size_t siz
 #else
 	/* Reserve the table statically, but make sure .dts doesn't exceed it */
 	{
-		static struct page *mif_map_pages[(MIFRAMMAN_MAXMEM >> PAGE_SHIFT) * sizeof(*pages)];
+		static struct page *mif_map_pages[MIFRAMMAN_MAXMEM >> PAGE_SHIFT];
 
 		pages = mif_map_pages;
 
@@ -3278,6 +3410,34 @@ static void platform_mif_irq_unreg_handler_wpan(struct scsc_mif_abs *interface)
 	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
 }
 
+static void platform_mif_set_ldo_radio(struct scsc_mif_abs *interface, u8 radio)
+{
+	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
+	struct i2c_client *client;
+	struct platform_device *pdev;
+	struct device *dev;
+	int ret;
+	unsigned char val;
+
+	pdev = platform->pdev;
+	dev = &pdev->dev;
+	client = to_i2c_client(dev);
+	client->addr = 0x1;
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Setting RADIO %s\n", radio == S615? "S615":"S620");
+	if (radio == S620) {
+		ret = s2mpw03_write_reg(client, 0x4B, 0x7C);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "write_reg ret : %d\n", ret);
+		ret = s2mpw03_read_reg(client, 0x4B, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "read_reg ret : %d, val : 0x%x\n", ret, val);
+	} else if (radio == S615) {
+		ret = s2mpw03_write_reg(client, 0x4B, 0x5C);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "write_reg ret : %d\n", ret);
+		ret = s2mpw03_read_reg(client, 0x4B, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "read_reg ret : %d, val : 0x%x\n", ret, val);
+	}
+}
+
 static void platform_mif_irq_reg_reset_request_handler(struct scsc_mif_abs *interface, void (*handler)(int irq, void *data), void *dev)
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
@@ -3377,6 +3537,29 @@ static int platform_load_pmu_fw(struct scsc_mif_abs *interface, u32 *ka_patch, s
 	memcpy(platform->ka_patch_fw, ka_patch, ka_patch_len);
 	platform->ka_patch_len = ka_patch_len;
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "load_pmu_fw sz %u done\n", ka_patch_len);
+	return 0;
+}
+
+static int platform_load_pmu_fw_flags(struct scsc_mif_abs *interface, u32 *ka_patch, size_t ka_patch_len, u32 flags)
+{
+	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
+
+	if (platform->ka_patch_fw) {
+		SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "ka_patch already allocated\n");
+		devm_kfree(platform->dev, platform->ka_patch_fw);
+	}
+
+	platform->ka_patch_fw = devm_kzalloc(platform->dev, ka_patch_len, GFP_KERNEL);
+
+	if (!platform->ka_patch_fw) {
+		SCSC_TAG_WARNING_DEV(PLAT_MIF, platform->dev, "Unable to allocate 0x%x\n", ka_patch_len);
+		return -ENOMEM;
+	}
+
+	memcpy(platform->ka_patch_fw, ka_patch, ka_patch_len);
+	*(uint *)platform->ka_patch_fw = flags;
+	platform->ka_patch_len = ka_patch_len;
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "load_pmu_fw sz %u done, flags 0x%x\n", ka_patch_len, flags);
 	return 0;
 }
 
@@ -3524,28 +3707,6 @@ static int platform_mif_read_register(struct scsc_mif_abs *interface, u64 id, u3
 	return -EIO;
 }
 
-static void platform_mif_dump_register(struct scsc_mif_abs *interface)
-{
-	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-	unsigned long       flags;
-
-	spin_lock_irqsave(&platform->mif_spinlock, flags);
-
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR0)));
-
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR1)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR1)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR1)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR1)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR1)));
-
-	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
-}
-
 inline void platform_int_debug(struct platform_mif *platform)
 {
 	int i;
@@ -3565,7 +3726,7 @@ inline void platform_int_debug(struct platform_mif *platform)
 			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "IRQCHIP_STATE %d(%s): pending %d, active %d, masked %d\n",
 							  irq, irqs_name[i], pending, active, masked);
 	}
-	platform_mif_dump_register(&platform->interface);
+	platform_wlbt_regdump(&platform->interface);
 }
 
 static void platform_mif_cleanup(struct scsc_mif_abs *interface)
@@ -3609,6 +3770,7 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform_if->destroy = platform_mif_destroy;
 	platform_if->get_uid = platform_mif_get_uid;
 	platform_if->reset = platform_mif_reset;
+	platform_if->wlbt_regdump = platform_wlbt_regdump;
 	platform_if->map = platform_mif_map;
 	platform_if->unmap = platform_mif_unmap;
 	platform_if->irq_bit_set = platform_mif_irq_bit_set;
@@ -3633,7 +3795,7 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform_if->get_mifram_phy_ptr = platform_mif_get_mifram_phy_ptr;
 	platform_if->get_mif_device = platform_mif_get_mif_device;
 	platform_if->irq_clear = platform_mif_irq_clear;
-	platform_if->mif_dump_registers = platform_mif_dump_register;
+	platform_if->mif_dump_registers = platform_wlbt_regdump;
 	platform_if->mif_read_register = platform_mif_read_register;
 	platform_if->mif_cleanup = platform_mif_cleanup;
 	platform_if->mif_restart = platform_mif_restart;
@@ -3657,9 +3819,12 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform_if->get_mbox_pmu = platform_mif_get_mbox_pmu;
 	platform_if->set_mbox_pmu = platform_mif_set_mbox_pmu;
 	platform_if->load_pmu_fw = platform_load_pmu_fw;
+	platform_if->load_pmu_fw_flags = platform_load_pmu_fw_flags;
 	platform_if->irq_reg_pmu_handler = platform_mif_irq_reg_pmu_handler;
 	platform->pmu_handler = platform_mif_irq_default_handler;
 	platform->irq_dev_pmu = NULL;
+	/* LDO voltage */
+	platform_if->set_ldo_radio = platform_mif_set_ldo_radio;
 	/* Reset ka_patch pointer & size */
 	platform->ka_patch_fw = NULL;
 	platform->ka_patch_len = 0;
@@ -3677,17 +3842,19 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform->suspendresume_data = NULL;
 
 #ifdef CONFIG_OF_RESERVED_MEM
-	if(!sharedmem_base){
-		struct device_node * np;
+	if (!sharedmem_base) {
+		struct device_node *np;
+
 		np = of_parse_phandle(platform->dev->of_node, "memory-region", 0);
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "module build register sharedmem np %x\n",np);
-		if(np){
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+				  "module build register sharedmem np %x\n", np);
+		if (np && of_reserved_mem_lookup(np)) {
 			platform->mem_start = of_reserved_mem_lookup(np)->base;
 			platform->mem_size = of_reserved_mem_lookup(np)->size;
 		}
-	}
-	else{
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "built-in register sharedmem \n");
+	} else {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+				  "built-in register sharedmem\n");
 		platform->mem_start = sharedmem_base;
 		platform->mem_size = sharedmem_size;
 	}
@@ -3880,6 +4047,11 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 #endif
 	/* Initialize spinlock */
 	spin_lock_init(&platform->mif_spinlock);
+
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
+	platform->itmon_nb.notifier_call = wlbt_itmon_notifier;
+	itmon_notifier_chain_register(&platform->itmon_nb);
+#endif
 
 #ifdef CONFIG_SCSC_WLBT_CFG_REQ_WQ
 	platform->cfgreq_workq = create_singlethread_workqueue("wlbt_cfg_reg_work");

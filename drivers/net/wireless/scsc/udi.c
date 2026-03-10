@@ -7,6 +7,7 @@
 #include <linux/sysfs.h>
 #include <linux/poll.h>
 #include <linux/cdev.h>
+#include <scsc/scsc_warn.h>
 
 #include "dev.h"
 
@@ -67,11 +68,11 @@ struct slsi_cdev {
 };
 
 struct udi_signal_header {
-		__le16 id;
-		__le16 receiver_pid;
-		__le16 sender_pid;
-		__le32 fw_reference;
-		__le16 vif;
+        __le16 id;
+        __le16 receiver_pid;
+        __le16 sender_pid;
+        __le32 fw_reference;
+        __le16 vif;
 } __packed;
 
 struct slsi_cdev_client {
@@ -113,8 +114,8 @@ static inline struct sk_buff *udi_signal_alloc_skb(size_t sig_size, size_t data_
 	struct sk_buff                *skb = alloc_skb(sig_size + data_size, GFP_ATOMIC);
 	struct udi_signal_header      *header;
 
-	WARN_ON(sig_size < sizeof(struct udi_signal_header));
-	if (WARN_ON(!skb))
+	WLBT_WARN_ON(sig_size < sizeof(struct udi_signal_header));
+	if (WLBT_WARN_ON(!skb))
 		return NULL;
 
 	slsi_skb_cb_init(skb)->sig_length = sig_size;
@@ -169,14 +170,14 @@ int slsi_kernel_to_user_space_event(struct slsi_log_client *log_client, u16 even
 	struct sk_buff          *skb;
 	int                     ret;
 
-	if (WARN_ON(!client))
+	if (WLBT_WARN_ON(!client))
 		return -EINVAL;
 
 	if (!client->log_allow_driver_signals)
 		return 0;
 
 	skb = udi_signal_alloc_skb(sizeof(struct udi_signal_header), data_length, event, 0, __FILE__, __LINE__);
-	if (WARN_ON(!skb))
+	if (WLBT_WARN_ON(!skb))
 		return -ENOMEM;
 
 	if (data_length)
@@ -360,6 +361,7 @@ static ssize_t slsi_cdev_write(struct file *filp, const char *p, size_t len, lof
 	struct sk_buff          *skb;
 	u8                      *data;
 	struct slsi_skb_cb	*cb;
+	u16 sig_len;
 
 	SLSI_UNUSED_PARAMETER(poff);
 
@@ -394,7 +396,16 @@ static ssize_t slsi_cdev_write(struct file *filp, const char *p, size_t len, lof
 	}
 
 	cb = slsi_skb_cb_init(skb);
-	cb->sig_length = fapi_get_expected_size(skb);
+
+	/* If first two octets of fw_ref are non-0, use that for signal length
+	 * else use the look up table for signal length
+	*/
+	sig_len = (u16)fapi_get_fwref(skb);
+	if (sig_len)
+		cb->sig_length = sig_len;
+	else
+		cb->sig_length = fapi_get_expected_size(skb);
+
 	cb->data_length = skb->len;
 
 	/* F/w will panic if fw_reference is not zero. */
@@ -409,6 +420,13 @@ static ssize_t slsi_cdev_write(struct file *filp, const char *p, size_t len, lof
 
 	/* In WlanLite test mode req signals IDs are 0x1000, 0x1002, 0x1004 */
 	if (slsi_is_test_mode_enabled() || fapi_is_req(skb) || fapi_is_res(skb)) {
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		if (scsc_mx_service_claim(WLAN_UDI)) {
+			SLSI_ERR(sdev, "Failed to get the PCIe link\n");
+			kfree_skb(skb);
+			return -EFAULT;
+		}
+#endif
 		/* Use the range of PIDs allocated to the udi clients */
 		client->tx_sender_id++;
 		if (client->tx_sender_id > SLSI_TX_PROCESS_ID_UDI_MAX)
@@ -420,12 +438,21 @@ static ssize_t slsi_cdev_write(struct file *filp, const char *p, size_t len, lof
 		if (fapi_is_ma(skb)) {
 			if (slsi_tx_data_lower(sdev, skb)) {
 				kfree_skb(skb);
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+				scsc_mx_service_release(WLAN_UDI);
+#endif
 				return -EINVAL;
 			}
 		} else if (slsi_tx_control(sdev, NULL, skb)) {
 			kfree_skb(skb);
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+			scsc_mx_service_release(WLAN_UDI);
+#endif
 			return -EINVAL;
 		}
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		scsc_mx_service_release(WLAN_UDI);
+#endif
 	} else if (slsi_hip_rx(sdev, skb)) {
 		kfree_skb(skb);
 		return -EINVAL;
@@ -463,8 +490,8 @@ static long slsi_unifi_set_mib(struct slsi_dev *sdev, unsigned long arg)
 		return -EFAULT;
 	}
 	/* check if length is valid */
-	if (unlikely(mib_data_length > UDI_MIB_SET_LEN_MAX || mib_data_size > UDI_MIB_SET_LEN_MAX || mib_data_length > mib_data_size)) {
-		SLSI_ERR(sdev, "UNIFI_SET_MIB: size too long or mib_data_length is invalid (mib_data_length:%u mib_data_size:%u)\n", mib_data_length, mib_data_size);
+	if (unlikely(mib_data_length > UDI_MIB_SET_LEN_MAX || mib_data_size > UDI_MIB_SET_LEN_MAX)) {
+		SLSI_ERR(sdev, "UNIFI_SET_MIB: size too long (mib_data_length:%u mib_data_size:%u)\n", mib_data_length, mib_data_size);
 		return -EFAULT;
 	}
 
@@ -532,8 +559,8 @@ static long slsi_unifi_get_mib(struct slsi_dev *sdev, unsigned long arg)
 	}
 
 	/* check if length is valid */
-	if (unlikely(mib_data_length > UDI_MIB_GET_LEN_MAX || mib_data_size > UDI_MIB_GET_LEN_MAX || mib_data_length > mib_data_size)) {
-		SLSI_ERR(sdev, "UNIFI_GET_MIB: size too long or mib_data_length is invalid (mib_data_length:%u mib_data_size:%u)\n", mib_data_length, mib_data_size);
+	if (unlikely(mib_data_length > UDI_MIB_GET_LEN_MAX || mib_data_size > UDI_MIB_GET_LEN_MAX)) {
+		SLSI_ERR(sdev, "UNIFI_GET_MIB: size too long (mib_data_length:%u mib_data_size:%u)\n", mib_data_length, mib_data_size);
 		return -EFAULT;
 	}
 
@@ -853,11 +880,11 @@ static int udi_log_event(struct slsi_log_client *log_client, struct sk_buff *skb
 	struct udi_msg_t        *msg_skb;
 	u16                     signal_id = fapi_get_sigid(skb);
 
-	if (WARN_ON(!client))
+	if (WLBT_WARN_ON(!client))
 		return -EINVAL;
-	if (WARN_ON(!skb))
+	if (WLBT_WARN_ON(!skb))
 		return -EINVAL;
-	if (WARN_ON(skb->len == 0))
+	if (WLBT_WARN_ON(skb->len == 0))
 		return -EINVAL;
 
 	/* Special Filtering of MaPacket frames */
@@ -865,7 +892,11 @@ static int udi_log_event(struct slsi_log_client *log_client, struct sk_buff *skb
 	    (signal_id == MA_UNITDATA_REQ || signal_id == MA_UNITDATA_IND)) {
 		SLSI_DBG4_NODEV(SLSI_UDI, "FILTER(0x%.4X) DROP\n", signal_id);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+		if (down_trylock(&client->log_mutex)) {
+#else
 		if (down_interruptible(&client->log_mutex)) {
+#endif
 			SLSI_WARN_NODEV("Failed to get udi sem\n");
 			return -ERESTARTSYS;
 		}
@@ -882,7 +913,11 @@ static int udi_log_event(struct slsi_log_client *log_client, struct sk_buff *skb
 	if (dir == UDI_CONFIG_IND)
 		goto allow_config_frame;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+	if (down_trylock(&client->log_mutex)) {
+#else
 	if (down_interruptible(&client->log_mutex)) {
+#endif
 		SLSI_WARN_NODEV("Failed to get udi sem\n");
 		return -ERESTARTSYS;
 	}
@@ -939,7 +974,7 @@ allow_config_frame:
 		struct slsi_skb_cb  *cb;
 		struct sk_buff *skb2 = alloc_skb(sizeof(msg) + client->ma_unitdata_size_limit, GFP_ATOMIC);
 
-		if (WARN_ON(!skb2))
+		if (WLBT_WARN_ON(!skb2))
 			return -ENOMEM;
 
 		skb_reserve(skb2, sizeof(msg));
@@ -950,7 +985,7 @@ allow_config_frame:
 		skb = skb2;
 	} else {
 		skb = skb_copy_expand(skb, sizeof(msg), 0, GFP_ATOMIC);
-		if (WARN_ON(!skb))
+		if (WLBT_WARN_ON(!skb))
 			return -ENOMEM;
 	}
 
@@ -982,9 +1017,6 @@ static const struct file_operations slsi_cdev_fops = {
 	.compat_ioctl   = slsi_cdev_ioctl,
 	.poll           = slsi_cdev_poll,
 };
-
-#define UF_DEVICE_CREATE(_class, _parent, _devno, _priv, _fmt, _args)       \
-	device_create(_class, _parent, _devno, _priv, _fmt, _args)
 
 #ifndef SLSI_TEST_DEV
 static int slsi_get_minor(void)

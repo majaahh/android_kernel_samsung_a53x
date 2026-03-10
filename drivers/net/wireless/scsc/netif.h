@@ -1,6 +1,6 @@
 /*****************************************************************************
  *
- * Copyright (c) 2012 - 2020 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2012 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 
@@ -52,14 +52,22 @@
 
 #define SLSI_NETIF_Q_PER_PEER   4
 
+/* From HIP5 the signal is not inlined with payload anymore.
+ * there is no need of a large headroom.
+ */
+#ifdef CONFIG_SCSC_WLAN_HIP5
+/* sizeof ma_unitdata_req [36] (needed for Host only) + reserved[28]  */
+#define SLSI_NETIF_SKB_HEADROOM (64)
+#else
 /* sizeof ma_unitdata_req [36] + pad [30] + pad_words [2]  */
 #define SLSI_NETIF_SKB_HEADROOM (68 + 160)
+#endif
 #define SLSI_NETIF_SKB_TAILROOM 0
 #define SLSI_SYS_ERROR_RECOVERY_TIMEOUT  1000 /* 1s timeout */
 
 static inline u16 slsi_netif_get_peer_queue(s16 queueset, s16 ac)
 {
-	WARN_ON(ac > SLSI_NETIF_Q_PER_PEER);
+	WLBT_WARN_ON(ac > SLSI_NETIF_Q_PER_PEER);
 	return SLSI_NETIF_Q_PEER_START + (queueset * SLSI_NETIF_Q_PER_PEER) + ac;
 }
 
@@ -71,7 +79,7 @@ static inline unsigned short slsi_netif_get_qs_from_queue(short queue, short ac)
 
 static inline u16 slsi_netif_get_multicast_queue(s16 ac)
 {
-	WARN_ON(ac > SLSI_NETIF_Q_PER_PEER);
+	WLBT_WARN_ON(ac > SLSI_NETIF_Q_PER_PEER);
 	return SLSI_NETIF_Q_MULTICAST_START + ac;
 }
 
@@ -93,18 +101,18 @@ struct slsi_peer;
 
 int slsi_netif_init(struct slsi_dev *sdev);
 /* returns the index or -E<error> code */
-int slsi_netif_dynamic_iface_add(struct slsi_dev *sdev, const char *name);
-int slsi_netif_register(struct slsi_dev *sdev, struct net_device *dev);
-int slsi_netif_register_rtlnl_locked(struct slsi_dev *sdev, struct net_device *dev);
-void slsi_netif_remove(struct slsi_dev *sdev, struct net_device *dev);
-void slsi_netif_remove_rtlnl_locked(struct slsi_dev *sdev, struct net_device *dev);
-void slsi_netif_remove_all(struct slsi_dev *sdev);
-void slsi_netif_deinit(struct slsi_dev *sdev);
+int slsi_netif_dynamic_iface_add(struct slsi_dev *sdev, const char *name, enum nl80211_iftype type);
+int slsi_netif_register(struct slsi_dev *sdev, struct net_device *dev, bool is_cfg80211);
+int slsi_netif_register_rtlnl_locked(struct slsi_dev *sdev, struct net_device *dev, bool is_cfg80211);
+void slsi_netif_remove(struct slsi_dev *sdev, struct net_device *dev, bool is_cfg80211);
+void slsi_netif_remove_rtlnl_locked(struct slsi_dev *sdev, struct net_device *dev,  bool is_cfg80211);
+void slsi_netif_remove_all(struct slsi_dev *sdev, bool is_cfg80211);
+void slsi_netif_deinit(struct slsi_dev *sdev, bool is_cfg80211);
 void slsi_tdls_move_packets(struct slsi_dev *sdev, struct net_device *dev,
 			    struct slsi_peer *sta_peer, struct slsi_peer *tdls_peer, bool connection);
-void slsi_netif_remove_locked(struct slsi_dev *sdev, struct net_device *dev);
+void slsi_netif_remove_locked(struct slsi_dev *sdev, struct net_device *dev, bool is_cfg80211);
 int slsi_netif_add_locked(struct slsi_dev *sdev, const char *name, int ifnum);
-int slsi_netif_register_locked(struct slsi_dev *sdev, struct net_device *dev);
+int slsi_netif_register_locked(struct slsi_dev *sdev, struct net_device *dev, bool is_cfg80211);
 #ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
 void slsi_net_randomize_nmi_ndi(struct slsi_dev *sdev);
 #endif

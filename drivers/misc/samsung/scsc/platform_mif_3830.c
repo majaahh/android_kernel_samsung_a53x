@@ -509,7 +509,7 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 
 	table = platform_mif_pm_qos_get_table(platform, config);
 
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev,
 		"PM QoS update request: %u. MIF %u INT %u CL0 %u CL1 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1);
 
 	pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
@@ -1131,6 +1131,29 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 			"updated successfully WLBT_CTRL_NS[WLBT_ACTIVE_EN]: 0x%x\n", val);
 
+#ifdef CONFIG_SCSC_MX152_EXT_DUAL_FEM
+		ret = regmap_update_bits(platform->pmureg, UART_IO_SHARE_CTRL,
+                                SEL_TXD_GPIO_1_20, BIT(20));
+                if (ret < 0) {
+                        SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+                                "Failed to update UART_IO_SHARE_CTRL[SEL_TXD_GPIO_1_20]: %d\n", ret);
+                        return ret;
+                }
+                regmap_read(platform->pmureg, UART_IO_SHARE_CTRL, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+                        "updated successfully UART_IO_SHARE_CTRL[SEL_TXD_GPIO_1_20]: 0x%x\n", val);
+
+		               ret = regmap_update_bits(platform->pmureg, UART_IO_SHARE_CTRL,
+                                SEL_TXD_GPIO_1_21, BIT(21));
+                if (ret < 0) {
+                        SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+                                "Failed to update UART_IO_SHARE_CTRL[SEL_TXD_GPIO_1_21]: %d\n", ret);
+                        return ret;
+                }
+                regmap_read(platform->pmureg, UART_IO_SHARE_CTRL, &val);
+                SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+                        "updated successfully UART_IO_SHARE_CTRL[SEL_TXD_GPIO_1_21]: 0x%x\n", val);
+#endif
 		init_done = true;
 
 		goto init_code_done;

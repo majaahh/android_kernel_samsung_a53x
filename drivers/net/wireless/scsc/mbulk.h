@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2014 - 2019 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
 
@@ -67,6 +67,8 @@ typedef u32 mbulk_colour;
 #define SLSI_MBULK_COLOUR_GET_VIF(colour)						(colour & 0xFF)
 #define SLSI_MBULK_COLOUR_GET_PEER_IDX(colour)					((colour >> 8) & 0xFF)
 #define SLSI_MBULK_COLOUR_GET_AC(colour)						((colour >> 16) & 0xFF)
+#else
+#define SLSI_MBULK_COLOUR_SET(colour, vif, ac_q)	(colour = ((ac_q) << 16) | (vif))
 #endif
 /**
  * mbulk host pool ID
@@ -268,7 +270,7 @@ static inline void mbulk_free(struct mbulk *m)
  */
 static inline void *mbulk_dat_rw(const struct mbulk *m)
 {
-	WARN_ON(MBULK_SEG_IS_READONLY(m));
+	WLBT_WARN_ON(MBULK_SEG_IS_READONLY(m));
 	return MBULK_SEG_DAT(m);
 }
 
@@ -292,7 +294,7 @@ static inline const void *mbulk_dat_r(const struct mbulk *m)
  */
 static inline void *mbulk_dat_at_rw(const struct mbulk *m, size_t off)
 {
-	WARN_ON(MBULK_SEG_IS_READONLY(m));
+	WLBT_WARN_ON(MBULK_SEG_IS_READONLY(m));
 	return MBULK_SEG_DAT_AT(m, off);
 }
 
@@ -544,5 +546,8 @@ void mbulk_pool_dump(u8 pool_id, int max_cnt);
 /* Get pool colour */
 mbulk_colour mbulk_get_colour(u8 pool_id, struct mbulk *m);
 
+#if !defined(CONFIG_SCSC_WLAN_TX_API) && defined(CONFIG_SCSC_WLAN_TPUT_MONITOR)
+int mbulk_pool_get_count(u8 pool_id, enum mbulk_class clas, int *free, int *inuse);
+#endif
 u16 mbulk_pool_seg_size(u8 pool_id);
 #endif /*__MBULK_H__*/

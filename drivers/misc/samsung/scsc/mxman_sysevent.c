@@ -10,11 +10,14 @@
  * (at your option) any later version.
  */
 
+#include "mxman_sysevent.h"
 #if IS_ENABLED(CONFIG_EXYNOS_SYSTEM_EVENT)
 #include <linux/platform_device.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/sysevent_notif.h>
+#else
 #include <soc/samsung/sysevent_notif.h>
-
-#include "mxman_sysevent.h"
+#endif
 
 int wlbt_sysevent_powerup(const struct sysevent_desc *sysevent)
 {
@@ -60,37 +63,26 @@ int wlbt_sysevent_notifier_cb(struct notifier_block *nb,
 						unsigned long code, void *nb_data)
 {
 	struct notif_data *notifdata = NULL;
-
 	notifdata = (struct notif_data *) nb_data;
+
+	if (!notifdata) {
+		pr_info("nb_data parameter is null\n");
+		return NOTIFY_DONE;
+	}
+
 	switch (code) {
 	case SYSTEM_EVENT_BEFORE_SHUTDOWN:
-		pr_info("%s: %s: %s\n", __func__, notifdata->pdev->name,
-			__stringify(SYSTEM_EVENT_BEFORE_SHUTDOWN));
-		break;
 	case SYSTEM_EVENT_AFTER_SHUTDOWN:
-		pr_info("%s: %s: %s\n", __func__, notifdata->pdev->name,
-			__stringify(SYSTEM_EVENT_AFTER_SHUTDOWN));
-		break;
 	case SYSTEM_EVENT_RAMDUMP_NOTIFICATION:
-		pr_info("%s: %s: %s\n", __func__, notifdata->pdev->name,
-			__stringify(SYSTEM_EVENT_RAMDUMP_NOTIFICATION));
-		break;
-	case SYSTEM_EVENT_BEFORE_POWERUP:
-		if (nb_data) {
-			notifdata = (struct notif_data *) nb_data;
-			pr_info("%s: %s: %s, crash_status:%d, enable_ramdump:%d\n",
-				__func__, notifdata->pdev->name,
-				__stringify(SYSTEM_EVENT_BEFORE_POWERUP),
-				notifdata->crashed, notifdata->enable_ramdump);
-		} else {
-			pr_info("%s: %s: %s\n", __func__,
-				notifdata->pdev->name,
-				__stringify(SYSTEM_EVENT_BEFORE_POWERUP));
-		}
-		break;
 	case SYSTEM_EVENT_AFTER_POWERUP:
 		pr_info("%s: %s: %s\n", __func__, notifdata->pdev->name,
-		__stringify(SYSTEM_EVENT_AFTER_POWERUP));
+			__stringify(code));
+		break;
+	case SYSTEM_EVENT_BEFORE_POWERUP:
+		pr_info("%s: %s: %s, crash_status:%d, enable_ramdump:%d\n",
+			__func__, notifdata->pdev->name,
+			__stringify(code),
+			notifdata->crashed, notifdata->enable_ramdump);
 		break;
 	default:
 		break;

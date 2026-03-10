@@ -177,9 +177,9 @@ wifi_error scsc_wifi_get_ring_data(char *ring_name)
 	r = scsc_wifilogger_get_ring_from_name(ring_name);
 	if (!r) {
 		SCSC_TAG_ERR(WLOG,
-			     "Ring %s NOT found. Cannot drain.\n",
+			     "Ring %s NOT found. Cannot drain. Request Ignored.\n",
 			     ring_name);
-		return WIFI_ERROR_NOT_AVAILABLE;
+		return WIFI_SUCCESS;
 	}
 
 	scsc_wlog_drain_whole_ring(r);

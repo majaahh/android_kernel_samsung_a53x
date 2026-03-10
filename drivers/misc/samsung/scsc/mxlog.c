@@ -12,6 +12,11 @@
 #include "mxlog_transport.h"
 #include "fwhdr.h"
 #include "mxlog.h"
+#include "srvman.h"
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mxlog.c"
+#endif
 
 /*
  * Receive handler for messages from the FW along the maxwell management transport
@@ -23,73 +28,6 @@ static inline void mxlog_phase4_message_handler(const void *message,
 	unsigned char *buf = (unsigned char *)message;
 
 	SCSC_TAG_LVL(MX_FW, level, SCSC_PREFIX"%d: %s\n", (int)length, buf);
-}
-
-/**
- * This function is used to parse a NULL terminated format string
- * and report on the provided output bitmaps smap/lmap which args
- * are 'long' and which are signed..
- *
- * We will care only about length and specifier fields
- *
- * %[flags][width][.precision][length]specifier
- *
- * and since flags width and .precision are represented
- * by NON chars, we will grossly compare simply against an 'A',
- * because we are NOT trying to make a full sanity check here BUT only
- * to search for long and signed values to provide the proper cast.
- *
- * Supporting:
- *	- ESCAPES %%ld
- *
- *	- %x %X %d %ld %lld %i %li %lli %u %lu %llu %hd %hhd %hu %hhu
- *
- * NOT supporting:
- *	- %s -> MARKED AS UNSUPPORTED
- */
-static inline void build_len_sign_maps(char *fmt, u32 *smap, u32 *lmap,
-				       u32 *strmap)
-{
-	u32 p = 0;
-	char *s = fmt;
-	bool escaping = false;
-
-	if (!s)
-		return;
-	for (; *s != '\0'; ++s) {
-		/* Skip any escaped fmtstring like %%d and move on */
-		if (escaping) {
-			if (*s == ' ')
-				escaping = false;
-			continue;
-		}
-		if (*s != '%')
-			continue;
-		/* Start escape seq ... */
-		if (*(s + 1) == '%') {
-			escaping = true;
-			continue;
-		}
-		/* skip [flags][width][.precision] if any */
-		for (; *++s < 'A';)
-			;
-		if (*s == 'l') {
-			*lmap |= (1 << p);
-			/* %lld ? skip */
-			if (*++s == 'l')
-				s++;
-		} else if (*s == 'h') {
-			/* just skip h modifiers */
-			/* hhd ? */
-			if (*++s == 'h')
-				s++;
-		}
-		if (*s == 'd' || *s == 'i')
-			*smap |= (1 << p);
-		else if (*s == 's')
-			*strmap |= (1 << p);
-		p++;
-	}
 }
 
 /**
@@ -131,41 +69,66 @@ static inline void mxlog_phase5_message_handler(const void *message,
 	if (mxlog && elogmsg) {
 		int num_args = 0;
 		char spare[MAX_SPARE_FMT + TSTAMP_LEN] = {};
+		char values[MAX_SPARE_FMT] = {};
 		char *fmt = NULL;
 		size_t fmt_sz = 0;
 		u32 smap = 0, lmap = 0, strmap = 0;
 		u32 *args = NULL;
 
-		/* Check OFFSET sanity... beware of FW guys :D ! */
-		if (elogmsg->offset >= MXLS_SZ(mxlog)) {
-			SCSC_TAG_ERR(MX_FW,
-				     "Received fmtstr OFFSET(%d) is OUT OF range(%zd)...skip..\n",
-				     elogmsg->offset, MXLS_SZ(mxlog));
-			return;
-		}
 		args = (u32 *)(elogmsg + 1);
 		num_args =
 			(length - MINIMUM_MXLOG_MSG_LEN_BYTES) /
 			MXLOG_ELEMENT_SIZE;
-		fmt = (char  *)(MXLS_DATA(mxlog) + elogmsg->offset);
-		/* Avoid being fooled by a NON NULL-terminated strings too ! */
-		fmt_sz = strnlen(fmt, MXLS_SZ(mxlog) - elogmsg->offset);
-		if (fmt_sz >= MAX_SPARE_FMT - 1) {
+
+		/* Check OFFSET sanity... beware of FW guys :D ! */
+		if (elogmsg->offset >= MXLS_SZ(mxlog) && elogmsg->offset < MXLOG_BINARY_FID) {
 			SCSC_TAG_ERR(MX_FW,
+				     "Received fmtstr OFFSET(%d) is OUT OF range(%zd)...skip..\n",
+				     elogmsg->offset, MXLS_SZ(mxlog));
+			return;
+
+		/* Check OFFSET is binary mxlog */
+		} else if (elogmsg->offset >= MXLOG_BINARY_FID) {
+			char arg_fmt[] = "%08x";
+			int i, len;
+			len = 0;
+
+			for (i = 0; i < num_args; i++) {
+				len += snprintf(values + len, MAX_SPARE_FMT - len, arg_fmt, args[i]);
+				if (i < (num_args - 1))
+					len += snprintf(values + len, MAX_SPARE_FMT - len, "%c", ':');
+			}
+			len = snprintf(spare, MAX_SPARE_FMT + TSTAMP_LEN - 2,
+					SCSC_PREFIX"%08X FID[%u]: %s",
+					elogmsg->timestamp, ~elogmsg->offset, values);
+
+			snprintf(spare + len, sizeof("\n"), "\n");
+			SCSC_TAG_LVL(MX_FW, level, spare);
+			return;
+		} else {
+			fmt = (char  *)(MXLS_DATA(mxlog) + elogmsg->offset);
+			fmt_sz = strnlen(fmt, MXLS_SZ(mxlog) - elogmsg->offset);
+
+			/* Avoid being fooled by a NON NULL-terminated strings too ! */
+			if (fmt_sz >= MAX_SPARE_FMT - 1) {
+				SCSC_TAG_ERR(MX_FW,
 				     "UNSUPPORTED message length %zd ... truncated.\n",
 				     fmt_sz);
-			fmt_sz = MAX_SPARE_FMT - 2;
-		}
-		/* Pre-Process fmt string to be able to do proper casting */
-		if (num_args)
-			build_len_sign_maps(fmt, &smap, &lmap, &strmap);
+				fmt_sz = MAX_SPARE_FMT - 2;
+			}
 
-		/* Add FW provided tstamp on front and proper \n at
-		 * the end when needed
-		 */
-		snprintf(spare, MAX_SPARE_FMT + TSTAMP_LEN - 2, SCSC_PREFIX"%08X %s%c",
-			 elogmsg->timestamp, fmt,
-			 (fmt[fmt_sz] != '\n') ? '\n' : '\0');
+			/* Pre-Process fmt string to be able to do proper casting */
+			if (num_args)
+	                        build_len_sign_maps(fmt, &smap, &lmap, &strmap);
+
+			/* Add FW provided tstamp on front and proper \n at
+			 * the end when needed
+			 */
+			snprintf(spare, MAX_SPARE_FMT + TSTAMP_LEN - 2, SCSC_PREFIX"%08X %s%c",
+				 elogmsg->timestamp, fmt,
+				 (fmt[fmt_sz] != '\n') ? '\n' : '\0');
+		}
+
 		fmt = spare;
 
 		switch (num_args) {
@@ -282,11 +245,17 @@ static void mxlog_message_handler(u8 phase, const void *message,
 				  size_t length, u32 level, void *data)
 {
 	struct mxlog  *mxlog = (struct mxlog *)data;
+	/* BT FW log to btsnoop (fwsnoop) */
+	struct srvman *srvman;
 
 	if (!mxlog) {
 		SCSC_TAG_ERR(MX_FW, "Missing MXLOG reference.\n");
 		return;
 	}
+
+	/* Forward binary BT FW log to BT driver to insert it to btsnoop */
+	srvman = scsc_mx_get_srvman(mxlog->mx);
+	srvman_forward_bt_fw_log(srvman, length, level, message);
 
 	switch (phase) {
 	case MX_LOG_PHASE_4:
@@ -348,7 +317,7 @@ static int mxlog_header_parser(u32 header, u8 *phase,
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 void mxlog_load_log_strings(struct mxlog *mxlog, const void *data, size_t len)
 {
 	if (data == NULL) {
@@ -383,7 +352,7 @@ void mxlog_unload_log_strings(struct mxlog *mxlog)
 }
 #endif
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 void mxlog_init(struct mxlog *mxlog, struct scsc_mx *mx, char *fw_build_id, enum scsc_mif_abs_target target)
 #else
 void mxlog_init(struct mxlog *mxlog, struct scsc_mx *mx, char *fw_build_id)
@@ -392,32 +361,21 @@ void mxlog_init(struct mxlog *mxlog, struct scsc_mx *mx, char *fw_build_id)
 	int ret = 0;
 	struct mxlog_transport *mtrans;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-	if (target == SCSC_MIF_ABS_TARGET_WLAN) {
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if (target == SCSC_MIF_ABS_TARGET_WLAN)
 		mtrans = scsc_mx_get_mxlog_transport(mx);
-	} else if (target == SCSC_MIF_ABS_TARGET_WPAN) {
+	else if (target == SCSC_MIF_ABS_TARGET_WPAN)
 		mtrans = scsc_mx_get_mxlog_transport_wpan(mx);
-	} else {
-		SCSC_TAG_INFO(MX_FW, "mxlog_init for UNKNOWN target %d\n", target);
+	else
 		return;
-	}
-
-	if (target != mtrans->target) {
-		SCSC_TAG_INFO(MX_FW, "mxlog_init for target %d but mtrans is initialized for %d\n",
-			      target, mtrans->target);
-		return;
-	}
-
 	mxlog->target = target;
 #else
 	mtrans = scsc_mx_get_mxlog_transport(mx);
 #endif
-	SCSC_TAG_INFO(MX_FW, "mxlog_init for target %d and init with target %d\n",
-		      target, mxlog->target);
 	mxlog->mx = mx;
 	mxlog->index = 0;
 
-#if !IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if !defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mxlog->logstrings = NULL;
 	/* File is in f/w profile directory */
 	ret = mx140_file_request_debug_conf(mx,
@@ -438,7 +396,7 @@ void mxlog_init(struct mxlog *mxlog, struct scsc_mx *mx, char *fw_build_id)
 				 * NULL-terminate it just in case we fetched
 				 * never-ending garbage.
 				 */
-				strncpy(found, mxlog->logstrings->data,
+				strlcpy(found, mxlog->logstrings->data,
 					FW_BUILD_ID_SZ - 1);
 				SCSC_TAG_WARNING(MX_FW,
 						"--> Log-strings VERSION MISMATCH !!!\n");
@@ -469,12 +427,11 @@ void mxlog_release(struct mxlog *mxlog)
 {
 	struct mxlog_transport *mtrans;
 
-	if (!mxlog->mx) {
-		SCSC_TAG_ERR(MX_FW, "mxlog->mx is NULL\n");
+	/* Check if this is null pointer for abnormal case */
+	if (!mxlog->mx)
 		return;
-	}
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (mxlog->target == SCSC_MIF_ABS_TARGET_WLAN)
 		mtrans = scsc_mx_get_mxlog_transport(mxlog->mx);
 	else if (mxlog->target == SCSC_MIF_ABS_TARGET_WPAN)
@@ -486,11 +443,10 @@ void mxlog_release(struct mxlog *mxlog)
 #endif
 	mxlog_transport_register_channel_handler(mtrans,
 						 NULL, NULL, NULL);
-#if !IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if !defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (mxlog->logstrings)
 		mx140_release_file(mxlog->mx, mxlog->logstrings);
 	mxlog->logstrings = NULL;
 #endif
 	mxlog->mx = NULL;
 }
-

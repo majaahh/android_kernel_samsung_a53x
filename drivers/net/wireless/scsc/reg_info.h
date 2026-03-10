@@ -9,6 +9,7 @@
 int slsi_read_regulatory(struct slsi_dev *sdev);
 void slsi_regd_deinit(struct slsi_dev *sdev);
 void slsi_regd_init(struct slsi_dev *sdev);
+void slsi_regd_init_wiphy_not_registered(struct slsi_dev *sdev);
 
 enum slsi_regdb_state {
 	SLSI_REG_DB_NOT_SET,
@@ -26,6 +27,7 @@ struct reg_database {
 	struct regdb_file_freq_range *freq_ranges;
 	struct regdb_file_reg_rules_collection *rules_collection;
 	struct regdb_file_reg_country *country;
+	int current_cc_index;
 };
 
 struct regdb_file_freq_range {
@@ -53,6 +55,21 @@ struct regdb_file_reg_country {
 	/* pointers to struct regdb_file_reg_rules_collection */
 	struct regdb_file_reg_rules_collection *collection;
 };
+
+#define SLSI_REG_VLP_MAX_POWER 14
+
+static inline int slsi_calculate_lpi_power(u32 max_bw)
+{
+	int max_power = 33;
+	int i;
+
+	for (i = 320; i >= 20; i = i / 2) {
+		if (i == max_bw)
+			break;
+		max_power = max_power - 3;
+	}
+	return max_power;
+}
 
 #endif
 

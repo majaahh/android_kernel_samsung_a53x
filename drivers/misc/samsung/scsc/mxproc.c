@@ -23,11 +23,17 @@
 
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 #include <linux/uaccess.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/debug-snapshot.h>
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 #include <soc/samsung/debug-snapshot.h>
 #else
 #include <linux/debug-snapshot.h>
 #endif
+#endif
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mxproc.c"
 #endif
 
 #ifndef AID_MXPROC
@@ -70,7 +76,11 @@
 	}
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#define MX_PDE_DATA(inode) pde_data(inode)
+#else
 #define MX_PDE_DATA(inode) PDE_DATA(inode)
+#endif
 
 #define MX_PROCFS_SET_UID_GID(_entry) \
 	do { \
@@ -92,6 +102,8 @@
 static const char *procdir_ctrl = "driver/mxman_ctrl";
 static const char *procdir_info = "driver/mxman_info";
 #if defined(CONFIG_WLBT_DCXO_TUNE)
+// static const char *procdir_dcxo = "~/vendor/etc/wifi/dcxo";
+
 #define APM_OP_GET_TUNE (0x4)
 #define APM_OP_SET_TUNE (0x5)
 #endif
@@ -143,7 +155,7 @@ static ssize_t mx_procfs_mx_fail_write(struct file *file, const char __user *use
 		if (mxman_if_subsys_active(mxproc->mxman,SCSC_SUBSYSTEM_WLAN)) {
 			mxman_if_fail(mxproc->mxman, SCSC_PANIC_CODE_HOST << 15, __func__, SCSC_SUBSYSTEM_WLAN);
 		} else {
-			SCSC_TAG_ERR(MXMAN, "Ignored mxman_fail procfs input %d as WLAN is not active\n", value);
+			SCSC_TAG_ERR(MXMAN, "Ignored mxman_fail procfs input %c as WLAN is not active\n", value);
 			return count;
 		}
 		break;
@@ -151,7 +163,7 @@ static ssize_t mx_procfs_mx_fail_write(struct file *file, const char __user *use
 		if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WPAN)) {
 			mxman_if_fail(mxproc->mxman, SCSC_PANIC_CODE_HOST << 15, __func__, SCSC_SUBSYSTEM_WPAN);
 		} else {
-			SCSC_TAG_ERR(MXMAN, "Ignored mxman_fail procfs input %d as WPAN is not active\n", value);
+			SCSC_TAG_ERR(MXMAN, "Ignored mxman_fail procfs input %c as WPAN is not active\n", value);
 			return count;
 		}
 		break;
@@ -159,7 +171,7 @@ static ssize_t mx_procfs_mx_fail_write(struct file *file, const char __user *use
 		if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WLAN_WPAN)) {
 			mxman_if_fail(mxproc->mxman, SCSC_PANIC_CODE_HOST << 15, __func__, SCSC_SUBSYSTEM_WLAN_WPAN);
 		} else {
-			SCSC_TAG_ERR(MXMAN, "Ignored mxman_fail procfs input %d as both WLAN and WPAN are not active\n", value);
+			SCSC_TAG_ERR(MXMAN, "Ignored mxman_fail procfs input %c as both WLAN and WPAN are not active\n", value);
 			return count;
 		}
 		break;
@@ -167,7 +179,7 @@ static ssize_t mx_procfs_mx_fail_write(struct file *file, const char __user *use
 		mxman_if_fail(mxproc->mxman, SCSC_PANIC_CODE_HOST << 15, __func__, SCSC_SUBSYSTEM_PMU);
 		break;
 	default:
-		SCSC_TAG_INFO(MX_PROC, "Ignored mxman_fail procfs invalid input %d\n", value);
+		SCSC_TAG_INFO(MX_PROC, "Ignored mxman_fail procfs invalid input %c\n", value);
 		return count;
 	};
 #else
@@ -226,7 +238,7 @@ static ssize_t mx_procfs_mx_panic_read(struct file *file, char __user *user_buf,
 		mxman_if_force_panic(mxproc->mxman, SCSC_SUBSYSTEM_WLAN_WPAN);
 	} else if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WLAN)) {
 		mxman_if_force_panic(mxproc->mxman, SCSC_SUBSYSTEM_WLAN);
-	} else if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WLAN_WPAN)) {
+	} else if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WPAN)) {
 		mxman_if_force_panic(mxproc->mxman, SCSC_SUBSYSTEM_WPAN);
 	} else {
 		SCSC_TAG_ERR(MX_PROC, "Ignored procfs mx_panic read as none of WLAN or WPAN active\n");
@@ -252,11 +264,9 @@ static ssize_t mx_procfs_mx_panic_write(struct file *file, const char __user *us
 	OS_UNUSED_PARAMETER(count);
 	OS_UNUSED_PARAMETER(ppos);
 
-#if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (mxproc == NULL || mxproc->mxman == NULL)
 		return -EFAULT;
-#endif
 #endif
 	if (count != 2)
 		return -EFAULT;
@@ -271,7 +281,7 @@ static ssize_t mx_procfs_mx_panic_write(struct file *file, const char __user *us
 		if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WLAN)) {
 			mxman_if_force_panic(mxproc->mxman, SCSC_SUBSYSTEM_WLAN);
 		} else {
-			SCSC_TAG_ERR(MX_PROC, "Ignored mxman_panic procfs input %d as WLAN is not active\n", value);
+			SCSC_TAG_ERR(MX_PROC, "Ignored mxman_panic procfs input %c as WLAN is not active\n", value);
 			return count;
 		}
 		break;
@@ -280,7 +290,7 @@ static ssize_t mx_procfs_mx_panic_write(struct file *file, const char __user *us
 		if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WPAN)) {
 			mxman_if_force_panic(mxproc->mxman, SCSC_SUBSYSTEM_WPAN);
 		} else {
-			SCSC_TAG_ERR(MX_PROC, "Ignored mxman_panic procfs input %d as WPAN is not active\n", value);
+			SCSC_TAG_ERR(MX_PROC, "Ignored mxman_panic procfs input %c as WPAN is not active\n", value);
 			return count;
 		}
 		break;
@@ -289,25 +299,25 @@ static ssize_t mx_procfs_mx_panic_write(struct file *file, const char __user *us
 		if (mxman_if_subsys_active(mxproc->mxman, SCSC_SUBSYSTEM_WLAN_WPAN)) {
 			mxman_if_force_panic(mxproc->mxman, SCSC_SUBSYSTEM_WLAN_WPAN);
 		} else {
-			SCSC_TAG_ERR(MX_PROC, "Ignored mxman_panic procfs input %d as both WLAN and WPAN not active\n", value);
+			SCSC_TAG_ERR(MX_PROC, "Ignored mxman_panic procfs input %c as both WLAN and WPAN not active\n", value);
 			return count;
 		}
 		break;
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 	case '4':
 		SCSC_TAG_INFO(MX_PROC, "Manual Scandump");
-		dbg_snapshot_do_dpm_policy(GO_S2D_ID);
+		mxman_scan_dump_mode();
 		break;
 #endif
 	default:
-		SCSC_TAG_INFO(MX_PROC, "Ignored mxman_panic procfs invalid input %d\n", value);
+		SCSC_TAG_INFO(MX_PROC, "Ignored mxman_panic procfs invalid input %c\n", value);
 		return count;
 	};
 #else
-#if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT) 
+#if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT) && defined(GO_S2D_ID)
 	if (value == '3') {
 		SCSC_TAG_INFO(MX_PROC, "Manual Scandump");
-		mxman_scan_dump_mode();
+		dbg_snapshot_do_dpm_policy(GO_S2D_ID);
 	} else if (mxproc) {
 		SCSC_TAG_INFO(MX_PROC, "Manual FW Panic");
 		mxman_force_panic(mxproc->mxman);
@@ -418,16 +428,17 @@ static ssize_t mx_procfs_mx_suspend_write(struct file *file, const char __user *
 {
 	struct mxproc *mxproc = file->private_data;
 	int r;
-	char value = 0;
 
 	OS_UNUSED_PARAMETER(file);
 	OS_UNUSED_PARAMETER(ppos);
 
-	if (copy_from_user(&value, user_buf, 1))
-		return -EFAULT;
-
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	OS_UNUSED_PARAMETER(mxproc);
+	OS_UNUSED_PARAMETER(r);
+	SCSC_TAG_INFO(MX_PROC, "NOP for PCIE chips\n");
+#else
 	if (count && mxproc) {
-		switch (value) {
+		switch (user_buf[0]) {
 		case 'Y':
 			SCSC_TAG_INFO(MX_PROC, "force suspend\n");
 			r = mxman_suspend(mxproc->mxman);
@@ -441,11 +452,11 @@ static ssize_t mx_procfs_mx_suspend_write(struct file *file, const char __user *
 			mxman_resume(mxproc->mxman);
 			break;
 		default:
-			SCSC_TAG_INFO(MX_PROC, "invalid value %c\n", value);
+			SCSC_TAG_INFO(MX_PROC, "invalid value %c\n", user_buf[0]);
 			return -EINVAL;
 		}
 	}
-
+#endif
 	return count;
 }
 
@@ -733,7 +744,7 @@ static ssize_t mx_procfs_mx_dcxo_cal_read(struct file *file, char __user *user_b
 		if (ret) {
 			SCSC_TAG_ERR(MX_PROC, "Failure to get DCXO Tune(cause: %d)\n", ret);
 		} else {
-			SCSC_TAG_INFO(MX_PROC, "Succeed to get DCXO Tune, and read value: 0x%x\n", val);
+			SCSC_TAG_INFO(MX_PROC, "Succeed to get DCXO Tune, and read value: 0x%p\n", val);
 		}
 
 		mif_abs->irq_unregister_mbox_apm(mif_abs);
@@ -766,7 +777,7 @@ static ssize_t mx_procfs_mx_dcxo_cal_write(struct file *file, const char __user 
 			SCSC_TAG_ERR(MX_PROC, "error to convert string to int(%d)\n", ret);
 			return ret;
 		}
-		SCSC_TAG_INFO(MX_PROC, "Intended DCXO Cal value: 0x%x\n", val);
+		SCSC_TAG_INFO(MX_PROC, "Intended DCXO Cal value: 0x%p\n", val);
 
 		ret = mif_abs->irq_register_mbox_apm(mif_abs);
 		if (ret) {

@@ -12,23 +12,19 @@
 #include "mlme.h"
 
 #define SLSI_INI_CONFIG_BUFF_SIZE            1024
-#define SET_HIGHEST_BYTE                     -1
+#define SET_HIGHEST_BYTE                     0
 #define SLSI_INI_KEY_LEN_MAX                 1000
 #define SLSI_INI_TRY_FALLBACK                1
+#define SET_LEAST_SIGNIFICANT_BYTE           -1
 
-#if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
-#define INI_CONFIG_FILE_PATH            "/vendor/firmware/wlan-connection-roaming.ini"
-#define INI_CONFIG_FILE_BACKUP_PATH     "/vendor/firmware/wlan-connection-roaming-backup.ini"
-#else
 #define INI_CONFIG_FILE_PATH            "../firmware/wlan-connection-roaming.ini"
 #define INI_CONFIG_FILE_BACKUP_PATH     "../firmware/wlan-connection-roaming-backup.ini"
-#endif
 
 struct ini_lookup {
 	const char *key;
 	int (*func_p)(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value, struct ini_lookup *lookup_entry);
 	u16 psid;
-	s8  index;
+	u16 index;
 	int unit_con_factor;
 	int min_value;
 	int max_value;
@@ -109,8 +105,8 @@ static int encode_int_mib(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
 	int res                       = 0;
 	int index                     = 0;
 
-	res = slsi_str_to_int(value, is_signed ? &value_sint : (int*)&value_uint);
-	if (!res) {
+	res = slsi_str2int(value, is_signed ? &value_sint : (int*)&value_uint);
+	if (res) {
 		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
 		return -EINVAL;
 	}
@@ -161,7 +157,7 @@ static int encode_sint_mib(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
 	return encode_int_mib(sdev, buf, pos, value, lookup_entry, true);
 }
 
-static int encode_mib_gen_with_two_psids(struct slsi_dev *sdev, u8 *buf, u16 *pos, s8 index1, s8 index2,
+static int encode_mib_gen_with_two_psids(struct slsi_dev *sdev, u8 *buf, u16 *pos, u16 index1, u16 index2,
 					 u16 psid1, u16 psid2, u32 value_int)
 {
 	struct slsi_mib_data mib_data1 = { 0, NULL };
@@ -199,32 +195,6 @@ exit_with_err1:
 	return 0;
 }
 
-static int encode_mib_con_dtim_skipping_number(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
-					       struct ini_lookup *lookup_entry)
-{
-	int  error = SLSI_MIB_STATUS_FAILURE;
-	u32 value_int = 0;
-	int res = 0;
-	int index = 0;
-
-	res = slsi_str_to_int(value, &value_int);
-	if (!res) {
-		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
-		return -EINVAL;
-	}
-
-	if (lookup_entry->index > 0)
-		index = lookup_entry->index;
-
-	value_int *= lookup_entry->unit_con_factor;
-
-	error = encode_mib_gen_with_two_psids(sdev, buf, pos, index, index, lookup_entry->psid,
-					      SLSI_PSID_UNIFI_IDLEMODE_LISTEN_INTERVAL_SKIPPING_DTIM,
-					      value_int);
-
-	return error;
-}
-
 static int encode_mib_roamcu_trig(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
 				  struct ini_lookup *lookup_entry)
 {
@@ -232,8 +202,8 @@ static int encode_mib_roamcu_trig(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *
 	u32 value_int = 0;
 	int res = 0;
 
-	res = slsi_str_to_int(value, &value_int);
-	if (!res) {
+	res = slsi_str2int(value, &value_int);
+	if (res) {
 		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
 		return -EINVAL;
 	}
@@ -246,7 +216,7 @@ static int encode_mib_roamcu_trig(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *
 	return error;
 }
 
-static int encode_mib_octet_with_2indices(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value, s8 index1, s8 index2,
+static int encode_mib_octet_with_2indices(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value, u16 index1, u16 index2,
 					  s8 octet_index, u16 psid, int unit_con_factor)
 {
 	struct slsi_mib_data mibrsp = { 0, NULL };
@@ -257,13 +227,14 @@ static int encode_mib_octet_with_2indices(struct slsi_dev *sdev, u8 *buf, u16 *p
 	u32 value_int = 0;
 	int res = 0;
 	struct slsi_mib_entry v = {0};
+	struct sk_buff *cfm = NULL;
 
 	if (!value) {
 		SLSI_ERR_NODEV("value points to null\n");
 		return 0;
 	}
-	res = slsi_str_to_int(value, &value_int);
-	if (!res) {
+	res = slsi_str2int(value, &value_int);
+	if (res) {
 		SLSI_ERR_NODEV("key_val is invalid for psid:%d\n", psid);
 		return -EINVAL;
 	}
@@ -304,7 +275,7 @@ static int encode_mib_octet_with_2indices(struct slsi_dev *sdev, u8 *buf, u16 *p
 	if (octet_index > mib_val_local.dataLength - 1)
 		goto exit_with_value;
 
-	mib_val_local.data[octet_index] &= value_int & 0xFF;
+	mib_val_local.data[octet_index] = value_int & 0xFF;
 
 	memset(&v, 0x00, sizeof(struct slsi_mib_entry));
 	v.psid = psid;
@@ -323,9 +294,18 @@ static int encode_mib_octet_with_2indices(struct slsi_dev *sdev, u8 *buf, u16 *p
 		SLSI_ERR_NODEV("Failed to encode mib with psid = %d\n", psid);
 		goto exit_with_value;
 	}
+	cfm = slsi_mlme_set_with_cfm(sdev, NULL, mib_val_set.data,
+				     mib_val_set.dataLength);
 
-	append_mibdata_to_buffer(sdev, buf, pos, mib_val_set.data, mib_val_set.dataLength);
+	if (fapi_get_datalen(cfm)) {
+		SLSI_ERR(sdev, "Err Setting MIB failed.\n");
+		log_failed_psids(sdev, fapi_get_data(cfm), fapi_get_datalen(cfm));
+	} else {
+		SLSI_INFO(sdev, "setting MIB successfully\n");
+	}
 
+
+	kfree_skb(cfm);
 	kfree(mib_val_set.data);
 
 exit_with_value:
@@ -405,7 +385,7 @@ static int encode_mib_band1_rssi_factor_score1(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -418,7 +398,7 @@ static int encode_mib_band1_rssi_factor_score2(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -431,7 +411,7 @@ static int encode_mib_band1_rssi_factor_score3(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -444,7 +424,7 @@ static int encode_mib_band1_rssi_factor_score4(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 4, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 4, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -457,7 +437,7 @@ static int encode_mib_band1_rssi_factor_score5(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 5, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 5, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -535,7 +515,7 @@ static int encode_mib_band2_rssi_factor_score1(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -548,7 +528,7 @@ static int encode_mib_band2_rssi_factor_score2(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -561,7 +541,7 @@ static int encode_mib_band2_rssi_factor_score3(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -574,7 +554,7 @@ static int encode_mib_band2_rssi_factor_score4(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 4, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 4, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -587,7 +567,7 @@ static int encode_mib_band2_rssi_factor_score5(struct slsi_dev *sdev, u8 *buf, u
 {
 	int error = SLSI_MIB_STATUS_FAILURE;
 
-	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 5, 0,
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 5, SET_LEAST_SIGNIFICANT_BYTE,
 					       lookup_entry->psid, lookup_entry->unit_con_factor);
 	if (error)
 		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
@@ -595,52 +575,310 @@ static int encode_mib_band2_rssi_factor_score5(struct slsi_dev *sdev, u8 *buf, u
 	return error;
 }
 
+static int encode_mib_band3_rssi_factor_value1(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, SET_HIGHEST_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_value2(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, SET_HIGHEST_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_value3(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, SET_HIGHEST_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_value4(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 4, SET_HIGHEST_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_score1(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, SET_LEAST_SIGNIFICANT_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_score2(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, SET_LEAST_SIGNIFICANT_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_score3(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, SET_LEAST_SIGNIFICANT_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band3_rssi_factor_score4(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 4, SET_LEAST_SIGNIFICANT_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band_cu_factor_value1(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, SET_HIGHEST_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band_cu_factor_value2(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+					       struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 2, SET_HIGHEST_BYTE,
+					       lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+
+static int encode_mib_band_cu_factor_score1(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+							   struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 1, 1,
+						   lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int encode_mib_band_cu_factor_score2(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+							   struct ini_lookup *lookup_entry)
+{
+	int error = SLSI_MIB_STATUS_FAILURE;
+
+	error = encode_mib_octet_with_2indices(sdev, buf, pos, value, lookup_entry->index, 3, 1,
+						   lookup_entry->psid, lookup_entry->unit_con_factor);
+	if (error)
+		SLSI_ERR_NODEV("Err Setting MIB %s failed. error = %d\n", lookup_entry->key, error);
+
+	return error;
+}
+
+static int save_roam_wtc_scan_mode(struct slsi_dev *sdev, u8 *buf, u16 *pos, u8 *value,
+				   struct ini_lookup *lookup_entry)
+{
+	u32 value_int = 0;
+	int res = 0;
+
+	res = slsi_str2int(value, &value_int);
+	if (!res) {
+		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
+		return -EINVAL;
+	}
+	sdev->ini_conf_struct.wtc_roam_scan_mode = value_int;
+	sdev->ini_conf_struct.is_wtc_set = true;
+	return 0;
+}
+
+static int save_roam_wtc_handling_rssi_threshold(struct slsi_dev *sdev, u8 *buf, u16 *pos,
+						 u8 *value, struct ini_lookup *lookup_entry)
+{
+	s32 value_int = 0;
+	int res = 0;
+
+	res = slsi_str2int(value, (int *)&value_int);
+	if (res) {
+		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
+		return -EINVAL;
+	}
+	sdev->ini_conf_struct.wtc_rssi_threshold = value_int;
+	sdev->ini_conf_struct.is_wtc_set = true;
+	return 0;
+}
+
+static int save_roam_wtc_24g_candi_rssi_threshold(struct slsi_dev *sdev, u8 *buf, u16 *pos,
+						  u8 *value, struct ini_lookup *lookup_entry)
+{
+	s32 value_int = 0;
+	int res = 0;
+
+	res = slsi_str2int(value, (int *)&value_int);
+	if (res) {
+		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
+		return -EINVAL;
+	}
+	sdev->ini_conf_struct.wtc_candidate24g_rssi_threshold = value_int;
+	sdev->ini_conf_struct.is_wtc_set = true;
+	return 0;
+}
+
+static int save_roam_wtc_5g_candi_rssi_threshold(struct slsi_dev *sdev, u8 *buf, u16 *pos,
+						 u8 *value, struct ini_lookup *lookup_entry)
+{
+	s32 value_int = 0;
+	int res = 0;
+
+	res = slsi_str2int(value, (int *)&value_int);
+	if (res) {
+		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
+		return -EINVAL;
+	}
+	sdev->ini_conf_struct.wtc_candidate5g_rssi_threshold = value_int;
+	sdev->ini_conf_struct.is_wtc_set = true;
+	return 0;
+}
+
+static int save_roam_wtc_6g_candi_rssi_threshold(struct slsi_dev *sdev, u8 *buf, u16 *pos,
+						 u8 *value, struct ini_lookup *lookup_entry)
+{
+	s32 value_int = 0;
+	int res = 0;
+
+	res = slsi_str2int(value, (int *)&value_int);
+	if (res) {
+		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
+		return -EINVAL;
+	}
+	sdev->ini_conf_struct.wtc_candidate6g_rssi_threshold = value_int;
+	sdev->ini_conf_struct.is_wtc_set = true;
+	return 0;
+}
+
+static int save_conn_non_hint_target_min_rssi(struct slsi_dev *sdev, u8 *buf, u16 *pos,
+					      u8 *value, struct ini_lookup *lookup_entry)
+{
+	s32 value_int = 0;
+	int res = 0;
+
+	res = slsi_str2int(value, (int *)&value_int);
+	if (res) {
+		SLSI_ERR_NODEV("key_val is invalid for key %s\n", lookup_entry->key);
+		return -EINVAL;
+	}
+	sdev->ini_conf_struct.conn_non_hint_target_min_rssi = value_int;
+	return 0;
+}
+
 struct ini_lookup slsi_ini_config_lookup_table[] = {
-	{.key = "RoamCommon_MinRoamDetla", .func_p = encode_uint_mib, .psid = 2322, .index = -1,
+	{.key = "RoamCommon_MinRoamDelta", .func_p = encode_uint_mib, .psid = 2322, .index = 0,
 	 .unit_con_factor = 100, .min_value = 0, .max_value = 100},
-	{.key = "RoamCommon_Delta", .func_p = encode_uint_mib, .psid = 2302, .index = -1,
+	{.key = "RoamCommon_Delta", .func_p = encode_uint_mib, .psid = 2302, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 30},
-	{.key = "RoamScan_FirstTimer", .func_p = encode_uint_mib, .psid = 2058, .index = -1,
+	{.key = "RoamCU_24DefaultCU", .func_p = encode_uint_mib, .psid = 2308, .index = 1,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamCU_5DefaultCU", .func_p = encode_uint_mib, .psid = 2308, .index = 2,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamCU_6DefaultCU", .func_p = encode_uint_mib, .psid = 2308, .index = 3,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamCommon_Mlo_TpPrefer", .func_p = encode_sint_mib, .psid = 2634, .index = 0,
+	 .unit_con_factor = 1, .min_value = -20, .max_value = 20},
+	{.key = "RoamScan_FirstTimer", .func_p = encode_uint_mib, .psid = 2058, .index = 0,
 	 .unit_con_factor = 1000000, .min_value = 0, .max_value = 20},
-	{.key = "RoamScan_SecondTimer", .func_p = encode_uint_mib, .psid = 2052, .index = -1,
-	 .unit_con_factor = 1000000, .min_value = 60, .max_value = 100},
-	{.key = "RoamScan_InactiveTimer", .func_p = encode_uint_mib, .psid = 2059, .index = -1,
+	{.key = "RoamScan_InactiveTimer", .func_p = encode_uint_mib, .psid = 2059, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamScan_InactiveCount", .func_p = encode_uint_mib, .psid = 2319, .index = -1,
+	{.key = "RoamScan_InactiveCount", .func_p = encode_uint_mib, .psid = 2319, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamScan_StepRSSI", .func_p = encode_uint_mib, .psid = 2062, .index = -1,
+	{.key = "RoamScan_StepRSSI", .func_p = encode_uint_mib, .psid = 2062, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamRSSI_Trigger", .func_p = encode_sint_mib, .psid = 2050, .index = -1,
+	{.key = "RoamRSSI_Trigger", .func_p = encode_sint_mib, .psid = 2050, .index = 0,
 	 .unit_con_factor = 1, .min_value = -100, .max_value = -50},
 	{.key = "RoamCU_Trigger", .func_p = encode_mib_roamcu_trig, .psid = 2308, .index = 1,
 	 .unit_con_factor = 1, .min_value = 60, .max_value = 90},
-	{.key = "RoamCU_MonitorTime", .func_p = encode_uint_mib, .psid = 2311, .index = -1,
+	{.key = "RoamCU_MonitorTime", .func_p = encode_uint_mib, .psid = 2311, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
 	{.key = "RoamCU_24GRSSIRange", .func_p = encode_sint_mib, .psid = 2307, .index = 1,
 	 .unit_con_factor = 1, .min_value = -70, .max_value = -50},
 	{.key = "RoamCU_5GRSSIRange", .func_p = encode_sint_mib, .psid = 2307, .index = 2,
 	 .unit_con_factor = 1, .min_value = -70, .max_value = -50},
-	{.key = "RoamIdle_TriggerBand", .func_p = encode_uint_mib, .psid = 2073, .index = -1,
+	{.key = "RoamIdle_TriggerBand", .func_p = encode_uint_mib, .psid = 2073, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 3},
-	{.key = "RoamIdle_InactiveTime", .func_p = encode_uint_mib, .psid = 2066, .index = -1,
+	{.key = "RoamIdle_InactiveTime", .func_p = encode_uint_mib, .psid = 2066, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamIdle_MinRSSI", .func_p = encode_sint_mib, .psid = 2064, .index = -1,
+	{.key = "RoamIdle_MinRSSI", .func_p = encode_sint_mib, .psid = 2064, .index = 0,
 	 .unit_con_factor = 1, .min_value = -70, .max_value = -50},
-	{.key = "RoamIdle_RSSIVariation", .func_p = encode_uint_mib, .psid = 2063, .index = -1,
+	{.key = "RoamIdle_RSSIVariation", .func_p = encode_uint_mib, .psid = 2063, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 10},
-	{.key = "RoamIdle_InactivePacketCount", .func_p = encode_uint_mib, .psid = 2071, .index = -1,
+	{.key = "RoamIdle_InactivePacketCount", .func_p = encode_uint_mib, .psid = 2071, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamIdle_Delta", .func_p = encode_uint_mib, .psid = 2074, .index = -1,
+	{.key = "RoamIdle_Delta", .func_p = encode_uint_mib, .psid = 2074, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamBeaconLoss_TargetMinRSSI", .func_p = encode_sint_mib, .psid = 2299, .index = -1,
+	{.key = "RoamBeaconLoss_TargetMinRSSI", .func_p = encode_sint_mib, .psid = 2299, .index = 0,
 	 .unit_con_factor = 1, .min_value = -127, .max_value = -70},
-	{.key = "RoamEmergency_TargetMinRSSI", .func_p = encode_sint_mib, .psid = 2301, .index = -1,
+	{.key = "RoamEmergency_TargetMinRSSI", .func_p = encode_sint_mib, .psid = 2301, .index = 0,
 	 .unit_con_factor = 1, .min_value = -127, .max_value = -70},
-	{.key = "RoamBTM_Delta", .func_p = encode_uint_mib, .psid = 2304, .index = -1,
+	{.key = "RoamBTM_Delta", .func_p = encode_uint_mib, .psid = 2304, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "RoamAPScore_RSSIWeight", .func_p = encode_uint_mib, .psid = 2305, .index = -1,
+	{.key = "RoamAPScore_RSSIWeight", .func_p = encode_uint_mib, .psid = 2305, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 100},
-	{.key = "RoamAPScore_CUWeight", .func_p = encode_uint_mib, .psid = 2303, .index = -1,
+	{.key = "RoamAPScore_CUWeight", .func_p = encode_uint_mib, .psid = 2303, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 100},
 	{.key = "RoamAPScore_Band1_RSSIFactorValue1", .func_p = encode_mib_band1_rssi_factor_value1, .psid = 2306,
 	 .index = 1, .unit_con_factor = 1, .min_value = -100, .max_value = -50},
@@ -682,70 +920,102 @@ struct ini_lookup slsi_ini_config_lookup_table[] = {
 	 .index = 2, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
 	{.key = "RoamAPScore_Band2_RSSIFactorScore5", .func_p = encode_mib_band2_rssi_factor_score5, .psid = 2306,
 	 .index = 2, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
-	{.key = "RoamNCHO_Trigger", .func_p = encode_sint_mib, .psid = 2092, .index = -1,
+	{.key = "RoamNCHO_Trigger", .func_p = encode_sint_mib, .psid = 2092, .index = 0,
 	 .unit_con_factor = 1, .min_value = -100, .max_value = -50},
-	{.key = "RoamNCHO_Delta", .func_p = encode_uint_mib, .psid = 2075, .index = -1,
+	{.key = "RoamNCHO_Delta", .func_p = encode_uint_mib, .psid = 2075, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 30},
 	{.key = "RoamNCHO_FullScanPeriod", .func_p = encode_uint_mib, .psid = 2053,
-	 .index = -1, .unit_con_factor = 1000000, .min_value = 60, .max_value = 300},
+	 .index = 0, .unit_con_factor = 1000000, .min_value = 60, .max_value = 300},
 	{.key = "RoamNCHO_PartialScanPeriod", .func_p = encode_uint_mib, .psid = 2292,
-	 .index = -1, .unit_con_factor = 1000000, .min_value = 0, .max_value = 20},
+	 .index = 0, .unit_con_factor = 1000000, .min_value = 0, .max_value = 20},
 	{.key = "RoamNCHO_ActiveCH_DwellTime", .func_p = encode_uint_mib, .psid = 2057,
-	 .index = -1, .unit_con_factor = 1, .min_value = 0, .max_value = 200},
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 200},
+	{.key = "RoamScan_ActiveCH_DwellTime", .func_p = encode_uint_mib, .psid = 2057,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 200},
 	{.key = "RoamNCHO_PassiveCH_DwellTime", .func_p = encode_uint_mib, .psid = 2644,
-	 .index = -1, .unit_con_factor = 1, .min_value = 0, .max_value = 200},
-	{.key = "RoamNCHO_HomeTime", .func_p = encode_uint_mib, .psid = 2069, .index = -1,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 200},
+	{.key = "RoamScan_PassiveCH_DwellTime", .func_p = encode_uint_mib, .psid = 2644,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 200},
+	{.key = "RoamNCHO_HomeTime", .func_p = encode_uint_mib, .psid = 2069, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 200},
-	{.key = "RoamNCHO_AwayTime", .func_p = encode_uint_mib, .psid = 2070, .index = -1,
+	{.key = "RoamScan_HomeTime", .func_p = encode_uint_mib, .psid = 2069, .index = 0,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 200},
+	{.key = "RoamNCHO_AwayTime", .func_p = encode_uint_mib, .psid = 2070, .index = 0,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 200},
+	{.key = "RoamScan_AwayTime", .func_p = encode_uint_mib, .psid = 2070, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 200},
 	{.key = "ConBeaconLoss_TimeoutOnWakeUp", .func_p = encode_uint_mib, .psid = 2098,
-	 .index = -1, .unit_con_factor = 1, .min_value = 0, .max_value = 20},
-	{.key = "ConDTIMSkipping_Number", .func_p = encode_mib_con_dtim_skipping_number, .psid = 2518,
-	 .index = -1, .unit_con_factor = 1, .min_value = 0, .max_value = 10},
-	{.key = "ConKeepAlive_Interval", .func_p = encode_uint_mib, .psid = 2502, .index = -1,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 20},
+	{.key = "ConDTIMSkipping_Number", .func_p = encode_uint_mib, .psid = 2518,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 10},
+	{.key = "ConKeepAlive_Interval", .func_p = encode_uint_mib, .psid = 2502, .index = 0,
 	 .unit_con_factor = 1, .min_value = 0, .max_value = 120},
-	{.key = "RoamWTC_ScanMode", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 2},
-	{.key = "RoamWTC_HandlingRSSIThreshold", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -90, .max_value = -60},
-	{.key = "RoamWTC_24GCandiRSSIThreshold", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -90, .max_value = -60},
-	{.key = "RoamWTC_5GCandiRSSIThreshold", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -90, .max_value = -60},
-	{.key = "RoamWTC_6GCandiRSSIThreshold", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -90, .max_value = -60},
-	{.key = "RoamBTCoex_ScoreWeight", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 100},
-	{.key = "RoamBTCoex_ETPWeight", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 100},
-	{.key = "RoamBTCoex_TargetMinRSSI", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -90, .max_value = -60},
-	{.key = "RoamBTCoex_Delta", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 20},
-	{.key = "RoamAPScore_Band3_RSSIFactorValue1", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -100, .max_value = -50},
-	{.key = "RoamAPScore_Band3_RSSIFactorValue2", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -100, .max_value = -50},
-	{.key = "RoamAPScore_Band3_RSSIFactorValue3", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -100, .max_value = -50},
-	{.key = "RoamAPScore_Band3_RSSIFactorValue4", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = -100, .max_value = -50},
-	{.key = "RoamAPScore_Band3_RSSIFactorScore1", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 100},
-	{.key = "RoamAPScore_Band3_RSSIFactorScore2", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 100},
-	{.key = "RoamAPScore_Band3_RSSIFactorScore3", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 100},
-	{.key = "RoamAPScore_Band3_RSSIFactorScore4", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 100},
-	{.key = "RoamScan_6G_PSC_DwellTime", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 200},
-	{.key = "RoamScan_6G_NonPSC_DwellTime", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 200},
-	{.key = "ConBeaconLoss_TimeoutOnSleep", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 20},
-	{.key = "ConDTIMSkipping_MaxTime", .func_p = NULL, .psid = -100, .index = -1,
-	 .unit_con_factor = 0, .min_value = 0, .max_value = 2}
+	{.key = "RoamWTC_ScanMode", .func_p = save_roam_wtc_scan_mode, .psid = -100, .index = 0,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 2},
+	{.key = "RoamWTC_HandlingRSSIThreshold", .func_p = save_roam_wtc_handling_rssi_threshold,
+	 .psid = -100, .index = 0, .unit_con_factor = 1, .min_value = -90, .max_value = -60},
+	{.key = "RoamWTC_24GCandiRSSIThreshold", .func_p = save_roam_wtc_24g_candi_rssi_threshold,
+	 .psid = -100, .index = 0, .unit_con_factor = 1, .min_value = -90, .max_value = -60},
+	{.key = "RoamWTC_5GCandiRSSIThreshold", .func_p = save_roam_wtc_5g_candi_rssi_threshold,
+	 .psid = -100, .index = 0, .unit_con_factor = 1, .min_value = -90, .max_value = -60},
+	{.key = "RoamWTC_6GCandiRSSIThreshold", .func_p = save_roam_wtc_6g_candi_rssi_threshold,
+	 .psid = -100, .index = 0, .unit_con_factor = 1, .min_value = -90, .max_value = -60},
+	{.key = "RoamAPScore_Band1_CUFactorValue1", .func_p = encode_mib_band_cu_factor_value1, .psid = 2295,
+	 .index = 1, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band1_CUFactorValue2", .func_p = encode_mib_band_cu_factor_value2, .psid = 2295,
+	 .index = 1, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band1_CUFactorScore1", .func_p = encode_mib_band_cu_factor_score1, .psid = 2295,
+	 .index = 1, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band1_CUFactorScore2", .func_p = encode_mib_band_cu_factor_score2, .psid = 2295,
+	 .index = 1, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band2_CUFactorValue1", .func_p = encode_mib_band_cu_factor_value1, .psid = 2295,
+	 .index = 2, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band2_CUFactorValue2", .func_p = encode_mib_band_cu_factor_value2, .psid = 2295,
+	 .index = 2, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band2_CUFactorScore1", .func_p = encode_mib_band_cu_factor_score1, .psid = 2295,
+	 .index = 2, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band2_CUFactorScore2", .func_p = encode_mib_band_cu_factor_score2, .psid = 2295,
+	 .index = 2, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band3_CUFactorValue1", .func_p = encode_mib_band_cu_factor_value1, .psid = 2295,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band3_CUFactorValue2", .func_p = encode_mib_band_cu_factor_value2, .psid = 2295,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band3_CUFactorScore1", .func_p = encode_mib_band_cu_factor_score1, .psid = 2295,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band3_CUFactorScore2", .func_p = encode_mib_band_cu_factor_score2, .psid = 2295,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamAPScore_Band3_RSSIFactorValue1", .func_p = encode_mib_band3_rssi_factor_value1, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = -100, .max_value = -50},
+	{.key = "RoamAPScore_Band3_RSSIFactorValue2", .func_p = encode_mib_band3_rssi_factor_value2, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = -100, .max_value = -50},
+	{.key = "RoamAPScore_Band3_RSSIFactorValue3", .func_p = encode_mib_band3_rssi_factor_value3, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = -100, .max_value = -50},
+	{.key = "RoamAPScore_Band3_RSSIFactorValue4", .func_p = encode_mib_band3_rssi_factor_value4, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = -100, .max_value = -50},
+	{.key = "RoamAPScore_Band3_RSSIFactorScore1", .func_p = encode_mib_band3_rssi_factor_score1, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 120},
+	{.key = "RoamAPScore_Band3_RSSIFactorScore2", .func_p = encode_mib_band3_rssi_factor_score2, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 120},
+	{.key = "RoamAPScore_Band3_RSSIFactorScore3", .func_p = encode_mib_band3_rssi_factor_score3, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 120},
+	{.key = "RoamAPScore_Band3_RSSIFactorScore4", .func_p = encode_mib_band3_rssi_factor_score4, .psid = 2306,
+	 .index = 3, .unit_con_factor = 1, .min_value = 0, .max_value = 120},
+	{.key = "ConBeaconLoss_TimeoutOnSleep", .func_p = NULL, .psid = -100, .index = 0,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
+	{.key = "ConDTIMSkipping_MaxTime", .func_p = NULL, .psid = -100, .index = 0,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 2},
+	{.key = "RoamBTCoex_ScoreWeight", .func_p = encode_uint_mib, .psid = 2655,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamBTCoex_ETPWeight", .func_p = encode_uint_mib, .psid = 2656,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "RoamBTCoex_TargetMinRSSI", .func_p = encode_sint_mib, .psid = 2648,
+	 .index = 0, .unit_con_factor = 1, .min_value = -90, .max_value = -60},
+	{.key = "RoamBTCoex_Delta", .func_p = encode_uint_mib, .psid = 2649, .index = 0,
+	 .unit_con_factor = 1, .min_value = 0, .max_value = 20},
+	{.key = "RoamBTCoex_ThresholdTime", .func_p = encode_uint_mib, .psid = 2657,
+	 .index = 0, .unit_con_factor = 1, .min_value = 0, .max_value = 100},
+	{.key = "ConNonHint_TargetMinRSSI", .func_p = save_conn_non_hint_target_min_rssi,
+	 .psid = -100, .index = 0, .unit_con_factor = 1, .min_value = -95, .max_value = -45}
 };
 
 static int slsi_ini_validate_parameter_range(struct slsi_dev *sdev, int key_val,
@@ -783,13 +1053,27 @@ static u8 *slsi_ini_trim_white_space(u8 *tmp, u8 *line, int len)
 	return tmp;
 }
 
+static void slsi_ini_get_value(u8 *tmp, u8 *line, int len, u8 *key_val)
+{
+	int i = 0;
+
+	while ((tmp - line) < len) {
+		if (*tmp == '\n' || *tmp == '\0') {
+			key_val[i] = '\0';
+			break;
+		}
+		key_val[i++] = *tmp;
+		tmp++;
+	}
+}
+
 static int slsi_parse_ini_config(struct slsi_dev *sdev, u8 *line, int len, bool read_operation)
 {
 	int ret                                     = 0;
 	int index                                   = -1;
 	int key_len                                 = 0;
 	u8 *key                                     = NULL;
-	u8 *key_val                                 = NULL;
+	u8 key_val[10]                              = {0};
 	u8 *tmp                                     = NULL;
 	int key_value_int                           = 0;
 	static u8 final_key[SLSI_INI_KEY_LEN_MAX];
@@ -854,10 +1138,10 @@ static int slsi_parse_ini_config(struct slsi_dev *sdev, u8 *line, int len, bool 
 		return -ENOTSUPP;
 	}
 
-	key_val = tmp;
+	slsi_ini_get_value(tmp, line, len, key_val);
 	if (read_operation) {
-		ret = slsi_str_to_int(key_val, &key_value_int);
-		if (!ret) {
+		ret = slsi_str2int(key_val, &key_value_int);
+		if (ret) {
 			SLSI_ERR_NODEV("Key value is invalid for key:%s\n",
 				       slsi_ini_config_lookup_table[index].key);
 			return -EINVAL;
@@ -942,11 +1226,23 @@ static int slsi_load_ini_config_file(struct slsi_dev *sdev, char *path, const st
 	return r;
 }
 
+void slsi_ini_set_defaults(struct slsi_dev *sdev)
+{
+	sdev->ini_conf_struct.wtc_roam_scan_mode = 1;
+	sdev->ini_conf_struct.wtc_rssi_threshold = -70;
+	sdev->ini_conf_struct.wtc_candidate24g_rssi_threshold = -70;
+	sdev->ini_conf_struct.wtc_candidate5g_rssi_threshold = -70;
+	sdev->ini_conf_struct.wtc_candidate6g_rssi_threshold = -70;
+	sdev->ini_conf_struct.is_wtc_set = false;
+	sdev->ini_conf_struct.conn_non_hint_target_min_rssi = -75;
+}
+
 void slsi_process_ini_config_file(struct slsi_dev *sdev)
 {
 	const struct firmware *e = NULL;
 	int r = 0;
 
+	slsi_ini_set_defaults(sdev);
 	r = slsi_load_ini_config_file(sdev, INI_CONFIG_FILE_PATH, &e);
 	if (!r) {
 		r = slsi_read_ini_config_file(sdev, e, true);

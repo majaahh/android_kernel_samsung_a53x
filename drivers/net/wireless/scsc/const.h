@@ -16,7 +16,6 @@ extern "C" {
 #endif
 
 /* Max number of peers */
-#define SLSI_TDLS_PEER_CONNECTIONS_MAX 4
 #define SLSI_AP_PEER_CONNECTIONS_MAX 10
 /* When SLSI_ADHOC_PEER_CONNECTIONS_MAX is increased to 32,
  *  method of intiliazing peer_sta_record[] should be carefully changed
@@ -32,10 +31,6 @@ extern "C" {
 #define SLSI_PEER_INDEX_MAX 16
 
 #define SLSI_STA_PEER_QUEUESET 0
-
-#define SLSI_BA_TRAFFIC_STREAM_MAX 8
-#define SLSI_BA_BUFFER_SIZE_MAX 64
-
 
 #ifdef __cplusplus
 }

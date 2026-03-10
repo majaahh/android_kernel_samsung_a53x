@@ -13,9 +13,13 @@
 
 /** Uses */
 #include <scsc/scsc_logring.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include "mxmgmt_transport_format.h"
 #include "mifintrbit.h"
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mxmgmt_transport.c"
+#endif
 
 /* Flag that an error has occurred so the I/O thread processing should stop */
 void mxmgmt_transport_set_error(struct mxmgmt_transport *mxmgmt_transport)
@@ -25,6 +29,7 @@ void mxmgmt_transport_set_error(struct mxmgmt_transport *mxmgmt_transport)
 	mxmgmt_transport->mxmgmt_thread.block_thread = 1;
 }
 
+#define MAX_MXMGMT_DISCARD_CNT 5
 /** MIF Interrupt handler for writes made to the AP */
 static void input_irq_handler(int irq, void *data)
 {
@@ -35,7 +40,7 @@ static void input_irq_handler(int irq, void *data)
 	SCSC_TAG_DEBUG(MXMGT_TRANS, "IN\n");
 	/* Clear the interrupt first to ensure we can't possibly miss one */
 	mif_abs = scsc_mx_get_mif_abs(mxmgmt_transport->mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mif_abs->irq_bit_clear(mif_abs, irq, SCSC_MIF_ABS_TARGET_WLAN);
 #else
 	mif_abs->irq_bit_clear(mif_abs, irq);
@@ -53,6 +58,13 @@ static void input_irq_handler(int irq, void *data)
 	 */
 	if (th->block_thread == 1) {
 		SCSC_TAG_ERR(MXMGT_TRANS, "discard message.\n");
+		mxmgmt_transport->discard_cnt++;
+		if(mxmgmt_transport->discard_cnt == MAX_MXMGMT_DISCARD_CNT)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+			mif_abs->irq_bit_mask(mif_abs, irq, SCSC_MIF_ABS_TARGET_WLAN);
+#else
+			mif_abs->irq_bit_mask(mif_abs, irq);
+#endif
 		/*
 		 * Do not try to acknowledge a pending interrupt here.
 		 * This function is called by a function which in turn can be
@@ -66,7 +78,7 @@ static void input_irq_handler(int irq, void *data)
 	wake_up_interruptible(&th->wakeup_q);
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 /** MIF Interrupt handler for writes made to the AP */
 static void input_irq_handler_wpan(int irq, void *data)
 {
@@ -91,6 +103,13 @@ static void input_irq_handler_wpan(int irq, void *data)
 	 */
 	if (th->block_thread == 1) {
 		SCSC_TAG_ERR(MXMGT_TRANS, "discard message.\n");
+		mxmgmt_transport->discard_cnt++;
+		if (mxmgmt_transport->discard_cnt == MAX_MXMGMT_DISCARD_CNT)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+			mif_abs->irq_bit_mask(mif_abs, irq, SCSC_MIF_ABS_TARGET_WPAN);
+#else
+			mif_abs->irq_bit_mask(mif_abs, irq);
+#endif
 		/*
 		 * Do not try to acknowledge a pending interrupt here.
 		 * This function is called by a function which in turn can be
@@ -117,7 +136,7 @@ static void output_irq_handler(int irq, void *data)
 	/* The FW read some data from the output stream.
 	 * Currently we do not care, so just clear the interrupt. */
 	mif_abs = scsc_mx_get_mif_abs(mxmgmt_transport->mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mif_abs->irq_bit_clear(mif_abs, irq, SCSC_MIF_ABS_TARGET_WLAN);
 	mif_abs->irq_bit_mask(mif_abs, irq, SCSC_MIF_ABS_TARGET_WLAN);
 #else
@@ -130,7 +149,7 @@ static void output_irq_handler(int irq, void *data)
 #endif
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 /** MIF Interrupt handler for acknowledging writes made by the AP */
 static void output_irq_handler_wpan(int irq, void *data)
 {
@@ -250,7 +269,7 @@ static int mxmgmt_thread_start(struct mxmgmt_transport *mxmgmt_transport)
 	snprintf(th->name, MXMGMT_THREAD_NAME_MAX_LENGTH, "mxmgmt_thread");
 
 	/* Start the kernel thread */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (mxmgmt_transport->target == SCSC_MIF_ABS_TARGET_WLAN)
 		th->task = kthread_run(mxmgmt_thread_function, mxmgmt_transport, "%s_wlan", th->name);
 	else
@@ -313,14 +332,15 @@ void mxmgmt_transport_config_serialise(struct mxmgmt_transport *mxmgmt_transport
 
 
 /** Public functions */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mxmgmt_transport_init(struct mxmgmt_transport *mxmgmt_transport, struct scsc_mx *mx, enum scsc_mif_abs_target target)
 {
-#define MEM_LENGTH 512
+#define MEM_LENGTH 1024
 	int      r;
 	uint32_t mem_length = MEM_LENGTH;
 	uint32_t packet_size = sizeof(struct mxmgr_message);
 	uint32_t num_packets;
+	enum IRQ_TYPE irq_type;
 	mifintrbit_handler input_handler, output_handler;
 
 	if (target == SCSC_MIF_ABS_TARGET_WLAN) {
@@ -343,14 +363,28 @@ int mxmgmt_transport_init(struct mxmgmt_transport *mxmgmt_transport, struct scsc
 	memset(mxmgmt_transport, 0, sizeof(struct mxmgmt_transport));
 	num_packets = mem_length / packet_size;
 	mutex_init(&mxmgmt_transport->channel_handler_mutex);
+	spin_lock_init(&mxmgmt_transport->mxmgmt_spinlock);
 	mxmgmt_transport->mx = mx;
 	mxmgmt_transport->target = target;
-	r = mif_stream_init(&mxmgmt_transport->mif_istream, target, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, input_handler, mxmgmt_transport);
+	mxmgmt_transport->discard_cnt = 0;
+	if(target == SCSC_MIF_ABS_TARGET_WLAN) {
+		irq_type = MXMGMT_WLAN_INPUT_TYPE;
+	}
+	else{
+		irq_type = MXMGMT_WPAN_INPUT_TYPE;
+	}
+	r = mif_stream_init(&mxmgmt_transport->mif_istream, target, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, input_handler, mxmgmt_transport, irq_type);
 	if (r) {
 		SCSC_TAG_ERR(MXMGT_TRANS, "mif_stream_init IN failed %d\n", r);
 		return r;
 	}
-	r = mif_stream_init(&mxmgmt_transport->mif_ostream, target, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, output_handler, mxmgmt_transport);
+	if(target == SCSC_MIF_ABS_TARGET_WLAN) {
+		irq_type = MXMGMT_WLAN_OUTPUT_TYPE;
+	}
+	else{
+		irq_type = MXMGMT_WPAN_OUTPUT_TYPE;
+	}
+	r = mif_stream_init(&mxmgmt_transport->mif_ostream, target, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, output_handler, mxmgmt_transport, irq_type);
 	if (r) {
 		SCSC_TAG_ERR(MXMGT_TRANS, "mif_stream_init OUT failed %d\n", r);
 		mif_stream_release(&mxmgmt_transport->mif_istream);
@@ -385,13 +419,15 @@ int mxmgmt_transport_init(struct mxmgmt_transport *mxmgmt_transport, struct scsc
 	memset(mxmgmt_transport, 0, sizeof(struct mxmgmt_transport));
 	num_packets = mem_length / packet_size;
 	mutex_init(&mxmgmt_transport->channel_handler_mutex);
+	spin_lock_init(&mxmgmt_transport->mxmgmt_spinlock);
 	mxmgmt_transport->mx = mx;
-	r = mif_stream_init(&mxmgmt_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, input_irq_handler, mxmgmt_transport);
+	mxmgmt_transport->discard_cnt = 0;
+	r = mif_stream_init(&mxmgmt_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, input_irq_handler, mxmgmt_transport, MXMGMT_WLAN_INPUT_TYPE);
 	if (r) {
 		SCSC_TAG_ERR(MXMGT_TRANS, "mif_stream_init IN failed %d\n", r);
 		return r;
 	}
-	r = mif_stream_init(&mxmgmt_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, output_irq_handler, mxmgmt_transport);
+	r = mif_stream_init(&mxmgmt_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, output_irq_handler, mxmgmt_transport, MXMGMT_WLAN_INPUT_TYPE);
 	if (r) {
 		SCSC_TAG_ERR(MXMGT_TRANS, "mif_stream_init OUT failed %d\n", r);
 		mif_stream_release(&mxmgmt_transport->mif_istream);
@@ -422,18 +458,57 @@ void mxmgmt_transport_register_channel_handler(struct mxmgmt_transport *mxmgmt_t
 	mutex_unlock(&mxmgmt_transport->channel_handler_mutex);
 }
 
+#define WRITE_RETRY 3
 void mxmgmt_transport_send(struct mxmgmt_transport *mxmgmt_transport, enum mxmgr_channels channel_id,
 			   void *message, uint32_t message_length)
 {
 	struct mxmgr_message transport_msg = { .channel_id = channel_id };
-	bool res;
+	bool res = false;
+	uint32_t i = WRITE_RETRY;
+	unsigned long       flags;
 
 	const void           *bufs[2] = { &transport_msg.channel_id, message };
 	uint32_t             buf_lengths[2] = { sizeof(transport_msg.channel_id), message_length };
 
-	res = mif_stream_write_gather(&mxmgmt_transport->mif_ostream, bufs, buf_lengths, 2);
+	spin_lock_irqsave(&mxmgmt_transport->mxmgmt_spinlock, flags);
+	while (i-- && res == false) {
+		res = mif_stream_write_gather(&mxmgmt_transport->mif_ostream, bufs, buf_lengths, 2);
+		if (res == false) {
+			SCSC_TAG_ERR(MXMGT_TRANS, "mif_stream_write_gather message error. Channel %d message_len %u. Retries %u left %u\n",
+						  channel_id, message_length, WRITE_RETRY, i);
+			mdelay(10);
+		}
+	}
+	spin_unlock_irqrestore(&mxmgmt_transport->mxmgmt_spinlock, flags);
+}
 
-	if (res == false)
-		SCSC_TAG_ERR(MXMGT_TRANS, "mif_stream_write_gather message error. Channel %d message_len %u\n",
-					  channel_id, message_length);
+void mxmgmt_print_sent_data_dump(bool sm_msg)
+{
+	uint8_t irq_bit;
+	uint32_t target;
+	uint8_t chan_id;
+	uint8_t serv_id;
+	uint8_t msg_id;
+	uint8_t *dump_address = mif_stream_get_dump_for_write_gather(&irq_bit, &target);
+
+	if (!dump_address) {
+		SCSC_TAG_ERR(MXMGT_TRANS, "Failed to send a message when using mif_stream_write_gather!!\n");
+		return;
+	}
+	chan_id = *dump_address;
+	SCSC_TAG_ERR(MXMGT_TRANS, "======== Parse data dump sent via mxmgmt_transport_send ========\n");
+	SCSC_TAG_ERR(MXMGT_TRANS, "Target subsystem: %s\n", (target == SCSC_MIF_ABS_TARGET_WPAN) ? "WPAN" : "WLAN");
+	SCSC_TAG_ERR(MXMGT_TRANS, "IRQ Bit number: %d\n", irq_bit);
+	SCSC_TAG_ERR(MXMGT_TRANS, "Transport Channel ID: %d\n", chan_id);
+	if (sm_msg) {
+		serv_id = *(dump_address + sizeof(uint8_t));
+		msg_id = *(dump_address + 2 * sizeof(uint8_t));
+		SCSC_TAG_ERR(MXMGT_TRANS, "Service ID: %d, SM MSG Type: %d\n", serv_id, msg_id);
+		SCSC_PRINTK_BIN(dump_address + 3 * sizeof(uint8_t), sizeof(struct mxmgr_message) - 3 * sizeof(uint8_t));
+	}
+	else {
+		msg_id = *(dump_address + sizeof(uint8_t));
+		SCSC_TAG_ERR(MXMGT_TRANS, "MM MSG Type: %d\n", msg_id);
+		SCSC_PRINTK_BIN(dump_address + 2 * sizeof(uint8_t), sizeof(struct mxmgr_message) - 2 * sizeof(uint8_t));
+	}
 }

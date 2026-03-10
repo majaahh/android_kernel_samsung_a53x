@@ -11,6 +11,12 @@
 #include "mxman_if.h"
 #include "mxman.h"
 
+void mxman_if_control_suspend_gpio(struct mxman *mxman, u8 value)
+{
+	mxman_control_suspend_gpio(mxman, value);
+}
+EXPORT_SYMBOL(mxman_if_control_suspend_gpio);
+
 int mxman_if_get_state(struct mxman *mxman)
 {
 	return mxman_get_state(mxman);
@@ -125,3 +131,31 @@ bool mxman_if_subsys_active(struct mxman *mxman, enum scsc_subsystem sub)
 	return mxman_subsys_active(mxman, sub);
 }
 EXPORT_SYMBOL(mxman_if_subsys_active);
+
+bool mxman_if_users_active(struct mxman *mxman)
+{
+	return mxman_users_active(mxman);
+}
+EXPORT_SYMBOL(mxman_if_users_active);
+
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+bool mxman_if_warm_reset_in_progress(void)
+{
+	return mxman_warm_reset_in_progress();
+}
+EXPORT_SYMBOL(mxman_if_warm_reset_in_progress);
+#endif
+
+#ifdef CONFIG_HDM_WLBT_SUPPORT
+int mxman_if_get_hdm_wlan_support(void)
+{
+	return mxman_get_hdm_wlan_support();
+}
+EXPORT_SYMBOL(mxman_if_get_hdm_wlan_support);
+
+int mxman_if_get_hdm_bt_support(void)
+{
+	return mxman_get_hdm_bt_support();
+}
+EXPORT_SYMBOL(mxman_if_get_hdm_bt_support);
+#endif

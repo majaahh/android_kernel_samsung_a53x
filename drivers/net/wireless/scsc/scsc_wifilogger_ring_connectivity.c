@@ -7,9 +7,14 @@
 #include "scsc_wifilogger_ring_connectivity.h"
 
 /* Uses */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#include <linux/stdarg.h>
+#else
 #include <stdarg.h>
+#endif
 #include "scsc_wifilogger_ring_connectivity_api.h"
 #include "scsc_wifilogger_internal.h"
+#include <scsc/scsc_warn.h>
 
 static struct scsc_wlog_ring *the_ring;
 
@@ -106,7 +111,7 @@ int scsc_wifilogger_ring_connectivity_driver_event(wlog_verbose_level lev,
 		tlv->tag = (u16)va_arg(ap, int);
 		tlv->length = (u16)va_arg(ap, int);
 		if (tlvs_sz + sizeof(*tlv) + tlv->length >= MAX_TLVS_SZ) {
-			WARN(true,
+			WLBT_WARN(true,
 			     "TLVs container too small [%d]....truncating event's tags !\n",
 			     MAX_TLVS_SZ);
 			break;

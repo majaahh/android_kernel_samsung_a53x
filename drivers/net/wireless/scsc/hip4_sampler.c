@@ -1,6 +1,6 @@
 /*****************************************************************************
  *
- * Copyright (c) 2014 - 2018 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2022 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 #include <linux/module.h>
@@ -254,12 +254,45 @@ void __hip4_sampler_update_record(struct hip4_sampler_dev *hip4_dev, u32 minor, 
 bool hip4_sampler_update_record_filter(u8 param1)
 {
 	switch (param1) {
+#ifdef CONFIG_SCSC_WLAN_HIP5
+	case HIP5_MIF_Q_FH_CTRL:
+	case HIP5_MIF_Q_FH_PRI0:
+	case HIP5_MIF_Q_FH_SKB0:
+	case HIP5_MIF_Q_FH_RFBC:
+	case HIP5_MIF_Q_FH_RFBD0:
+
+	/* UCPU0 TH */
+	case HIP5_MIF_Q_TH_CTRL:
+	case HIP5_MIF_Q_TH_DAT0:
+	case HIP5_MIF_Q_TH_RFBC:
+	case HIP5_MIF_Q_TH_RFBD0:
+
+	/* UCPU1 FH */
+	case HIP5_MIF_Q_FH_PRI1:
+	case HIP5_MIF_Q_FH_SKB1:
+	case HIP5_MIF_Q_FH_RFBD1:
+	case HIP5_MIF_Q_TH_DAT1:
+	case HIP5_MIF_Q_TH_RFBD1:
+
+	/* FH DATA */
+	case HIP5_MIF_Q_FH_DAT0:
+	case HIP5_MIF_Q_FH_DAT1:
+	case HIP5_MIF_Q_FH_DAT2:
+	case HIP5_MIF_Q_FH_DAT3:
+	case HIP5_MIF_Q_FH_DAT4:
+	case HIP5_MIF_Q_FH_DAT5:
+	case HIP5_MIF_Q_FH_DAT6:
+	case HIP5_MIF_Q_FH_DAT7:
+	case HIP5_MIF_Q_FH_DAT8:
+	case HIP5_MIF_Q_FH_DAT9:
+#else
 	case HIP4_MIF_Q_FH_CTRL:
 	case HIP4_MIF_Q_FH_DAT:
 	case HIP4_MIF_Q_FH_RFB:
 	case HIP4_MIF_Q_TH_CTRL:
 	case HIP4_MIF_Q_TH_DAT:
 	case HIP4_MIF_Q_TH_RFB:
+#endif
 		return hip4_sampler_sample_q;
 	case HIP4_SAMPLER_QREF:
 		return hip4_sampler_sample_qref;
@@ -622,8 +655,18 @@ int hip4_collect(struct scsc_log_collector_client *collect_client, size_t size)
 			header.platform = SCSC_HIP4_SAMPLER_EXYNOS9610;
 #elif defined(CONFIG_SOC_EXYNOS7885)
 			header.platform = SCSC_HIP4_SAMPLER_EXYNOS7885;
+#elif defined(CONFIG_SOC_S5E9815)
+			header.platform = SCSC_HIP4_SAMPLER_EXYNOS9815;
 #elif defined(CONFIG_SOC_S5E8825)
 			header.platform = SCSC_HIP4_SAMPLER_EXYNOS8825;
+#elif defined(CONFIG_SOC_S5E9925)
+			header.platform = SCSC_HIP4_SAMPLER_EXYNOS9925;
+#elif defined(CONFIG_SOC_S5E8535)
+			header.platform = SCSC_HIP4_SAMPLER_EXYNOS8535;
+#elif defined(CONFIG_SOC_S5E8835)
+			header.platform = SCSC_HIP4_SAMPLER_EXYNOS8835;
+#elif defined(CONFIG_SOC_S5E8845)
+			header.platform = SCSC_HIP4_SAMPLER_EXYNOS8845;
 #else
 			header.platform = SCSC_HIP4_SAMPLER_UNDEF;
 #endif
@@ -890,7 +933,7 @@ void hip4_sampler_create(struct slsi_dev *sdev, struct scsc_mx *mx)
 
 	/* Search for free minors */
 	minor = find_first_zero_bit(bitmap_hip4_sampler_minor, SCSC_HIP4_DEBUG_INTERFACES);
-	if (minor == SCSC_HIP4_DEBUG_INTERFACES) {
+	if (minor >= SCSC_HIP4_DEBUG_INTERFACES) {
 		SLSI_INFO_NODEV("minor %d > SCSC_TTY_MINORS\n", minor);
 		return;
 	}
@@ -938,6 +981,7 @@ void hip4_sampler_create(struct slsi_dev *sdev, struct scsc_mx *mx)
 			TRAFFIC_MON_CLIENT_MODE_PERIODIC,
 			0,
 			0,
+			TRAFFIC_MON_DIR_DEFAULT,
 			hip4_sampler_tput_monitor);
 
 		/* Update bit mask */

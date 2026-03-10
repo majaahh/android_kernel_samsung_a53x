@@ -2,6 +2,7 @@ config SCSC_WLAN
 	tristate "Driver for Samsung SCSC Maxwell Wifi"
 	depends on SCSC_CORE
 	depends on CFG80211
+	default n
 
 if SCSC_WLAN != n
 config SCSC_WLAN_KEY_MGMT_OFFLOAD
@@ -12,7 +13,7 @@ config SCSC_WLAN_KEY_MGMT_OFFLOAD
 
 config SCSC_WLAN_HIP4_PROFILING
 	bool "Enable HIP4 profiling"
-        default y
+	default y
 	depends on SCSC_WLAN
 	help
 	  This option enables HIP4 profiling
@@ -27,7 +28,7 @@ config SCSC_WLAN_DEBUG
 config SCSC_WLAN_SG
 	bool "Enable SCSC WLAN Scatter-gather and GSO support"
 	depends on SCSC_WLAN
-        default y
+        default n
 	help
 	  This option enables scatter-gather and GSO feature
 
@@ -40,9 +41,17 @@ config SCSC_WLAN_RX_NAPI
 config SCSC_WLAN_RX_NAPI_GRO
 	bool "Enable use of net device napi rx GRO"
 	depends on SCSC_WLAN_RX_NAPI
-	default y
+	default n
 	help
 	  This option enables the drivers use of the napi Generic Receive Offload
+
+config SCSC_WLAN_NAPI_PER_NETDEV
+	bool "Add napi instance per each netdevice"
+	depends on SOC_S5E9945
+	depends on SCSC_WLAN_RX_NAPI
+	default y
+	help
+	  This option enables the drivers to allow one netdevice to have one napi instance.
 
 config SCSC_WLAN_ANDROID
 	bool "Android specific support"
@@ -69,11 +78,6 @@ config SCSC_WLAN_GSCAN_ENABLE
 	help
 	  This option enables GSCAN in SCSC wlan driver.
 
-config WLBT_WARN_ON
-       bool "Enable wlbt warn on"
-       default y
-       help
-         Enable wlbt warn on
 config SCSC_WLAN_WES_NCHO
 	bool "Enable NCHO/WES feature"
 	default y
@@ -135,8 +139,6 @@ config SCSC_WLAN_ACM_API
 	help
 	  This option provides API to read TSF.
 
-endif
-
 config SCSC_WLAN_MAC_ADDRESS_FILENAME
 	string "MAC address filename"
 	default "/efs/wifi/.mac.info"
@@ -145,8 +147,8 @@ config SCSC_WLAN_MAC_ADDRESS_FILENAME
 
 config SCSC_WLAN_MAX_INTERFACES
         int "Max number of virtual interfaces supported"
-        range 1 12
-        default 3
+        range 5 16
+        default 5
         help
           The driver structures are sized to support this
           number of interfaces.
@@ -157,25 +159,11 @@ config SCSC_WLAN_WIFI_SHARING
 	help
 	  This option tells if wifi sharing is supported or not.
 
-config SCSC_WLAN_SAE_CONFIG
-        bool "Wpa3 Support"
-        default y
-        help
-          This option tells if wpa3  is supported or not.
-
 config SCSC_WLAN_ENABLE_MAC_RANDOMISATION
         bool "Wifi Mac Randomization Support"
         default n
         help
           This option tells if mac randomization is supported or not.
-
-config SCSC_WLAN_SINGLE_ANTENNA
-	depends on SCSC_WLAN_WIFI_SHARING
-	bool "Single Antenna Supported"
-	default y
-	help
-	  This option tells if there is support for single
-	  antenna or dual antenna.
 
 config SCSC_AP_INTERFACE_NAME
         string "AP net device interface name"
@@ -189,12 +177,6 @@ config SCSC_WLAN_ACS_ENABLE
         help
           This option tells if automatic channel selection is
 	  supported or not.
-
-config SCSC_AP_INTERFACE_NAME
-        string "AP net device interface name"
-        default "wlan1"
-        help
-          AP net device interface name.
 
 config SCSC_WLAN_MHS_STATIC_INTERFACE
         bool "Static AP Interface Support"
@@ -224,12 +206,6 @@ config SCSC_WLAN_ENHANCED_PKT_FILTER
         help
           This option tells if UDP packet filtering in suspend is
           supported or not.
-
-config SCSC_WLAN_NUM_ANTENNAS
-        bool "Enable configuring and fetching of number of antennas"
-        default n
-        help
-          This option tells whether configuring and fetching of number of antennas is enabled or not.
 
 config SCSC_ENHANCED_PACKET_STATS
         bool "Enable enhanced packet stats"
@@ -316,9 +292,15 @@ config SCSC_WLAN_ENHANCED_BIGDATA
 
 config SCSC_WLAN_HE
         bool "Enable HE Capability in Driver"
-        default n
+	default n
         help
         Enable HE Capability in Driver.
+
+config SCSC_WLAN_EHT
+        bool "Enable EHT Capability in Driver"
+        default n
+        help
+        Enable EHT Capability in Driver.
 
 config SCSC_WLAN_BSS_COLOR
 	bool "Enable making a bss color IE in kernel 5.4"
@@ -332,11 +314,11 @@ config SCSC_WLAN_RTT
         help
           This option tells whether WiFi RTT is enabled or not.
 
-config SCSC_WLAN_NW_PKT_DROP
-        bool "Enable debugging for EAPOL/DHCP/ARP packet drop in Network Stack"
+config SCSC_WLAN_DELAYED_SCHED_SCAN
+        bool "Enable delayed scheduled scan"
         default n
         help
-        This option enable the dumps for packets getting dropped in Network Stack.
+        This option enables the delayed scheduled scan.
 
 config SCSC_WLAN_EXPONENTIAL_SCHED_SCAN
         bool "Enable exponential scheduled scan"
@@ -364,18 +346,127 @@ config SCSC_WLAN_DEBUG_MLME_WORK_STRUCT
 
 config SCSC_WLAN_TX_API
         bool "Enable Tx APIs"
-        default n
+        default y
+        depends on SOC_S5E9925 || SOC_S5E9935 || SOC_S5E9945 || SOC_S5E5515 || SOC_S5E8535 || SOC_S5E8835 || SOC_S5E8845 || SOC_S5E5535
+        select SCSC_WLAN_LOAD_BALANCE_MANAGER
         help
         This option enables Tx APIs.
 
 config SCSC_WLAN_CPUHP_MONITOR
 	bool "Enable CPU Hotplug Monitor"
-        default n
+        default y
+	depends on SOC_S5E9945 || SOC_S5E8845 || SOC_S5E8835
         help
         This option enables CPU Hotplug Monitor
+
+config SCSC_WLAN_MULTIPLE_CLUSTER
+	bool "Enable Cluster2 usage"
+	default y
+	depends on SOC_S5E9945
+	help
+	This option enables cluster2 usage
+
+config SCSC_WLAN_SUPPORT_6G
+        bool "Enable 6G band"
+        default n
+        help
+        This option enables 6g band support.
 
 config SCSC_WLAN_LOG_2_USER_SP
         bool "Enable Logging for Driver events for user space"
         default y
         help
         This option enables logging of driver events to user space
+
+config SCSC_WLAN_LOAD_BALANCE_MANAGER
+        bool "load balance manager"
+        default y
+        depends on SOC_S5E9925 || SOC_S5E5515 || SOC_S5E9935 || SOC_S5E9945 || SOC_S5E8535 || SOC_S5E8835 || SOC_S5E8845
+        help
+        This option enables load balance manager.
+
+config SCSC_WLAN_TRACEPOINT_DEBUG
+        bool "Enable Tracepoint debug"
+        default y
+        depends on TRACEPOINTS && KRETPROBES
+        help
+        This option enables tracepoint debug.
+
+config SCSC_WLAN_HIP5
+	bool "Enable HIP5"
+	default y
+	depends on SOC_S5E9925 || SOC_S5E9935 || SOC_S5E9945
+	depends on SCSC_WLAN
+	select SCSC_WLAN_RX_NAPI
+	select SCSC_WLAN_LOAD_BALANCE_MANAGER
+	help
+	This option enables HIP version 5
+
+config SCSC_WLAN_HOST_DPD
+	bool "Enable support for Host DPD"
+	default y
+	depends on SOC_S5E8825 || SOC_S5E8835 || SOC_S5E8845 || SCSC_BB_REDWOOD
+	depends on SCSC_WLAN
+	help
+	This option enables support for DPD in Host
+
+config SCSC_UNII4
+        bool "Support UNII4 sub band"
+        default n
+        depends on SCSC_WLAN
+        help
+        This option enables UNII4 sub band.
+
+config SCSC_WLAN_SAP_POWER_SAVE
+	bool "Enable SAP_POWER_SAVE"
+	default n
+	depends on SCSC_WLAN
+	help
+	This option enables the power_save mode of softap
+
+config WLBT_LOCAL_MIB
+	bool "Enables check local_mib file"
+	default y
+	help
+	This option enables loading local_mib file.
+
+config SCSC_WLAN_TPUT_MONITOR
+	bool "Enable Throughput Monitor"
+	default y
+	help
+	This option enables throughput monitor in Host
+
+config SCSC_WLAN_KUNIT_TEST
+	bool "Enable Kunit test"
+	default n
+	depends on KUNIT
+	help
+	  This option enables kunit test
+
+config RPS
+	bool "Enable RPS config"
+	default n
+	depends on SCSC_WLAN_KUNIT_TEST
+	help
+	  This option enables RPS configuration
+
+config SCSC_WLAN_TAS
+	bool "Enable WLAN TAS"
+	default n
+	depends on SCSC_WLAN_TX_API
+	help
+	  This option enables TAS in Host. Native daemon should be configured.
+
+config SCSC_WLAN_LPC
+	bool "Enable Local Packet Capture"
+	depends on SOC_S5E9945
+	default y
+	help
+	  This option enables Local Packet Capture.
+
+config SCSC_WLAN_OCE
+	bool "OCE Support"
+	default n
+	help
+	  This option enables OCE support in driver
+endif

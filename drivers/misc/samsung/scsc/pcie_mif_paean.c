@@ -32,6 +32,7 @@
 struct pcie_mif *g_pcie;
 struct scsc_mif_abs *g_if;
 bool global_enable;
+static void* ramrp_buff;
 
 static bool fw_compiled_in_kernel;
 module_param(fw_compiled_in_kernel, bool, S_IRUGO | S_IWUSR);
@@ -49,9 +50,14 @@ static bool enable_pcie_mif_arm_reset = true;
 module_param(enable_pcie_mif_arm_reset, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(enable_pcie_mif_arm_reset, "Enables ARM cores reset");
 
+/* Workaround for design issue that didn't make PMU a wakeup source from PCIe doorbell */
+static bool wake_pmu = true;
+module_param(wake_pmu, bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(wake_pmu, "Write wakeup to PMU when in deep sleep");
+
 #define NUM_TO_HOST_IRQ_PMU		1
-#define NUM_TO_HOST_IRQ_WLAN		16
-#define NUM_TO_HOST_IRQ_WPAN		10
+#define NUM_TO_HOST_IRQ_WLAN		23
+#define NUM_TO_HOST_IRQ_WPAN		8
 #define NUM_TO_HOST_IRQ_PMU_START	0
 #define NUM_TO_HOST_IRQ_PMU_END		((NUM_TO_HOST_IRQ_PMU_START + NUM_TO_HOST_IRQ_PMU) - 1)
 #define NUM_TO_HOST_IRQ_WLAN_START	(NUM_TO_HOST_IRQ_PMU_END + 1)
@@ -59,6 +65,10 @@ MODULE_PARM_DESC(enable_pcie_mif_arm_reset, "Enables ARM cores reset");
 #define NUM_TO_HOST_IRQ_WPAN_START	(NUM_TO_HOST_IRQ_WLAN_END + 1)
 #define NUM_TO_HOST_IRQ_WPAN_END	((NUM_TO_HOST_IRQ_WPAN_START + NUM_TO_HOST_IRQ_WPAN) - 1)
 #define NUM_TO_HOST_IRQ_TOTAL		(NUM_TO_HOST_IRQ_PMU + NUM_TO_HOST_IRQ_WLAN + NUM_TO_HOST_IRQ_WPAN)
+
+#define CEILING(x,y) (((x) + (y) - 1) / (y))
+#define MAX_RAMRP_SZ			33 * 1024
+#define MAX_RAMRP_SZ_ALIGNED	((CEILING(MAX_RAMRP_SZ, PAGE_SIZE)) * (PAGE_SIZE))	/* Maximum memory for ramrp, note that it has to be page aligned*/
 
 /* Types */
 struct msi_emul {
@@ -124,6 +134,57 @@ struct pcie_mif {
 /** Upcast from interface member to pcie_mif */
 #define pcie_mif_from_mif_abs(MIF_ABS_PTR) container_of(MIF_ABS_PTR, struct pcie_mif, interface)
 
+__iomem void *__pcie_get_ramrp_ptr(struct pcie_mif *pcie)
+{
+	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "base 0x%lx\n", (uintptr_t)pcie->registers_ramrp);
+	return pcie->registers_ramrp;
+}
+
+int __pcie_get_ramrp_buff(struct pcie_mif *pcie, void** buff, int count, u64 offset)
+{
+	int i = 0;
+	if (pcie->registers_ramrp == NULL)
+		return -EPERM;
+
+	/* Adjust the 'count' */
+	if((offset + count) > MAX_RAMRP_SZ)
+		count = MAX_RAMRP_SZ - offset;
+
+	if (count % 4)
+		count = ((count/4) + 1) * 4;
+
+	if ((offset % 4) && (offset > 4))
+		offset = ((offset/4) - 1) * 4;
+	else if (offset <= 3)
+		offset = 0;
+
+	if (*buff == NULL) {
+		*buff = kzalloc(MAX_RAMRP_SZ_ALIGNED, GFP_KERNEL);
+		if (*buff == NULL)
+			return -ENOMEM;
+		else
+			ramrp_buff = *buff;
+	}
+	for (i = 0; i < (count / 4); i++) {
+		((u32 *)*buff)[i] = readl((pcie->registers_ramrp) + (4 * i) + (offset));
+	}
+	return count;
+}
+
+int pcie_get_ramrp_buff(struct scsc_mif_abs *interface, void** buff, int count, u64 offset)
+{
+	struct pcie_mif *pcie = pcie_mif_from_mif_abs(interface);
+
+	return __pcie_get_ramrp_buff(pcie, buff, count, offset);
+}
+
+static __iomem void *pcie_get_ramrp_ptr(struct scsc_mif_abs *interface)
+{
+	struct pcie_mif *pcie = pcie_mif_from_mif_abs(interface);
+
+	return __pcie_get_ramrp_ptr(pcie);
+}
+
 static inline void pcie_mif_reg_write(struct pcie_mif *pcie, u32 offset, u32 value)
 {
 	writel(value, pcie->registers_ramrp + offset);
@@ -181,7 +242,8 @@ irqreturn_t pcie_mif_isr_wlan(int irq, void *data)
 			pcie->rcv_irq_wlan = pcie->wlan_msi[i].msi_bit;
 	}
 
-	SCSC_TAG_DEBUG_DEV(PCIE_MIF, pcie->dev, "IN WLAN ISR!!!!!!!!!!!!!!!!! line %d msi_bit %u cpu %d", irq, pcie->rcv_irq_wlan, smp_processor_id());
+	SCSC_TAG_DEBUG_DEV(PCIE_MIF, pcie->dev, "IRQ received line %d msi_bit %u cpu %d\n", irq,
+			   pcie->rcv_irq_wlan, smp_processor_id());
 #if 0 /* not yet */
 	/* We need to disable this IRQ line based on MBOX emulation */
 	disable_irq_nosync(irq);
@@ -213,7 +275,7 @@ irqreturn_t pcie_mif_isr_wpan(int irq, void *data)
 			pcie->rcv_irq_wpan = pcie->wpan_msi[i].msi_bit;
 	}
 
-	SCSC_TAG_DEBUG_DEV(PCIE_MIF, pcie->dev, "IN WPAN ISR!!!!!!!!!!!!!!!!! line %d msi_bit %u", irq, pcie->rcv_irq_wpan);
+	SCSC_TAG_DEBUG_DEV(PCIE_MIF, pcie->dev, "IRQ received line %d msi_bit %u\n", irq, pcie->rcv_irq_wpan);
 #if 0 /* not yet */
 	/* We need to disable this IRQ line based on MBOX emulation */
 	disable_irq_nosync(irq);
@@ -230,6 +292,8 @@ irqreturn_t pcie_mif_isr_wpan(int irq, void *data)
 
 static void pcie_mif_destroy(struct scsc_mif_abs *interface)
 {
+	if (ramrp_buff)
+		kfree(ramrp_buff);
 }
 
 static char *pcie_mif_get_uid(struct scsc_mif_abs *interface)
@@ -249,18 +313,9 @@ static void pcie_set_atu(struct pcie_mif *pcie)
 	atu.start_addr_0 = pcie->dma_addr;
 	atu.end_addr_0 = pcie->dma_addr + PCIE_MIF_PREALLOC_MEM;
 
-	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "Copy ATU offset 0x%x start 0x%lx end 0x%lx\n", RAMRP_HOSTIF_PMU_BUF_PTR,
+	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "Copy ATU offset 0x%x start 0x%lx end 0x%lx\n", RAMRP_HOSTIF_PMU_PCIE_CONFIG_PTR,
 			  atu.start_addr_0, atu.end_addr_0);
-	memcpy_toio(pcie->registers_ramrp + RAMRP_HOSTIF_PMU_BUF_PTR, &atu, sizeof(pcie_atu_config_t));
-	msleep(1);
-
-	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "Write PMU_HOSTIF_MBOX_REQ_PCIE_ATU_CONFIG at offset %x\n",
-			  RAMRP_HOSTIF_PMU_MBOX_FROM_HOST_PTR);
-	writel(PMU_HOSTIF_MBOX_REQ_PCIE_ATU_CONFIG, pcie->registers_ramrp + RAMRP_HOSTIF_PMU_MBOX_FROM_HOST_PTR);
-	msleep(1);
-
-	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "TRIGGER IRQ 0x2: PMU_INTERRUPT_FROM_HOST_INTGR\n");
-	writel(0x2, pcie->registers_pert + PMU_INTERRUPT_FROM_HOST_INTGR);
+	memcpy_toio(pcie->registers_ramrp + RAMRP_HOSTIF_PMU_PCIE_CONFIG_PTR, &atu, sizeof(pcie_atu_config_t));
 	msleep(1);
 }
 
@@ -318,6 +373,7 @@ static void pcie_load_pmu(struct pcie_mif *pcie)
 	msleep(100);
 	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "KA patch done\n");
 
+	pcie_set_atu(pcie);
 	wmb();
 
 	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "End GFG\n");
@@ -329,7 +385,6 @@ static void pcie_load_pmu(struct pcie_mif *pcie)
 	writel(0x1, pcie->registers_pert + PMU_INTERRUPT_FROM_HOST_INTGR);
 	msleep(100);
 
-	pcie_set_atu(pcie);
 	pcie_set_remappers(pcie);
 
 	pcie->boot_state = WLBT_BOOT_CFG_DONE;
@@ -348,7 +403,6 @@ static int pcie_mif_reset(struct scsc_mif_abs *interface, bool reset)
 				pcie_load_pmu(pcie);
 				already_done = true;
 			} else {
-				pcie_set_atu(pcie);
 				pcie_set_remappers(pcie);
 			}
 			pcie->in_reset = false;
@@ -552,6 +606,7 @@ static void pcie_mif_remap_set(struct scsc_mif_abs *interface, uintptr_t remap_a
 
 static void pcie_mif_irq_bit_set(struct scsc_mif_abs *interface, int bit_num, enum scsc_mif_abs_target target)
 {
+	u32 wake;
 	struct pcie_mif *pcie = pcie_mif_from_mif_abs(interface);
 	u32 target_off = WLAN_INTERRUPT_FROM_HOST_PENDING_BIT_ARRAY_SET;
 
@@ -562,12 +617,19 @@ static void pcie_mif_irq_bit_set(struct scsc_mif_abs *interface, int bit_num, en
 		return;
 	}
 
-	if (target == SCSC_MIF_ABS_TARGET_WLAN)
+	if (target == SCSC_MIF_ABS_TARGET_WLAN) {
 		target_off = WLAN_INTERRUPT_FROM_HOST_PENDING_BIT_ARRAY_SET;
-	else
+		wake = PMU_INT_FROM_HOST_WAKE_WLAN_MASK;
+	} else {
 		target_off = WPAN_INTERRUPT_FROM_HOST_INTGR;
+		wake = PMU_INT_FROM_HOST_WAKE_WPAN_MASK;
+	}
 
 	writel(1 << bit_num, pcie->registers_pert + target_off);
+
+	/* Wake PMU to tell it to wake BT/WLAN */
+	if (wake_pmu)
+		writel(wake, pcie->registers_pert + PMU_INTERRUPT_FROM_HOST_INTGR);
 }
 
 static void pcie_mif_irq_reg_handler(struct scsc_mif_abs *interface, void (*handler)(int irq, void *data), void *dev)
@@ -900,7 +962,8 @@ struct scsc_mif_abs *pcie_mif_create(struct pci_dev *pdev, const struct pci_devi
 	/* Suspend/resume not supported in PCIe MIF */
 	pcie_if->suspend_reg_handler = NULL;
 	pcie_if->suspend_unreg_handler = NULL;
-
+	pcie_if->get_ramrp_ptr = pcie_get_ramrp_ptr;
+	pcie_if->get_ramrp_buff = pcie_get_ramrp_buff;
 	pcie_if->get_mbox_pmu = pcie_mif_get_mbox_pmu;
 	pcie_if->set_mbox_pmu = pcie_mif_set_mbox_pmu;
 	pcie_if->load_pmu_fw = pcie_load_pmu_fw;

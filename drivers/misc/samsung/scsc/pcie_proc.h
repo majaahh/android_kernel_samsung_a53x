@@ -20,7 +20,11 @@
 #define AID_WIFI        0444
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#define PCIE_PDE_DATA(inode) pde_data(inode)
+#else
 #define PCIE_PDE_DATA(inode) PDE_DATA(inode)
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
 #define PCIE_PROCFS_SEQ_FILE_OPS(name)                                                      \

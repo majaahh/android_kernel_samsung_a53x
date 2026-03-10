@@ -54,7 +54,7 @@ static void slsi_test_dev_free(void)
 					uftestdev->hw_addr[4],
 					uftestdev->hw_addr[5]);
 
-			if (WARN_ON(uftestdev->attached)) {
+			if (WLBT_WARN_ON(uftestdev->attached)) {
 				slsi_test_bh_deinit(uftestdev);
 				flush_workqueue(uftestdev->attach_detach_work_queue);
 			}
@@ -326,7 +326,7 @@ static struct slsi_test_data_route *slsi_test_process_signal_get_route(struct sl
 	struct slsi_test_data_route *route;
 	int                         i;
 
-	if (WARN_ON(!spin_is_locked(&uftestdev->route_spinlock)))
+	if (WLBT_WARN_ON(!spin_is_locked(&uftestdev->route_spinlock)))
 		return NULL;
 
 	for (i = 0; i < SLSI_AP_PEER_CONNECTIONS_MAX; i++) {
@@ -343,7 +343,7 @@ static struct slsi_test_data_route *slsi_test_process_signal_get_free_route(stru
 	struct slsi_test_data_route *route;
 	int                         i;
 
-	if (WARN_ON(!spin_is_locked(&uftestdev->route_spinlock)))
+	if (WLBT_WARN_ON(!spin_is_locked(&uftestdev->route_spinlock)))
 		return NULL;
 
 	for (i = 0; i < SLSI_AP_PEER_CONNECTIONS_MAX; i++) {
@@ -456,9 +456,9 @@ bool slsi_test_process_signal(struct slsi_test_dev *uftestdev, struct sk_buff *s
 			struct fapi_signal *ind;
 
 			/* Convert the MA_UNITDATA_REQ to a MA_UNITDATA_IND */
-			WARN_ON(!skb_pull(skb, fapi_sig_size(ma_unitdata_req)));
+			WLBT_WARN_ON(!skb_pull(skb, fapi_sig_size(ma_unitdata_req)));
 			ind = (struct fapi_signal *)skb_push(skb, fapi_sig_size(ma_unitdata_ind));
-			if (WARN_ON(!ind)) {
+			if (WLBT_WARN_ON(!ind)) {
 				kfree_skb(skb);
 				spin_unlock(&uftestdev->route_spinlock);
 				return true;

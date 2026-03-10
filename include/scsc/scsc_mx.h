@@ -33,17 +33,97 @@ struct device;
 struct firmware;
 struct scsc_mx;
 
+enum CLAIM_TYPE{
+	DEFAULT_CLAIM_TYPE,
+	WLAN_RX_CTRL,
+	WLAN_RB,
+	WLAN_RX_DATA,
+	WLAN_TX_DATA,
+	WLAN_TX_CTRL,
+	WLAN_MLME_SEND_FRAME,
+	WLAN_MLME_REQ_CFM_IND,
+	WLAN_MLME_REQ,
+	WLAN_UDI,
+	MX_GDB,
+	MX_RAMRP,
+	MXLOGGER_GENERATE_SYNC_RECORD,
+	MXLOGGER_COLLECT,
+	MXLOGGER_UNREGISTER_OBSERVER,
+	MXMAN_FAILURE_WORK_WLAN,
+	MXMAN_FAILURE_WORK_WPAN,
+	MXMAN_FAILURE_WORK,
+	MXMAN_FREEZE,
+	MXMAN_FORCE_PANIC,
+	SCSC_LERNA,
+	SERVICE_START,
+	SERVICE_STOP,
+	SERVICE_CLOSE,
+	SERVICE_OPEN,
+	LAST_CLAIM_TYPE
+};
+
+enum IRQ_TYPE{
+	DEFAULT_IRQ_TYPE,
+	GDB_TRANSPORT_FXM_1_INPUT_TYPE,
+	GDB_TRANSPORT_FXM_1_OUTPUT_TYPE,
+	GDB_TRANSPORT_FXM_2_INPUT_TYPE,
+	GDB_TRANSPORT_FXM_2_OUTPUT_TYPE,
+	GDB_TRANSPORT_FXM_3_INPUT_TYPE,
+	GDB_TRANSPORT_FXM_3_OUTPUT_TYPE,
+	GDB_TRANSPORT_WPAN_INPUT_TYPE,
+	GDB_TRANSPORT_WPAN_OUTPUT_TYPE,
+	GDB_TRANSPORT_PMU_INPUT_TYPE,
+	GDB_TRANSPORT_PMU_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_2_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_2_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_3_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_3_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_4_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_4_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_5_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_5_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_6_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_6_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_7_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_7_OUTPUT_TYPE,
+	GDB_TRANSPORT_WLAN_8_INPUT_TYPE,
+	GDB_TRANSPORT_WLAN_8_OUTPUT_TYPE,
+	MXLOG_WLAN_TYPE,
+	MXLOG_WPAN_TYPE,
+	MXMGMT_WLAN_INPUT_TYPE,
+	MXMGMT_WLAN_OUTPUT_TYPE,
+	MXMGMT_WPAN_INPUT_TYPE,
+	MXMGMT_WPAN_OUTPUT_TYPE,
+	MX_DBG_SAMPLER_TYPE,
+	SCSC_ANT_SHM_IRQ_TYPE,
+	SCSC_BT_SHM_IRQ_TYPE,
+	HIP4_SMAPPER_REFILL_TYPE,
+	HIP4_IRQ_HANDLER_FB_TYPE,
+	HIP4_IRQ_HANDLER_CTRL_TYPE,
+	HIP4_IRQ_HANDLER_DATA_TYPE,
+	HIP4_IRQ_HANDLER_TYPE,
+	HIP4_IRQ_HANDLER_DPD_TYPE,
+	HIP5_IRQ_HANDLER_CTRL_TYPE,
+	HIP5_IRQ_HANDLER_FB_TYPE,
+	HIP5_IRQ_HANDLER_DAT_TYPE,
+	HIP5_IRQ_HANDLER_DPD_TYPE,
+	HIP5_IRQ_HANDLER_STUB_TYPE,
+	LAST_IRQ_TYPE
+};
+
 enum scsc_service_id {
 	SCSC_SERVICE_ID_NULL = 0,
 	SCSC_SERVICE_ID_WLAN = 1,
 	SCSC_SERVICE_ID_BT = 2,
 	SCSC_SERVICE_ID_ANT = 3,
-	SCSC_SERVICE_ID_R4DBG = 4,
+	SCSC_SERVICE_ID_WLANDBG = 4,
 	SCSC_SERVICE_ID_ECHO = 5,
 	SCSC_SERVICE_ID_DBG_SAMPLER = 6,
 	SCSC_SERVICE_ID_CLK20MHZ = 7,
 	SCSC_SERVICE_ID_FM = 8,
-	SCSC_SERVICE_ID_NULL_BT = 9,
+	SCSC_SERVICE_ID_FLASH = 9,
 	SCSC_SERVICE_ID_INVALID = 0xff,
 };
 
@@ -63,6 +143,8 @@ enum scsc_module_client_reason {
 	SCSC_MODULE_CLIENT_REASON_HW_PROBE = 0,
 	SCSC_MODULE_CLIENT_REASON_HW_REMOVE = 1,
 	SCSC_MODULE_CLIENT_REASON_RECOVERY = 2,
+	SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN = 3,
+	SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN = 4,
 	SCSC_MODULE_CLIENT_REASON_INVALID = 0xff,
 };
 
@@ -197,6 +279,8 @@ struct scsc_service_client {
 	int (*resume)(struct scsc_service_client *client);
 	/* called when log collection has been triggered */
 	void (*log)(struct scsc_service_client *client, u16 reason);
+	/* called when FW log collection has been triggered */
+	void (*fw_log)(struct scsc_service_client *client, size_t length, u32 level, const void *message);
 };
 
 /*
@@ -239,7 +323,11 @@ typedef void (*scsc_mifintrbit_handler)(int which_bit, void *data);
  */
 int scsc_mx_module_register_client_module(struct scsc_mx_module_client *module_client);
 void scsc_mx_module_unregister_client_module(struct scsc_mx_module_client *module_client);
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+int scsc_mx_module_reset(enum scsc_module_client_reason reason);
+#else
 int scsc_mx_module_reset(void);
+#endif
 
 /*
  *  Core Instance interface
@@ -248,6 +336,16 @@ int scsc_mx_module_reset(void);
 struct scsc_service *scsc_mx_service_open(struct scsc_mx *mx, enum scsc_service_id id, struct scsc_service_client *client, int *status);
 /** Open can be called passing arbitrary data that will be added in mxconf */
 struct scsc_service *scsc_mx_service_open_boot_data(struct scsc_mx *mx, enum scsc_service_id id, struct scsc_service_client *client, int *status, void *data, size_t data_sz);
+
+
+#if IS_ENABLED(CONFIG_SCSC_FLASH_SERVICE)
+/* Services can request a lock on service_open. This is to avoid multiple
+ * services opening at the same time. Usage in Flash service */
+void scsc_mx_service_lock_open(struct scsc_mx *mx, enum scsc_service_id id);
+void scsc_mx_service_unlock_open(struct scsc_mx *mx, enum scsc_service_id id);
+bool scsc_mx_service_users_active(struct scsc_mx *mx);
+#endif
+
 /*
  * Service interface
  */
@@ -256,11 +354,21 @@ void *scsc_mx_service_mif_addr_to_ptr(struct scsc_service *service, scsc_mifram_
 void *scsc_mx_service_mif_addr_to_phys(struct scsc_service *service, scsc_mifram_ref ref);
 int scsc_mx_service_mif_ptr_to_addr(struct scsc_service *service, void *mem_ptr, scsc_mifram_ref *ref);
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+__iomem void *scsc_mx_service_get_ramrp_ptr(struct scsc_service *service);
+void pcie_users_print(void);
+#endif
+
+void scsc_mx_service_control_suspend_gpio(struct scsc_mx *mx, u8 value);
+
 int scsc_mx_service_start(struct scsc_service *service, scsc_mifram_ref ref);
 int scsc_mx_service_stop(struct scsc_service *service);
 int scsc_mx_service_close(struct scsc_service *service);
 int scsc_mx_service_mif_dump_registers(struct scsc_service *service);
-
+/* PCIe claim/release API for chips with PCIE (for SOC chips nop) */
+int scsc_mx_service_claim(enum CLAIM_TYPE claim_type);
+int scsc_mx_service_claim_deferred(struct scsc_service *service, int (*claim_complete)(void *service, void *data), void *dev, enum CLAIM_TYPE claim_type);
+int scsc_mx_service_release(enum CLAIM_TYPE claim_type);
 /** Signal a failure detected by the Client. This will trigger the systemwide
  * MX_SYSERR_LEVEL_7 failure handling procedure: _All_ Clients will be called back via
  * their stop_on_failure() handler as a side-effect. */
@@ -310,7 +418,7 @@ void scsc_service_mifintrbit_bit_set(struct scsc_service *service, int which_bit
 
 /* Register an interrupt handler -TOHOST direction.
  * Function returns the IRQ associated , -EIO if all interrupts have been assigned */
-int scsc_service_mifintrbit_register_tohost(struct scsc_service *service, void (*handler)(int irq, void *data), void *data, enum scsc_mifintr_target dir);
+int scsc_service_mifintrbit_register_tohost(struct scsc_service *service, void (*handler)(int irq, void *data), void *data, enum scsc_mifintr_target dir, enum IRQ_TYPE irq_type);
 /* Unregister an interrupt handler associated with a bit -TOHOST direction */
 int scsc_service_mifintrbit_unregister_tohost(struct scsc_service *service, int which_bit, enum scsc_mifintr_target dir);
 
@@ -333,6 +441,7 @@ struct device *scsc_service_get_device_by_mx(struct scsc_mx *mx);
 
 int scsc_service_force_panic(struct scsc_service *service);
 
+void mxman_scan_dump_mode(void);
 /*
  * API to share /sys/wifi kobject between core and wifi driver modules.
  * Depending upon the order of loading respective drivers, a kobject is
@@ -370,9 +479,33 @@ u16 scsc_service_get_alignment(struct scsc_service *service);
 int scsc_service_pm_qos_add_request(struct scsc_service *service, enum scsc_qos_config config);
 int scsc_service_pm_qos_update_request(struct scsc_service *service, enum scsc_qos_config config);
 int scsc_service_pm_qos_remove_request(struct scsc_service *service);
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+int scsc_service_set_affinity_cpu(struct scsc_service *service, u8 msi, u8 cpu);
+#else
 int scsc_service_set_affinity_cpu(struct scsc_service *service, u8 cpu);
 #endif
+#endif
 
+/**
+ * Set of functions to find and read properties from wlbt binding
+ * @propname:	name of the property to be searched.
+ * @out_value:	pointer to null terminated return string, modified only if
+ *		return value is 0.
+ *
+ * Return:
+ * - scsc_mx_service_property_read_bool:
+ *  if the property exists false otherwise
+ * - scsc_mx_service_property_read_u8/u16/u32/string
+ *   0 if success
+ *   -ENOSYS if function is not implemented in platfrom/pcie
+ */
+bool scsc_mx_service_property_read_bool(struct scsc_service *service, const char *propname);
+int scsc_mx_service_property_read_u8(struct scsc_service *service, const char *propname, u8 *out_value, size_t size);
+int scsc_mx_service_property_read_u16(struct scsc_service *service, const char *propname, u16 *out_value, size_t size);
+int scsc_mx_service_property_read_u32(struct scsc_service *service, const char *propname, u32 *out_value, size_t size);
+int scsc_mx_property_read_u32(struct scsc_mx *mx, const char *propname, u32 *out_value, size_t size);
+int scsc_mx_service_property_read_string(struct scsc_service *service, const char *propname, char **out_value,
+					 size_t size);
 int scsc_mx_service_phandle_property_read_u32(struct scsc_service *service, const char *phandle_name, const char *propname,
 					u32 *out_value, size_t size);
 int scsc_mx_phandle_property_read_u32(struct scsc_mx *mx, const char *phandle_name, const char *propname,
@@ -386,6 +519,9 @@ size_t scsc_service_mxlogger_buff_size(struct scsc_service *service, enum scsc_l
 size_t scsc_service_collect_buffer(struct scsc_service *service, enum scsc_log_chunk_type fw_buffer,
 				   void *buffer, size_t size, enum scsc_mifintr_target dir);
 #endif
+#if defined(CONFIG_SCSC_WLAN_LPC)
+void* scsc_service_mxlogger_buff(struct scsc_service *service);
+#endif
 
 /* MXLOGGER API */
 /* If there is no service/mxman associated, register the observer as global (will affect all the mx instanes)*/
@@ -394,6 +530,9 @@ size_t scsc_service_collect_buffer(struct scsc_service *service, enum scsc_log_c
 int scsc_service_register_observer(struct scsc_service *service, char *name);
 /* Unregister an observer */
 int scsc_service_unregister_observer(struct scsc_service *service, char *name);
+
+int scsc_service_register_check_bt_status_cb(void(*status_cb)(bool bt_on));
+int scsc_service_unregister_check_bt_status_cb(void);
 
 /* Reads a configuration file into memory.
  *

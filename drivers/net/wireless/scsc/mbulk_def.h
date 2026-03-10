@@ -9,6 +9,7 @@
 
 #include <linux/bug.h>
 #include <scsc/scsc_mifram.h>
+#include <scsc/scsc_warn.h>
 
 /**
  * mbulk
@@ -94,7 +95,7 @@ struct mbulk {
 
 static inline bool mbulk_seg_reserve_head(struct mbulk *m, size_t headroom)
 {
-	if (WARN_ON(!(m->dat_bufsz >= headroom)))
+	if (WLBT_WARN_ON(!(m->dat_bufsz >= headroom)))
 		return false;
 	m->head += (mbulk_len_t)headroom;
 	return true;
@@ -103,7 +104,7 @@ static inline bool mbulk_seg_reserve_head(struct mbulk *m, size_t headroom)
 static inline bool mbulk_seg_adjust_range(struct mbulk *m, size_t headroom,
 					  size_t len)
 {
-	if (WARN_ON(!(m->dat_bufsz >= (headroom + len))))
+	if (WLBT_WARN_ON(!(m->dat_bufsz >= (headroom + len))))
 		return false;
 	m->head = m->sig_bufsz + (mbulk_len_t)headroom;
 	m->len = (mbulk_len_t)len;
@@ -112,7 +113,7 @@ static inline bool mbulk_seg_adjust_range(struct mbulk *m, size_t headroom,
 
 static inline bool mbulk_seg_prepend_head(struct mbulk *m, size_t more)
 {
-	if (WARN_ON(!(MBULK_SEG_HEADROOM(m) >= more)))
+	if (WLBT_WARN_ON(!(MBULK_SEG_HEADROOM(m) >= more)))
 		return false;
 	m->head -= (mbulk_len_t)more;
 	m->len += (mbulk_len_t)more;
@@ -121,7 +122,7 @@ static inline bool mbulk_seg_prepend_head(struct mbulk *m, size_t more)
 
 static inline bool mbulk_seg_append_tail(struct mbulk *m, size_t more)
 {
-	if (WARN_ON(!(MBULK_SEG_TAILROOM(m) >= more)))
+	if (WLBT_WARN_ON(!(MBULK_SEG_TAILROOM(m) >= more)))
 		return false;
 	m->len += (mbulk_len_t)more;
 	return true;
@@ -136,7 +137,7 @@ static inline bool mbulk_seg_trim_head(struct mbulk *m, size_t less)
 
 static inline bool mbulk_seg_trim_tail(struct mbulk *m, size_t less)
 {
-	if (WARN_ON(!(m->len >= (mbulk_len_t)less)))
+	if (WLBT_WARN_ON(!(m->len >= (mbulk_len_t)less)))
 		return false;
 	m->len -= (mbulk_len_t)less;
 	return true;

@@ -26,7 +26,7 @@
 
 #include "cpacket_buffer.h"
 #include "mifintrbit.h"
-#include "scsc_logring_common.h"
+#include "logs/scsc_logring_common.h"
 
 /* Public Types */
 
@@ -44,15 +44,21 @@ enum MIF_STREAM_DIRECTION {
  * Defines for the MIF Stream interrupt bits
  *
  * MIF_STREAM_INTRBIT_TYPE_RESERVED: the bits are reserved
- * at initialization and are assigned to GDB transport channels.
+ * at initialization and are assigned to FH GDB transport channels.
  * It is for purpose of forcing Panics from either MX manager or GDB
  *
  * MIF_STREAM_INTRBIT_TYPE_ALLOC: the bits are allocated dynamically
  * when a stream is initialized
+ *
+ * MIF_STREAM_INTRBIT_TYPE_PREALLOC: the bits are reserved at initialization
+ * and are assigned and shared amongst TH GDB transport channels
+ * due to overflowing WLAN IRQ allocation.
+ * It is used to handle TH responses from FW monitor from the GDB tranport channels.
  */
 enum MIF_STREAM_INTRBIT_TYPE {
 	MIF_STREAM_INTRBIT_TYPE_RESERVED,
 	MIF_STREAM_INTRBIT_TYPE_ALLOC,
+	MIF_STREAM_INTRBIT_TYPE_PREALLOC,
 };
 
 /* Forward Decls */
@@ -65,7 +71,7 @@ struct mif_stream;
  * Initialises MIF Stream state.
  */
 int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, enum MIF_STREAM_DIRECTION direction, uint32_t num_packets, uint32_t packet_size,
-		    struct scsc_mx *mx, enum MIF_STREAM_INTRBIT_TYPE intrbit, mifintrbit_handler tohost_irq_handler, void *data);
+		    struct scsc_mx *mx, enum MIF_STREAM_INTRBIT_TYPE intrbit, mifintrbit_handler tohost_irq_handler, void *data, enum IRQ_TYPE irq_type);
 /**
  * Initialises MIF Output Stream state.
  */
@@ -173,6 +179,12 @@ void mif_stream_config_serialise(struct mif_stream *stream, struct mxstreamconf 
 void mif_stream_log(const struct mif_stream *stream, enum scsc_log_level log_level);
 
 /**
+ * Get dump information which used to send data on mif_stream for debug, 
+ * such as data address, irq bit number and target subsystem.
+ */
+uint8_t *mif_stream_get_dump_for_write_gather(uint8_t *irq_bit, uint32_t *target);
+
+/**
  * MIF Packet Stream Descriptor.
  */
 struct mif_stream {
@@ -186,9 +198,20 @@ struct mif_stream {
 	uint8_t              read_bit_idx;
 	uint8_t              write_bit_idx;
 	enum MIF_STREAM_DIRECTION direction;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_mif_abs_target target;
 #endif
+};
+
+struct mif_stream_write_gather_dump {
+	struct cpacketbuffer 		*buffer;
+	uint32_t			start_idx;
+
+	uint8_t				irq_bit_num;
+	enum scsc_mif_abs_target 	target;
+
+	/* Last return value of mif_stream_write_gather */
+	bool				ret_value;
 };
 
 #endif /* MIFSTREAM_H__ */

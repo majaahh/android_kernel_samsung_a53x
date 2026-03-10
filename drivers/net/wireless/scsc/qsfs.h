@@ -10,35 +10,42 @@
 #define SLSI_QSF_LOW_RX_CORE_GET_MASK  1
 #define SLSI_QSF_MAIN_CORES_GET_MASK   0x0E
 #define SLSI_QSF_MAIN_CORES_SHIFT 1
-#define SLSI_QSF_SW_FEATURE_PNO_ID  1
+
+enum slsi_qsf_sw_feature_id {
+	SLSI_QSF_SW_FEATURE_PNO_ID = 1,
+	SLSI_QSF_SW_FEATURE_TWT_ID,
+	SLSI_QSF_SW_FEATURE_WIFI_OPTIMIZER_ID,
+	SLSI_QSF_SW_FEATURE_SCHEDULED_PM_ID,
+	SLSI_QSF_SW_FEATURE_DELAYED_WAKEUP_ID,
+	SLSI_QSF_SW_FEATURE_RFC_8325_ID,
+	SLSI_QSF_SW_FEATURE_MHS_ID,
+	SLSI_QSF_SW_FEATURE_ROAMING_ID,
+	SLSI_QSF_SW_FEATURE_NCHO_ID,
+	SLSI_QSF_SW_FEATURE_ASSURANCE_ID = 10,
+	SLSI_QSF_SW_FEATURE_PCAP_FRAME_LOGGING_ID,
+	SLSI_QSF_SW_FEATURE_SECURITY_ID,
+	SLSI_QSF_SW_FEATURE_P2P_ID,
+	SLSI_QSF_SW_FEATURE_BIG_DATA_ID,
+	SLSI_QSF_SW_FEATURE_GET_STA_DUMP_ID
+};
+
 #define SLSI_QSF_SW_FEATURE_PNO_LEN 1
-#define SLSI_QSF_SW_FEATURE_TWT_ID  2
 #define SLSI_QSF_SW_FEATURE_TWT_LEN 2
-#define SLSI_QSF_SW_FEATURE_WIFI_OPTIMIZER_ID  3
 #define SLSI_QSF_SW_FEATURE_WIFI_OPTIMIZER_LEN 1
-#define SLSI_QSF_SW_FEATURE_SCHEDULED_PM_ID  4
 #define SLSI_QSF_SW_FEATURE_SCHEDULED_PM_LEN 1
-#define SLSI_QSF_SW_FEATURE_DELAYED_WAKEUP_ID  5
 #define SLSI_QSF_SW_FEATURE_DELAYED_WAKEUP_LEN 1
-#define SLSI_QSF_SW_FEATURE_RFC_8325_ID  6
 #define SLSI_QSF_SW_FEATURE_RFC_8325_LEN 1
 #define SLSI_QSF_NUM_ANTENNA_MAX 2
-#define SLSI_QSF_SW_FEATURE_MHS_ID  7
 #define SLSI_QSF_SW_FEATURE_MHS_LEN 2
 #define SLSI_QSF_SW_FEATURE_ROAMING_LEN 4
-#define SLSI_QSF_SW_FEATURE_NCHO_ID  9
-#define SLSI_QSF_SW_FEATURE_ROAMING_ID  8
 #define SLSI_QSF_SW_FEATURE_NCHO_LEN 2
-#define SLSI_QSF_SW_FEATURE_ASSURANCE_ID  10
 #define SLSI_QSF_SW_FEATURE_ASSURANCELEN  1
-#define SLSI_QSF_SW_FEATURE_PCAP_FRAME_LOGGING_ID  11
 #define SLSI_QSF_SW_FEATURE_PCAP_FRAME_LOGGING_LEN 1
-#define SLSI_QSF_SW_FEATURE_SECURITY_ID  12
 #define SLSI_QSF_SW_FEATURE_SECURITY_LEN 2
-#define SLSI_QSF_SW_FEATURE_P2P_ID  13
 #define SLSI_QSF_SW_FEATURE_P2P_LEN 6
-#define SLSI_QSF_SW_FEATURE_BIG_DATA_ID  14
 #define SLSI_QSF_SW_FEATURE_BIG_DATA_LEN 1
+#define SLSI_QSF_SW_FEATURE_GET_STA_DUMP_LEN 1
+
 #define SLSI_QSF_SW_FEATURE_ASSURANCE_MASK  0x01
 
 #define DUAL_BAND_CONCURRANCY_WITH_6G 2
@@ -74,7 +81,6 @@
 
 #define SLSI_QSF_HW_FEATURE_LEN_POS  16
 #define SLSI_QSF_HW_FEATURE_LEN_MASK 0xFFFF0000
-
 #define SLSI_SUPPORTED_TX_MCS_PRESENT_AND_TXRX_MCS_NOT_EQUAL(caps)   (caps[12] & (BIT(0) | BIT(1)))
 #define SLSI_GET_NSS_FROM_HT_CAPS(caps)     ((caps[12] & (BIT(2) | BIT(3))) >> 2)
 
@@ -87,6 +93,8 @@
 #define SLSI_MAX_MCS_3NSS(mcs_map)  (((mcs_map) & 0x0030) >> 4)
 #define SLSI_MAX_MCS_2NSS(mcs_map)  (((mcs_map) & 0x000C) >> 2)
 #define SLSI_MAX_MCS_1NSS(mcs_map)  ((mcs_map) & 0x0003)
+
+#define SLSI_SUPPORT_FOR_HE_160MHZ_CHANNEL_WIDTH(caps)  (caps[6] & BIT(3))
 
 #define SLSI_GET_HE_RX_80MHZ_MCS_MAP(caps)    SLSI_BUFF_LE_TO_U16((caps) + 17)
 #define SLSI_GET_HE_TX_80MHZ_MCS_MAP(caps)    SLSI_BUFF_LE_TO_U16((caps) + 19)
@@ -118,7 +126,11 @@
 #define SLSI_DYNAMIC_DWELL_CONTROL_SUPPORTED  BIT(1)
 #define SLSI_ENHANCED_PASSIVE_SCAN_SUPPORDED  BIT(2)
 #define SLSI_GET_SCHED_PM_SUPPORT(misc_features_activated)  (misc_features_activated[4] & BIT(0))
+#define SLSI_GET_SCHED_PM_SERVICE_PERIOD(misc_features_activated) ((misc_features_activated[4] & (BIT(1) |BIT(2))) >> 1)
+#define SLSI_GET_SCHED_PM_SLEEP_PERIOD(misc_features_activated) ((misc_features_activated[4] & (BIT(3) | BIT(4))) >> 3)
 #define SLSI_SCHED_PM_ENABLED  BIT(0)
+#define SLSI_SET_SCHED_PM_SERVICE_PERIOD(scheduled_pm, sched_pm_min_service_period) (scheduled_pm |= (sched_pm_min_service_period << 1))
+#define SLSI_SET_SCHED_PM_SLEEP_PERIOD(scheduled_pm, sched_pm_min_sleep_period) (scheduled_pm |= (sched_pm_min_sleep_period <<3))
 #define SLSI_GET_DELAYED_WAKEUP_SUPPORT(misc_features_activated)     (misc_features_activated[5] & BIT(0))
 #define SLSI_DELAYED_WAKEUP_ENABLED BIT(0)
 #define SLSI_GET_DUAL_IFACE_SUPPORT(misc_features_activated)  (misc_features_activated[6] & BIT(0))
@@ -164,6 +176,7 @@
 #define SLSI_GET_SUPPORT_MGMT_FRAMES(misc_features_activated) (misc_features_activated[10] & BIT(0))
 #define SLSI_GET_SUPPORT_CTRL_FRAMES(misc_features_activated) ((misc_features_activated[10] & BIT(1)) >> 1)
 #define SLSI_GET_SUPPORT_DATA_FRAMES(misc_features_activated) ((misc_features_activated[10] & BIT(2)) >> 2)
+
 #define SLSI_MGMT_FRAME_ENABLED BIT(0)
 #define SLSI_CTRL_FRAME_ENABLED BIT(1)
 #define SLSI_DATA_FRAME_ENABLED BIT(2)
@@ -184,6 +197,8 @@
 #define SLSI_QSF_TDLS_OFFCHANNEL_SUPPORTED       BIT(5)
 #define SLSI_QSF_TDLS_CAPA_ENHANCE_SUPPORTED     BIT(6)
 #define SLSI_QSF_TDLS_PEER_UAPSD_SUPPORTED  BIT(7)
+#define SLSI_GET_TDLS_WIDER_BANDWIDTH(misc_features_activated)        (misc_features_activated[13] & BIT(1))
+#define SLSI_GET_TDLS_OFFCHANNEL(misc_features_activated)             (misc_features_activated[13] & BIT(5))
 #define SLSI_GET_MAX_NAN_NDPS(misc_features_activated)                (misc_features_activated[14] & 0xF0)
 #define SLSI_QSF_STA_P2P_SUPPORTED          BIT(0)
 #define SLSI_QSF_STA_SOFTAP_SUPPORTED       BIT(1)
@@ -211,6 +226,7 @@
 #define SLSI_QSF_BSSI_INFO_API_SUPP_ENABLED      BIT(0)
 #define SLSI_QSF_ASSOC_REJECT_INFO_API_ENABLED   BIT(1)
 #define SLSI_QSF_STA_INFO_API_SUPP_ENABLED       BIT(2)
+#define SLSI_QSF_GET_STA_DUMP_SUPPORTED		 BIT(0)
 
 #define SLSI_QSF_SECURITY_FEATURE_MASK  (SLSI_SUPPORT_SAE_H2E | SLSI_SUPPORT_SAE_FT | SLSI_SUPPORT_SUITE_B |\
 					 SLSI_SUPPORT_SUITE_B_192 | SLSI_SUPPORT_SHA_256 |\
@@ -233,15 +249,6 @@
 					     SLSI_QSF_STA_SOFTAP_NAN_TDLS_SUPPORTED |\
 					     SLSI_QSF_STA_P2P_P2P_TDLS_SUPPORTED |\
 					     SLSI_QSF_STA_P2P_NAN_TDLS_SUPPORTED)
-#define SLSI_MAX_TDLS_LINK (4)
-#define SLSI_WIFI_5                   1
-#define SLSI_WIFI_4                   0
-#define SLSI_QSF_FEATURE_VER_LEN      4
-#define SLSI_QSF_SOLUTION_PROVIDER    3
-#define SLSI_QSF_SW_FEATURE_CHAR_LEN  4
-#define SLSI_QSF_WIFI_FEATURE_VERSION 1
-#define SLSI_QSF_WIFI_HCF_FILE_NAME   "wlan_sw.hcf"
-#define SLSI_HCF_HEADER_LEN           8
 
 struct slsi_qsf_mib_data {
 	bool he_active;
@@ -259,6 +266,18 @@ struct slsi_qsf_mib_data {
 	u32 appendix_versions;
 	u32 twt_control;
 };
+
+#define SLSI_WIFI_7                   4
+#define SLSI_WIFI_6E                  3
+#define SLSI_WIFI_6                   2
+#define SLSI_WIFI_5                   1
+#define SLSI_WIFI_4                   0
+#define SLSI_QSF_FEATURE_VER_LEN      4
+#define SLSI_QSF_SOLUTION_PROVIDER    3
+#define SLSI_QSF_SW_FEATURE_CHAR_LEN  4
+#define SLSI_QSF_WIFI_FEATURE_VERSION 2
+#define SLSI_QSF_WIFI_HCF_FILE_NAME   "wlan_sw.hcf"
+#define SLSI_HCF_HEADER_LEN           8
 
 void slsi_qsf_init(struct slsi_dev *sdev);
 void slsi_qsf_deinit(void);

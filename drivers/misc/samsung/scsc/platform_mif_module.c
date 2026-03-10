@@ -17,6 +17,10 @@
 /* Implements */
 #include "scsc_mif_abs.h"
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_platform_mif_module.c"
+#endif
+
 /* Variables */
 struct mif_abs_node {
 	struct list_head    list;

@@ -15,7 +15,7 @@
 #include <linux/types.h>
 #include "scsc_mx_impl.h"
 #include "mxconf.h"
-#include "scsc_logring_common.h"
+#include "logs/scsc_logring_common.h"
 
 struct cpacketbuffer;
 
@@ -129,6 +129,11 @@ void cpacketbuffer_config_serialise(const struct cpacketbuffer *buffer, struct m
 void cpacketbuffer_log(const struct cpacketbuffer *buffer, enum scsc_log_level log_level);
 
 /**
+ * Get the address of a specific packet buffer which used to send data on mif_stream for debug.
+ */
+uint8_t *cpacketbuffer_get_dump_address(struct cpacketbuffer *buffer, uint32_t dump_index);
+
+/**
  * Buffer context object.
  */
 struct cpacketbuffer {
@@ -142,7 +147,7 @@ struct cpacketbuffer {
 					*     contains the index of the next packet to read. */
 	uint32_t       *write_index; /* Pointer to the location of the write index, which
 					*     contains the index after the last packet written. */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_mif_abs_target target;
 #endif
 };

@@ -12,6 +12,9 @@
 #include <linux/slab.h>
 #include <scsc/scsc_logring.h>
 #include "mifintrbit.h"
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_gdb_transport.c"
+#endif
 
 struct clients_node {
 	struct list_head            list;
@@ -31,35 +34,41 @@ static struct gdb_transport_module {
 	.gdb_transport_list = LIST_HEAD_INIT(gdb_transport_module.gdb_transport_list)
 };
 
-/** Handle incoming packets and pass to handler */
-static void gdb_input_irq_handler(int irq, void *data)
+static void gdb_transport_process_input_stream(struct gdb_transport *gdb_transport, int irq)
 {
-	struct gdb_transport *gdb_transport = (struct gdb_transport *)data;
-	struct scsc_mif_abs  *mif_abs;
-	u32                  num_bytes;
-	u32                  alloc_bytes;
-	char                 *buf;
-
-	SCSC_TAG_DEBUG(GDB_TRANS, "Handling write signal.\n");
+	u32 num_bytes = 0;
+	u32 alloc_bytes = 0;
+	char *buf = NULL;
+	int r = 0;
 
 	/* 1st length */
-	/* Clear the interrupt first to ensure we can't possibly miss one */
-	mif_abs = scsc_mx_get_mif_abs(gdb_transport->mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-	mif_abs->irq_bit_clear(mif_abs, irq, gdb_transport->target);
-#else
-	mif_abs->irq_bit_clear(mif_abs, irq);
-#endif
 	while (mif_stream_read(&gdb_transport->mif_istream, &num_bytes, sizeof(uint32_t))) {
 		SCSC_TAG_DEBUG(GDB_TRANS, "Transferring %d byte payload to handler.\n", num_bytes);
 		if (num_bytes > 0 && num_bytes
-		    < (GDB_TRANSPORT_BUF_LENGTH - sizeof(uint32_t))) {
+			< (GDB_TRANSPORT_BUF_LENGTH - sizeof(uint32_t))) {
 			alloc_bytes = sizeof(char) * num_bytes;
 			/* This is called in atomic context so must use kmalloc with GFP_ATOMIC flag */
 			buf = kmalloc(alloc_bytes, GFP_ATOMIC);
 			/* 2nd payload (msg) */
 			mif_stream_read(&gdb_transport->mif_istream, buf, num_bytes);
-			gdb_transport->channel_handler_fn(buf, num_bytes, gdb_transport->channel_handler_data);
+			r = gdb_transport->channel_handler_fn(buf, num_bytes, gdb_transport->channel_handler_data);
+			if (r == -EINVAL) {
+				/* The handler function rejects further input on this channel,
+				 * e.g. because it is getting spurious requests.
+				 */
+				SCSC_TAG_ERR(GDB_TRANS, "channel_handler_fn rejects source (irq %d)", irq);
+
+				/* This case occurs when gdb irq occurs before gdb channel is opened.
+				 * It is confirmed that unidentified data is continuously updated
+				 * for a while in cpacketbuffer of gdb transport when gdb irq occurs.
+				 * In other words, host driver must remain in this loop
+				 * until the data update is completed.
+				 * Therefore, It is necessary to escape from the loop of the handler
+				 * function in order to avoid kernel panic due to core occupancy.
+				 */
+				kfree(buf);
+				break;
+			}
 			kfree(buf);
 		} else {
 			SCSC_TAG_ERR(GDB_TRANS, "Incorrect num_bytes: 0x%08x\n", num_bytes);
@@ -68,6 +77,54 @@ static void gdb_input_irq_handler(int irq, void *data)
 	}
 }
 
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+/* Handle incoming packets and pass to handler - poll all gdb channels to find which one was responding and process it */
+static void gdb_input_irq_handler_poll(int irq, void *data)
+{
+	struct scsc_mif_abs  *mif_abs;
+	struct gdb_transport *gdb_transport = (struct gdb_transport *)data;
+	const void *peek_message;
+	struct gdb_transport_node *gdb_transport_node;
+
+	/* Clear the interrupt first to ensure we can't possibly miss one */
+	mif_abs = scsc_mx_get_mif_abs(gdb_transport->mx);
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	mif_abs->irq_bit_clear(mif_abs, irq, gdb_transport->target);
+#else
+	mif_abs->irq_bit_clear(mif_abs, irq);
+#endif
+
+	/* peek for a message from all wlan/fxm gdb channels and process that particular gdb transport channel */
+	list_for_each_entry(gdb_transport_node, &gdb_transport_module.gdb_transport_list, list) {
+		gdb_transport = gdb_transport_node->gdb_transport;
+		if ((gdb_transport->type != GDB_TRANSPORT_WPAN) && (gdb_transport->type != GDB_TRANSPORT_PMU)) {
+			if ((peek_message = mif_stream_peek(&gdb_transport->mif_istream, NULL)) != NULL) {
+				gdb_transport_process_input_stream(gdb_transport, irq);
+				break;
+			}
+		}
+	}
+}
+#endif
+
+/** Handle incoming packets and pass to handler */
+static void gdb_input_irq_handler(int irq, void *data)
+{
+	struct scsc_mif_abs  *mif_abs;
+	struct gdb_transport *gdb_transport = (struct gdb_transport *)data;
+
+	SCSC_TAG_DEBUG(GDB_TRANS, "Handling write signal from gdb_transport_type %d irq %d\n", gdb_transport->type, irq);
+
+	/* Clear the interrupt first to ensure we can't possibly miss one */
+	mif_abs = scsc_mx_get_mif_abs(gdb_transport->mx);
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	mif_abs->irq_bit_clear(mif_abs, irq, gdb_transport->target);
+#else
+	mif_abs->irq_bit_clear(mif_abs, irq);
+#endif
+
+	gdb_transport_process_input_stream(gdb_transport, irq);
+}
 
 /** MIF Interrupt handler for acknowledging reads made by the AP */
 static void gdb_output_irq_handler(int irq, void *data)
@@ -81,7 +138,7 @@ static void gdb_output_irq_handler(int irq, void *data)
 	/* The FW read some data from the output stream.
 	 * Currently we do not care, so just clear the interrupt. */
 	mif_abs = scsc_mx_get_mif_abs(gdb_transport->mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mif_abs->irq_bit_clear(mif_abs, irq, gdb_transport->target);
 #else
 	mif_abs->irq_bit_clear(mif_abs, irq);
@@ -123,9 +180,9 @@ void gdb_transport_release(struct gdb_transport *gdb_transport)
 			list_for_each_entry_safe(gdb_client_node, gdb_client_next, &gdb_transport_module.clients_list, list) {
 				gdb_client_node->gdb_client->remove(gdb_client_node->gdb_client, gdb_transport);
 			}
-			mutex_unlock(&gdb_transport->channel_open_mutex);
 			list_del(&gdb_transport_node->list);
 			kfree(gdb_transport_node);
+			mutex_unlock(&gdb_transport->channel_open_mutex);
 		}
 	}
 	if (match == false)
@@ -146,7 +203,7 @@ void gdb_transport_config_serialise(struct gdb_transport *gdb_transport,
 /** Public functions */
 int gdb_transport_init(struct gdb_transport *gdb_transport, struct scsc_mx *mx, enum gdb_transport_enum type)
 {
-	int                       r;
+	int                       r = 0;
 	uint32_t                  mem_length = GDB_TRANSPORT_BUF_LENGTH;
 	uint32_t                  packet_size = 4;
 	uint32_t                  num_packets;
@@ -161,42 +218,105 @@ int gdb_transport_init(struct gdb_transport *gdb_transport, struct scsc_mx *mx, 
 	mutex_init(&gdb_transport->channel_handler_mutex);
 	mutex_init(&gdb_transport->channel_open_mutex);
 	gdb_transport->mx = mx;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (type == GDB_TRANSPORT_WPAN)
 		gdb_transport->target = SCSC_MIF_ABS_TARGET_WPAN;
 	else
 		gdb_transport->target = SCSC_MIF_ABS_TARGET_WLAN;
 #endif
 
+#if defined(CONFIG_SCSC_BB_REDWOOD)
 	if (type == GDB_TRANSPORT_FXM_1)
-		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_1, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_1, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_FXM_1_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_FXM_2)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_2, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_FXM_2_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WPAN)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_WPAN_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_PMU)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_PMU, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_PMU_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_FXM_3)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_3, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_FXM_3_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_2)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_2, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_2_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_3)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_3, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_3_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_4)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_4, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_4_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_5)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_5, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_5_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_6)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_6, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_6_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_7)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_7, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_7_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_8)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_8, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_8_INPUT_TYPE);
+	else
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_PREALLOC, gdb_input_irq_handler_poll, gdb_transport, GDB_TRANSPORT_WLAN_INPUT_TYPE);
+#else /* CONFIG_SCSC_BB_REDWOOD */
+	if (type == GDB_TRANSPORT_FXM_1)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_1, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_FXM_1_INPUT_TYPE);
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
 	else if (type == GDB_TRANSPORT_FXM_2)
-		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_2, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_2, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_FXM_2_INPUT_TYPE);
 #endif
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	else if (type == GDB_TRANSPORT_WPAN)
-		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_WPAN_INPUT_TYPE);
+#endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	else if (type == GDB_TRANSPORT_PMU)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_PMU, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_PMU_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_FXM_3)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_FXM_3, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_FXM_3_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_2)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_2, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_2_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_3)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_3, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_3_INPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_4)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN_4, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_4_INPUT_TYPE);
 #endif
 	else
-		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_INPUT_TYPE);
+#endif /* CONFIG_SCSC_BB_REDWOOD */
 	if (r) {
 		kfree(gdb_transport_node);
 		return r;
 	}
 
 	if (type == GDB_TRANSPORT_FXM_1)
-		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_FXM_1, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_FXM_1, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_FXM_1_OUTPUT_TYPE);
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
 	else if (type == GDB_TRANSPORT_FXM_2)
-		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_FXM_2, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_FXM_2, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_FXM_2_OUTPUT_TYPE);
 #endif
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	else if (type == GDB_TRANSPORT_WPAN)
-		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WPAN_OUTPUT_TYPE);
+#endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	else if (type == GDB_TRANSPORT_PMU)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_PMU, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_PMU_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_FXM_3)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_FXM_3, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_FXM_3_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_2)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_2, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_2_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_3)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_3, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_3_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_4)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_4, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_4_OUTPUT_TYPE);
+#endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	else if (type == GDB_TRANSPORT_WLAN_5)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_5, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_5_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_6)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_6, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_6_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_7)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_7, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_7_OUTPUT_TYPE);
+	else if (type == GDB_TRANSPORT_WLAN_8)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN_8, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_8_OUTPUT_TYPE);
 #endif
 	else
-		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport, GDB_TRANSPORT_WLAN_OUTPUT_TYPE);
 	if (r) {
 		mif_stream_release(&gdb_transport->mif_istream);
 		kfree(gdb_transport_node);

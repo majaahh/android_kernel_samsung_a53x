@@ -15,6 +15,10 @@
 #include <scsc/scsc_logring.h>
 #include <scsc/scsc_mx.h>
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_client_test.c"
+#endif
+
 struct scsc_mx_test {
 	/* scsc_service_client has to be the first */
 	struct scsc_service_client test_service_client;
@@ -29,12 +33,12 @@ static struct scsc_mx_test *test;
 /* First service to start */
 static int                 service_id = SCSC_SERVICE_ID_NULL;
 module_param(service_id, int, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(service_id, "ID of service to start, Default 0:NULL, 1:WLAN, 2:BT, 3:ANT, 5:ECHO");
+MODULE_PARM_DESC(service_id, "ID of service to start, Default 0:NULL, 1:WLAN, 2:BT, 3:ANT, 4:WLANDBG, 5:ECHO");
 
 /* Second service to start if != -1 */
 static int service_id_2 = -1;
 module_param(service_id_2, int, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(service_id_2, "ID of optional second service to start: Default -1:None, 0:NULL, 1:WLAN, 2:BT, 3:ANT, 5:ECHO");
+MODULE_PARM_DESC(service_id_2, "ID of optional second service to start: Default -1:None, 0:NULL, 1:WLAN, 2:BT, 3:ANT, 4:WLANDBG, 5:ECHO");
 
 #ifdef CONFIG_SCSC_MX_ALWAYS_ON
 static int auto_start = 2;
@@ -233,6 +237,13 @@ void client_module_probe(struct scsc_mx_module_client *module_client, struct scs
 
 	SCSC_TAG_ERR(MXMAN_TEST, "mx140:\n");
 
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) {
+		pr_info("mx140: %s. Ignore reason code %d\n", __func__, reason);
+		return;
+	}
+#endif
+
 	test = kzalloc(sizeof(*test), GFP_KERNEL);
 	if (!test)
 		return;
@@ -267,6 +278,13 @@ void client_module_remove(struct scsc_mx_module_client *module_client, struct sc
 	(void)module_client;
 
 	pr_info("mx140: %s\n", __func__);
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) {
+		pr_info("mx140: %s. Ignore reason code %d\n", __func__, reason);
+		return;
+	}
+#endif
 
 	if (!test)
 		return;
@@ -322,9 +340,13 @@ static ssize_t client_test_dev_write(struct file *file, const char *data, size_t
 	}
 
 	if (test) {
-		if (val) {
+		if (val == 1) {
 			SCSC_TAG_INFO(MXMAN_TEST, "Start services\n");
 			ok = open_start_services(test->mx);
+		} else if(val == 2){
+			scsc_mx_service_control_suspend_gpio(test->mx, 0);
+		} else if(val == 3){
+			scsc_mx_service_control_suspend_gpio(test->mx, 1);
 		} else {
 			SCSC_TAG_INFO(MXMAN_TEST, "Stop services\n");
 			stop_close_services();

@@ -16,6 +16,7 @@
 #include <linux/wakelock.h>
 #endif
 #include <linux/cdev.h>
+#include <linux/circ_buf.h>
 
 #include <scsc/scsc_mx.h>
 #include <scsc/api/bsmhcp.h>
@@ -37,9 +38,11 @@
 #define H4_HEADER_INDEX         (0)
 #define H4_HEADER_SIZE          (1)
 #define HCICMD_HEADER_SIZE      (3)
+#define HCIEVT_HEADER_SIZE      (2)
 #define ACLDATA_HEADER_SIZE     (4)
 #define ISODATA_HEADER_SIZE     (4)
 #define L2CAP_HEADER_SIZE       (4)
+#define FW_LOG_HEADER_SIZE      (2)
 
 /**
  * Size of temporary buffer (on stack) for peeking at HCI/H4
@@ -51,6 +54,7 @@
  * For ACL that is 1 h4 header + 2 ACL handle + 2 ACL data size
  */
 #define H4DMUX_HEADER_HCI (H4_HEADER_SIZE + HCICMD_HEADER_SIZE)  /* CMD, SCO */
+#define H4DMUX_HEADER_EVT (H4_HEADER_SIZE + HCIEVT_HEADER_SIZE)  /* EVT */
 #define H4DMUX_HEADER_ACL (H4_HEADER_SIZE + ACLDATA_HEADER_SIZE) /* ACL */
 #define H4DMUX_HEADER_ISO (H4_HEADER_SIZE + ISODATA_HEADER_SIZE) /* ISO */
 #define H4DMUX_HEADER_MAX_SIZE  (5) /* Worst case header Size */
@@ -92,6 +96,26 @@ do { \
 	buf[3] = (u8)(len & 0x00ff); \
 	buf[4] = (u8)((len & 0xff00) >> 8); \
 } while (0)
+
+/* Macros for writing L2CAP headers to a L2CAP Data Packet */
+#define HCI_L2CAP_DATA_SET_LENGTH(buf, len) \
+do { \
+	buf[0] = (u8)(len & 0x00ff); \
+	buf[1] = (u8)((len & 0xff00) >> 8); \
+} while (0)
+
+#define HCI_L2CAP_DATA_SET_CON_HDL(buf, hdl) \
+do { \
+	buf[2] = (u8)(hdl & 0x00ff); \
+	buf[3] = (u8)((hdl & 0xff00) >> 8); \
+} while (0)
+
+/* Macro for HCI_COMMAND */
+#define HCI_COMMAND_GET_OPCODE(data)    ((u16)(*(data + 1) | (*(data + 2)) << 8))
+
+/* Macro for HCI_VSC_SET_FW_LOG_BTSNOOP */
+#define HCI_FW_LOG_GET_FILTER(data)     ((u32)(*(data) | (*(data+1)) << 8 |\
+					 (*(data + 2)) << 16 | (*(data + 3)) << 24))
 
 /* Size of ISO Headers */
 #define ISO_DATA_LOAD_HEADER_SIZE (8) /* Time stamp + Packet Sequence Number + SDU length + Packet Status Flag */
@@ -153,6 +177,22 @@ do { \
 #define HCI_EVENT_NUMBER_OF_COMPLETED_PACKETS_EVENT     (0x13)
 #define HCI_EVENT_HARDWARE_ERROR_EVENT                  (0x10)
 
+/* HCI COMMAND COMPLETE EVENT */
+#define HCI_EVENT_COMMAND_COMPLETE                      (0x0E)
+#define HCI_EVENT_COMMAND_COMPLETE_LEN                  (0x04)
+
+/* Vendor Specific Command subcode for FW Log to Btsnoop (fwsnoop) */
+#define HCI_VSC_SET_FW_LOG_BTSNOOP                      (0xFDF6)
+#define HCI_VSC_SET_FW_LOG_BTSNOOP_LEN                  (0x11)
+
+/* Vendor Specific Event */
+#define HCI_EVENT_VENDOR_SPECIFIC_EVENT                 (0xFF)
+#define HCI_EVENT_VSE_SUB_CODE_LEN                      (1)
+
+/* Vendor Specific Event subcode for System Error Information */
+#define HCI_VSE_SYSTEM_ERROR_INFO_SUB_CODE              (0x65)
+#define HCI_VSE_SYSTEM_ERROR_INFO_LEN                   (H4DMUX_HEADER_EVT + HCI_EVENT_VSE_SUB_CODE_LEN + sizeof(struct mx_syserr_decode))
+
 #define SCSC_BT_CONF      "bt.hcf"
 #ifdef CONFIG_SCSC_BT_BLUEZ
 #define SCSC_BT_ADDR      "/csa/bluetooth/.bd_addr"
@@ -176,6 +216,9 @@ do { \
 
 #define SCSC_TTY_MINORS (8)
 
+/* Defines the maximum number of Isochronous Broadcast */
+#define SCSC_BT_BIG_INFO_MAX         (0x0100)
+
 enum scsc_bt_shm_thread_flags;
 
 enum scsc_bt_read_op {
@@ -186,7 +229,8 @@ enum scsc_bt_read_op {
 	BT_READ_OP_CREDIT,
 	BT_READ_OP_IQ_REPORT,
 	BT_READ_OP_STOP,
-	BT_READ_OP_ISO_DATA
+	BT_READ_OP_ISO_DATA,
+	BT_READ_OP_FW_LOG_DATA
 };
 
 enum scsc_ant_read_op {
@@ -199,6 +243,13 @@ struct scsc_bt_connection_info {
 	u8  state;
 	u16 remaining_length;
 	u16 l2cap_cid; /* Only used by ACL */
+	u16 big_handle; /* Only used by Broadcast Isochronous */
+};
+
+/* Only used by Broadcast Isochronous */
+struct scsc_bt_big_info {
+	u16 big_handle;
+	u16 num_of_connections;
 };
 
 #define CONNECTION_NONE         (0)
@@ -264,10 +315,11 @@ struct scsc_bt_avdtp_detect_src_snk {
 };
 
 struct scsc_bt_avdtp_detect_snk_seid {
-	uint8_t                                 seid;
+	uint8_t                                 seid; /* Stream end point identifier */
 	struct scsc_bt_avdtp_detect_snk_seid    *next;
 };
 
+/* This structure holds all information about a (potential) AVDTP connection for A2DP streaming */
 struct scsc_bt_avdtp_detect_hci_connection {
 	struct scsc_bt_avdtp_detect_ongoing             ongoing;
 	u16                                             hci_connection_handle;
@@ -276,6 +328,12 @@ struct scsc_bt_avdtp_detect_hci_connection {
 	struct scsc_bt_avdtp_detect_src_snk             tsep_detect;
 	struct scsc_bt_avdtp_detect_hci_connection      *next;
 	spinlock_t                                      lock;
+    bool opened; /* Indicate if we detected an AVDTP_OPEN. This is assumed to be an indicator for
+                  * the establishment of stream connection */
+    bool crossing_signal_conns; /* Indicates if two signal connections have been established. If
+                                 * this is true, we should expect that the current connection in the
+                                 * "signal" attribute could be exchanged with one of the "ongoing"
+                                 * signal connections */
 };
 
 struct scsc_bt_avdtp_detect {
@@ -289,11 +347,9 @@ struct scsc_common_service {
 	struct class                   *class;
 };
 
-extern struct scsc_common_service common_service;
-
 #ifdef CONFIG_SCSC_QOS
 struct scsc_qos_service {
-	struct work_struct             update_work;
+	struct delayed_work            update_work;
 	struct delayed_work            disable_work;
 	bool                           enabled;
 	bool                           disabling;
@@ -310,6 +366,43 @@ struct scsc_bt_hcf_collection {
 	u32                        hcf_size;
 };
 #endif
+
+/**
+ * scsc_bt_fw_log for btsnoop logging (fwsnoop)
+ * fw_acl_read_state:
+ * - 0x0X               : Disable
+ * - 0x1X               : Enable
+ *  + 0x10              : Idle
+ *  + 0x11              : HCI_EVENT is occurred
+ *  + 0x12              : Threashold is exceeded
+ *  + 0x14              : VSC of BT FW log is received
+ *  + 0x18              : BT FW log is copying to userspace
+ */
+#define FW_LOG_REMOVE_MULTIPLIER       (4)
+
+struct scsc_bt_fw_log {
+	struct circ_buf                circ_buf;
+	size_t                         circ_buf_size;
+	size_t                         circ_buf_threshold;
+	u8                             *fw_acl_read;
+	size_t                         fw_acl_read_len;
+	u8                             fw_acl_read_state;
+	bool                           observers_registered;
+	u32                            btlog_enables0_low;
+	u32                            btlog_enables0_high;
+	u32                            btlog_enables1_low;
+	u32                            btlog_enables1_high;
+};
+
+#define FW_READ_DISABLE                (0x00)
+#define FW_READ_ENABLE                 (0x10)
+#define FW_READ_HCI_EVENT              (0x01)
+#define FW_READ_THRESHOLD              (0x02)
+#define FW_READ_VSC                    (0x04)
+#define FW_READ_BUSY                   (0x08)
+
+#define REALTIME_OBSERVERS             (0x00)
+#define RELAXED_OBSERVERS              (0x01)
 
 struct scsc_bt_service {
 	dev_t                          device;
@@ -356,6 +449,7 @@ struct scsc_bt_service {
 	u32                            iso_freed_count;
 
 	struct scsc_bt_connection_info connection_handle_list[SCSC_BT_CONNECTION_INFO_MAX];
+	struct scsc_bt_big_info        big_handle_list[SCSC_BT_BIG_INFO_MAX];
 	bool                           hci_event_paused;
 	bool                           data_paused; /* ACL or ISO */
 	uint16_t                       data_paused_conn_hdl; /* ACL or ISO */
@@ -396,6 +490,10 @@ struct scsc_bt_service {
 	struct completion              recovery_release_complete;
 	struct completion              recovery_probe_complete;
 	u8                             recovery_level;
+	bool                           recovery_waiting;
+
+	u8                             *system_error_info;
+	struct scsc_bt_fw_log          fw_log;
 
 	bool                           iq_reports_enabled;
 
@@ -404,7 +502,7 @@ struct scsc_bt_service {
 #endif
 };
 
-extern struct scsc_bt_service bt_service;
+struct scsc_bt_service *get_bt_service(void);
 
 /* IQ reporting */
 #define HCI_IQ_REPORTING_MAX_NUM_SAMPLES               (82)
@@ -573,12 +671,6 @@ extern struct scsc_ant_service ant_service;
 #define AVDTP_SNK_FLAG_TD_MASK             (0x00000001)
 #define AVDTP_OPEN_FLAG_TD_MASK            (0x00000002)
 
-extern uint16_t avdtp_signaling_src_cid;
-extern uint16_t avdtp_signaling_dst_cid;
-extern uint16_t avdtp_streaming_src_cid;
-extern uint16_t avdtp_streaming_dst_cid;
-extern uint16_t avdtp_hci_connection_handle;
-
 #define AVDTP_DETECT_SIGNALING_IGNORE   0
 #define AVDTP_DETECT_SIGNALING_ACTIVE   1
 #define AVDTP_DETECT_SIGNALING_INACTIVE 2
@@ -591,6 +683,7 @@ void scsc_avdtp_detect_exit(void);
 
 #ifdef CONFIG_SCSC_QOS
 void scsc_bt_qos_service_init(void);
+void scsc_bt_qos_service_exit(void);
 void scsc_bt_qos_service_start(void);
 void scsc_bt_qos_service_stop(void);
 void scsc_bt_qos_update(uint32_t number_of_outstanding_hci_events,

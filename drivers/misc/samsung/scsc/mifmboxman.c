@@ -102,14 +102,14 @@ u32 *mifmboxman_get_mbox_ptr(struct mifmboxman *mbox,  struct scsc_mif_abs *mif_
 	/* Avoid unused parameter error */
 	(void)mbox;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	return mif_abs->get_mbox_ptr(mif_abs, mbox_index, SCSC_MIF_ABS_TARGET_WLAN);
 #else
 	return mif_abs->get_mbox_ptr(mif_abs, mbox_index);
 #endif
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 u32 *mifmboxman_get_mbox_ptr_wpan(struct mifmboxman *mbox,  struct scsc_mif_abs *mif_abs, int mbox_index)
 {
 	/* Avoid unused parameter error */
@@ -162,7 +162,7 @@ int mifmboxman_get_dcxo_tune_value(struct scsc_mif_abs *mif_abs, u32* value)
 	if (ret) {
 		SCSC_TAG_ERR(MX_PROC, "Failure to get DCXO Tune(cause: %d)\n", ret);
 	} else {
-		SCSC_TAG_INFO(MX_PROC, "Succeed to get DCXO Tune, and read value: 0x%x\n", *value);
+		SCSC_TAG_INFO(MX_PROC, "Succeed to get DCXO Tune, and read value: 0x%p\n", *value);
 	}
 
 	mif_abs->irq_unregister_mbox_apm(mif_abs);

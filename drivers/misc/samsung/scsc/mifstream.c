@@ -17,6 +17,17 @@
 
 /* Public Functions */
 
+static struct mif_stream_write_gather_dump write_gather_dump;
+
+static void mif_stream_record_write_gather(struct mif_stream *stream, uint32_t start_idx)
+{
+	write_gather_dump.buffer = &stream->buffer;
+	write_gather_dump.start_idx = start_idx;
+	write_gather_dump.target = stream->target;
+	write_gather_dump.irq_bit_num = stream->write_bit_idx;
+	write_gather_dump.ret_value = true;
+}
+
 void mif_stream_config_serialise(struct mif_stream *stream, struct mxstreamconf *stream_conf)
 {
 	stream_conf->read_bit_idx = stream->read_bit_idx;
@@ -25,12 +36,12 @@ void mif_stream_config_serialise(struct mif_stream *stream, struct mxstreamconf 
 }
 
 int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, enum MIF_STREAM_DIRECTION direction, uint32_t num_packets, uint32_t packet_size,
-		    struct scsc_mx *mx, enum MIF_STREAM_INTRBIT_TYPE intrbit, mifintrbit_handler tohost_irq_handler, void *data)
+		    struct scsc_mx *mx, enum MIF_STREAM_INTRBIT_TYPE intrbit, mifintrbit_handler tohost_irq_handler, void *data, enum IRQ_TYPE irq_type)
 {
 	struct mifintrbit *intr;
 	int               r, r1, r2;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	stream->buffer.target = target;
 #endif
 	stream->mx = mx;
@@ -38,7 +49,7 @@ int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, 
 	if (r)
 		return r;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Get the proper intr instance */
 	if (target == SCSC_MIF_ABS_TARGET_WPAN)
 		intr = scsc_mx_get_intrbit_wpan(mx);
@@ -51,7 +62,7 @@ int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, 
 	intr = scsc_mx_get_intrbit(mx);
 #endif
 
-	r1 = mifintrbit_alloc_tohost(intr, tohost_irq_handler, data);
+	r1 = mifintrbit_alloc_tohost(intr, tohost_irq_handler, data, irq_type);
 	if (r1 < 0) {
 		cpacketbuffer_release(&stream->buffer);
 		return r1;
@@ -78,7 +89,7 @@ int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, 
 		else
 			r2 = MIFINTRBIT_RESERVED_PANIC_WLAN;
 	} else
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		r2 = mifintrbit_alloc_fromhost(intr);
 #else
 		r2 = mifintrbit_alloc_fromhost(intr, target);
@@ -91,11 +102,16 @@ int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, 
 	}
 	switch (direction) {
 	case MIF_STREAM_DIRECTION_OUT:
+		/* Clear the f-h shared memory region */
+		memset(stream->buffer.buffer, 0x00, num_packets * packet_size);
+		/* Commit */
+		smp_wmb();
+
 		stream->read_bit_idx = r1;
 		stream->write_bit_idx = r2;
 		break;
 	case MIF_STREAM_DIRECTION_IN:
-		/* Default value for the shared memory region */
+		/* Default value for the t-h shared memory region */
 		memset(stream->buffer.buffer, 0xff, num_packets * packet_size);
 		/* Commit */
 		smp_wmb();
@@ -105,7 +121,7 @@ int mif_stream_init(struct mif_stream *stream, enum scsc_mif_abs_target target, 
 	default:
 		cpacketbuffer_release(&stream->buffer);
 		mifintrbit_free_tohost(intr, r1);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		mifintrbit_free_fromhost(intr, r2);
 #else
 		mifintrbit_free_fromhost(intr, r2, target);
@@ -121,6 +137,7 @@ void mif_stream_release(struct mif_stream *stream)
 {
 	struct mifintrbit *intr;
 
+	/* Check if this is null pointer for abnormal case */
 	if (!stream->mx)
 		return;
 
@@ -134,14 +151,14 @@ void mif_stream_release(struct mif_stream *stream)
 #endif
 	if (stream->direction == MIF_STREAM_DIRECTION_IN) {
 		mifintrbit_free_tohost(intr, stream->write_bit_idx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		mifintrbit_free_fromhost(intr, stream->read_bit_idx);
 #else
 		mifintrbit_free_fromhost(intr, stream->read_bit_idx, (enum scsc_mif_abs_target)stream->peer);
 #endif
 	} else {
 		mifintrbit_free_tohost(intr, stream->read_bit_idx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		mifintrbit_free_fromhost(intr, stream->write_bit_idx);
 #else
 		mifintrbit_free_fromhost(intr, stream->write_bit_idx, (enum scsc_mif_abs_target)stream->peer);
@@ -158,7 +175,7 @@ uint32_t mif_stream_read(struct mif_stream *stream, void *buf, uint32_t num_byte
 
 	uint32_t            num_bytes_read = cpacketbuffer_read(&stream->buffer, buf, num_bytes);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (num_bytes_read > 0)
 		mif_abs->irq_bit_set(mif_abs, stream->read_bit_idx, stream->target);
 #else
@@ -182,7 +199,7 @@ void mif_stream_peek_complete(struct mif_stream *stream, const void *packet)
 	cpacketbuffer_peek_complete(&stream->buffer, packet);
 
 	/* Signal that the read is finished to anyone interested */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mif_abs->irq_bit_set(mif_abs, stream->read_bit_idx, stream->target);
 #else
 	mif_abs->irq_bit_set(mif_abs, stream->read_bit_idx, (enum scsc_mif_abs_target)stream->peer);
@@ -197,7 +214,7 @@ bool mif_stream_write(struct mif_stream *stream, const void *buf, uint32_t num_b
 		return false;
 
 	/* Kick the assigned interrupt to let others know new data is available */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mif_abs->irq_bit_set(mif_abs, stream->write_bit_idx, stream->target);
 #else
 	mif_abs->irq_bit_set(mif_abs, stream->write_bit_idx, (enum scsc_mif_abs_target)stream->peer);
@@ -209,17 +226,23 @@ bool mif_stream_write(struct mif_stream *stream, const void *buf, uint32_t num_b
 bool mif_stream_write_gather(struct mif_stream *stream, const void **bufs, uint32_t *lengths, uint32_t num_bufs)
 {
 	struct scsc_mif_abs *mif_abs = NULL;
+	uint32_t start_idx;
+
+	write_gather_dump.ret_value = false;
 
 	if (!stream->mx || !stream->buffer.mx)
 		return false;
 
 	mif_abs = scsc_mx_get_mif_abs(stream->mx);
+	start_idx = *(stream->buffer.write_index);
 
 	if (!cpacketbuffer_write_gather(&stream->buffer, bufs, lengths, num_bufs))
 		return false;
 
+	mif_stream_record_write_gather(stream, start_idx);
+
 	/* Kick the assigned interrupt to let others know new data is available */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mif_abs->irq_bit_set(mif_abs, stream->write_bit_idx, stream->target);
 #else
 	mif_abs->irq_bit_set(mif_abs, stream->write_bit_idx, (enum scsc_mif_abs_target)stream->peer);
@@ -247,3 +270,12 @@ void mif_stream_log(const struct mif_stream *stream, enum scsc_log_level log_lev
 	cpacketbuffer_log(&stream->buffer, log_level);
 }
 
+uint8_t *mif_stream_get_dump_for_write_gather(uint8_t *irq_bit, uint32_t *target)
+{
+	if (!write_gather_dump.ret_value)
+		return NULL;
+
+	*irq_bit = write_gather_dump.irq_bit_num;
+	*target = (uint32_t)write_gather_dump.target;
+	return cpacketbuffer_get_dump_address(write_gather_dump.buffer, write_gather_dump.start_idx);
+}

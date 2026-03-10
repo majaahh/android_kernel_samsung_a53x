@@ -7,7 +7,11 @@
 #include "scsc_wifilogger_ring_pktfate.h"
 
 /* Uses */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#include <linux/stdarg.h>
+#else
 #include <stdarg.h>
+#endif
 #include "scsc_wifilogger_internal.h"
 
 static bool pktfate_monitor_started;

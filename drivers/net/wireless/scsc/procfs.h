@@ -30,7 +30,11 @@ struct slsi_vif;
 #define SLSI_PROCFS_SET_UID_GID(entry)
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#define SLSI_PDE_DATA(inode) pde_data(inode)
+#else
 #define SLSI_PDE_DATA(inode) PDE_DATA(inode)
+#endif
 
 /* procfs operations */
 int slsi_create_proc_dir(struct slsi_dev *sdev);

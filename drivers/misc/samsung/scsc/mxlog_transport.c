@@ -13,6 +13,9 @@
 #include "mifintrbit.h"
 /** Implements */
 #include "mxlog_transport.h"
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mxlog_transport.c"
+#endif
 
 #define MXLOG_TRANSPORT_BUF_LENGTH (16 * 1024)
 #define MXLOG_TRANSPORT_PACKET_SIZE (4)
@@ -26,6 +29,7 @@ void mxlog_transport_set_error(struct mxlog_transport *mxlog_transport)
 	mxlog_transport->mxlog_thread.block_thread = 1;
 }
 
+#define MAX_MXLOG_DISCARD_CNT 5
 static void input_irq_handler(int irq, void *data)
 {
 	struct mxlog_transport *mxlog_transport = (struct mxlog_transport *)data;
@@ -35,8 +39,8 @@ static void input_irq_handler(int irq, void *data)
 	SCSC_TAG_DEBUG(MXLOG_TRANS, "mxlog intr\n");
 	/* Clear the interrupt first to ensure we can't possibly miss one */
 	mif_abs = scsc_mx_get_mif_abs(mxlog_transport->mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-	mif_abs->irq_bit_clear(mif_abs, irq, mxlog_transport->target);
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	mif_abs->irq_bit_clear(mif_abs, irq, SCSC_MIF_ABS_TARGET_WLAN);
 #else
 	mif_abs->irq_bit_clear(mif_abs, irq);
 #endif
@@ -55,6 +59,13 @@ static void input_irq_handler(int irq, void *data)
 	 */
 	if (th->block_thread == 1) {
 		SCSC_TAG_ERR(MXLOG_TRANS, "discard message.\n");
+		mxlog_transport->discard_cnt++;
+		if (mxlog_transport->discard_cnt == MAX_MXLOG_DISCARD_CNT)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+			mif_abs->irq_bit_mask(mif_abs, irq, SCSC_MIF_ABS_TARGET_WLAN);
+#else
+			mif_abs->irq_bit_mask(mif_abs, irq);
+#endif
 		/*
 		 * Do not try to acknowledge a pending interrupt here.
 		 * This function is called by a function which in turn can be
@@ -68,7 +79,7 @@ static void input_irq_handler(int irq, void *data)
 	wake_up_interruptible(&th->wakeup_q);
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 static void mxlog_input_irq_handler_wpan(int irq, void *data)
 {
 	struct mxlog_transport *mxlog_transport = (struct mxlog_transport *)data;
@@ -94,6 +105,54 @@ static void mxlog_input_irq_handler_wpan(int irq, void *data)
 	 */
 	if (th->block_thread == 1) {
 		SCSC_TAG_ERR(MXLOG_TRANS, "discard message.\n");
+		mxlog_transport->discard_cnt++;
+		if (mxlog_transport->discard_cnt == MAX_MXLOG_DISCARD_CNT)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+			mif_abs->irq_bit_mask(mif_abs, irq, SCSC_MIF_ABS_TARGET_WPAN);
+#else
+			mif_abs->irq_bit_mask(mif_abs, irq);
+#endif
+		/*
+		 * Do not try to acknowledge a pending interrupt here.
+		 * This function is called by a function which in turn can be
+		 * running in an atomic or 'disabled irq' level.
+		 */
+		return;
+	}
+	th->wakeup_flag = 1;
+
+	/* wake up I/O thread */
+	wake_up_interruptible(&th->wakeup_q);
+}
+
+void mxlog_thread_wake_up_for_fwsnoop(struct scsc_mx *mx)
+{
+	struct mxlog_transport *mxlog_transport = scsc_mx_get_mxlog_transport_wpan(mx);
+	struct mxlog_thread    *th;
+
+	if (!mxlog_transport) {
+		SCSC_TAG_ERR(MXLOG_TRANS, "no context of mxlog transport!!\n");
+		return;
+	}
+
+	th = &mxlog_transport->mxlog_thread;
+	/* The the other side wrote some data to the input stream,
+	 * wake up the thread that deals with this.
+	 */
+	if (th->task == NULL) {
+		SCSC_TAG_ERR(MXLOG_TRANS, "mxlog_thread is NOT running\n");
+		return;
+	}
+	/*
+	 * If an error has occured, we discard silently all messages from
+	 * the stream until the error has been processed and the system has
+	 * been reinitialised.
+	 */
+	if (th->block_thread == 1) {
+		SCSC_TAG_ERR(MXLOG_TRANS, "discard message.\n");
+		mxlog_transport->discard_cnt++;
+		if (mxlog_transport->discard_cnt == MAX_MXLOG_DISCARD_CNT)
+			SCSC_TAG_ERR(MXLOG_TRANS, "ERROR!! Too many discard messages on mxlog transport.\n");
 		/*
 		 * Do not try to acknowledge a pending interrupt here.
 		 * This function is called by a function which in turn can be
@@ -345,7 +404,8 @@ int mxlog_transport_init(struct mxlog_transport *mxlog_transport, struct scsc_mx
 	mutex_init(&mxlog_transport->lock);
 	num_packets = mem_length / packet_size;
 	mxlog_transport->mx = mx;
-	r = mif_stream_init(&mxlog_transport->mif_stream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, input_irq_handler, mxlog_transport);
+	mxlog_transport->discard_cnt = 0;
+	r = mif_stream_init(&mxlog_transport->mif_stream, SCSC_MIF_ABS_TARGET_WLAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, input_irq_handler, mxlog_transport, MXLOG_WLAN_TYPE);
 	if (r)
 		return r;
 	r = mxlog_thread_start(mxlog_transport);
@@ -354,11 +414,12 @@ int mxlog_transport_init(struct mxlog_transport *mxlog_transport, struct scsc_mx
 		return r;
 	}
 
+	mxlog_transport->target = SCSC_MIF_ABS_TARGET_WLAN;
 	return 0;
 }
 
 /** TOFACTORIZE **/
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mxlog_transport_init_wpan(struct mxlog_transport *mxlog_transport, struct scsc_mx *mx)
 {
 	int                       r;
@@ -374,7 +435,8 @@ int mxlog_transport_init_wpan(struct mxlog_transport *mxlog_transport, struct sc
 	mutex_init(&mxlog_transport->lock);
 	num_packets = mem_length / packet_size;
 	mxlog_transport->mx = mx;
-	r = mif_stream_init(&mxlog_transport->mif_stream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, mxlog_input_irq_handler_wpan, mxlog_transport);
+	mxlog_transport->discard_cnt = 0;
+	r = mif_stream_init(&mxlog_transport->mif_stream, SCSC_MIF_ABS_TARGET_WPAN, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, mxlog_input_irq_handler_wpan, mxlog_transport, MXLOG_WPAN_TYPE);
 	if (r)
 		return r;
 

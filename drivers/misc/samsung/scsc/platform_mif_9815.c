@@ -40,6 +40,7 @@
 #ifdef CONFIG_SOC_S5E9815
 //#include <linux/mfd/samsung/s2mpu11-regulator.h>
 #include "../../../../drivers/soc/samsung/cal-if/acpm_dvfs.h"
+#include <soc/samsung/cal-if.h>
 #endif
 
 #ifdef CONFIG_SCSC_SMAPPER
@@ -74,7 +75,13 @@
 #endif
 
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/debug-snapshot.h>
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #include <soc/samsung/debug-snapshot.h>
+#else
+#include <linux/debug-snapshot.h>
+#endif
 #endif
 
 #ifdef CONFIG_SCSC_WLBT_CFG_REQ_WQ
@@ -488,6 +495,7 @@ static int platform_mif_set_affinity_cpu(struct scsc_mif_abs *interface, u8 cpu)
 static int platform_mif_parse_qos(struct platform_mif *platform, struct device_node *np)
 {
 	int len, i;
+	u32 mif_get_max_clock, acpm_dvfs, lp4_max, lp5_max, max_mif_qos_lp5;
 
 	platform->qos_enabled = false;
 
@@ -513,6 +521,40 @@ static int platform_mif_parse_qos(struct platform_mif *platform, struct device_n
 			platform->qos[i].freq_cl2);
 	}
 
+	if (of_property_read_u32(np, "acpm_dvfs", &acpm_dvfs)) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			  "Failed to read max_freq, assuming LP4\n");
+		goto cont;
+	}
+
+	if (of_property_read_u32(np, "lp4_max_clock", &lp4_max)) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			  "Failed to read lp4_max_clock, assuming LP4\n");
+		goto cont;
+	}
+
+	if (of_property_read_u32(np, "lp5_max_clock", &lp5_max)) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			  "Failed to read lp5_max_clock, assuming LP4\n");
+		goto cont;
+	}
+
+	if (of_property_read_u32(np, "max_mif_qos_lp5", &max_mif_qos_lp5)) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			  "Failed to read lp5_max_clock, assuming LP4\n");
+		goto cont;
+	}
+
+	mif_get_max_clock = cal_dfs_get_max_freq(acpm_dvfs);
+	if (mif_get_max_clock == lp4_max)
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "LP4 DRAM\n");
+	else if (mif_get_max_clock >= lp5_max) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			  "LP5 DRAM, setting MIF MAX to %u\n", max_mif_qos_lp5);
+		platform->qos[2].freq_mif = max_mif_qos_lp5;
+	}
+
+cont:
 	platform->qos_enabled = true;
 	return 0;
 }
@@ -619,7 +661,7 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 
 	table = platform_mif_pm_qos_get_table(platform, config);
 
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev,
 		"PM QoS update request: %u. MIF %u INT %u CL0 %u CL1 %u CL2 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1, table.freq_cl2);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
@@ -818,7 +860,7 @@ static void wlbt_regdump(struct platform_mif *platform)
 	regmap_read(platform->pmureg, SYSTEM_OUT, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "SYSTEM_OUT 0x%x\n", val);
 
-	regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+	regmap_read(platform->pmureg, VGPIO_TX_MONITOR, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "VGPIO_TX_MONITOR 0x%x\n", val);
 }
 
@@ -881,7 +923,7 @@ uint32_t ka_patch[] = {
 #if IS_ENABLED(CONFIG_EXYNOS_ITMON)
 static void wlbt_karam_dump(struct platform_mif *platform)
 {
-	unsigned int ka_addr = 0x1000;
+	unsigned int ka_addr = PMU_BOOT_RAM_START;
 	unsigned int val;
 	unsigned int ka_array_size = ka_addr + (ARRAY_SIZE(ka_patch) * sizeof(ka_patch[0]));
 
@@ -1682,7 +1724,7 @@ static void __iomem *platform_mif_map_region(unsigned long phys_addr, size_t siz
 #else
 	/* Reserve the table statically, but make sure .dts doesn't exceed it */
 	{
-		static struct page *mif_map_pages[(MIFRAMMAN_MAXMEM >> PAGE_SHIFT) * sizeof(*pages)];
+		static struct page *mif_map_pages[MIFRAMMAN_MAXMEM >> PAGE_SHIFT];
 
 		pages = mif_map_pages;
 

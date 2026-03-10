@@ -386,6 +386,7 @@ static bool mxlogger_wait_for_msg_reply(struct mxlogger *mxlogger)
 				      mxlogger->cfg->bfds[i].info, mxlogger->cfg->bfds[i].status);
 	} else {
 		SCSC_TAG_ERR(MXMAN, "MXLOGGER timeout waiting for reply.\n");
+		mxmgmt_print_sent_data_dump(false);
 	}
 
 	return ret ? true : false;

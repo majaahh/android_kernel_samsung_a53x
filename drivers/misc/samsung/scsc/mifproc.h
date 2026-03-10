@@ -17,8 +17,11 @@
 #ifndef AID_MX
 #define AID_MX  0444
 #endif
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#define MIF_PDE_DATA(inode) pde_data(inode)
+#else
 #define MIF_PDE_DATA(inode) PDE_DATA(inode)
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
 #define MIF_PROCFS_SEQ_FILE_OPS(name)                                                      \

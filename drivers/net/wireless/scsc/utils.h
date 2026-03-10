@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2012 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2012 - 2022 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
 
@@ -15,7 +15,6 @@
 #include <net/cfg80211.h>
 #include <linux/firmware.h>
 #include <scsc/scsc_warn.h>
-#include <linux/string.h>
 #include <linux/overflow.h>
 
 #include "netif.h"
@@ -38,6 +37,7 @@ struct slsi_skb_cb {
 	u16 tid;
 	u16 seq_num;
 	u8 keyrsc[8];  /* the value 8 should match the SLSI_EAPOL_KEY_RSC_LENGTH in mgt.h */
+	u16 peer_idx;
 };
 struct netdev_vif;
 
@@ -53,35 +53,6 @@ static inline struct slsi_skb_cb *slsi_skb_cb_init(struct sk_buff *skb)
 	memset(skb->cb, 0, sizeof(struct slsi_skb_cb));
 	return slsi_skb_cb_get(skb);
 }
-
-#define fapi_alloc(mp_name, mp_id, mp_vif, mp_datalen) fapi_alloc_f(fapi_sig_size(mp_name), mp_datalen, mp_id, mp_vif, __FILE__, __LINE__)
-#define fapi_get_buff(mp_skb, mp_name) (((struct fapi_signal *)(mp_skb)->data)->mp_name)
-#define fapi_get_u16(mp_skb, mp_name) le16_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name)
-#define fapi_get_u32(mp_skb, mp_name) le32_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name)
-#define fapi_get_u64(mp_skb, mp_name) le64_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name)
-#define fapi_set_u16(mp_skb, mp_name, mp_value) (((struct fapi_signal *)(mp_skb)->data)->mp_name = cpu_to_le16(mp_value))
-#define fapi_set_u32(mp_skb, mp_name, mp_value) (((struct fapi_signal *)(mp_skb)->data)->mp_name = cpu_to_le32(mp_value))
-#define fapi_get_s16(mp_skb, mp_name) ((s16)le16_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name))
-#define fapi_get_s32(mp_skb, mp_name) ((s32)le32_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name))
-#define fapi_set_s16(mp_skb, mp_name, mp_value) (((struct fapi_signal *)(mp_skb)->data)->mp_name = cpu_to_le16((u16)mp_value))
-#define fapi_set_s32(mp_skb, mp_name, mp_value) (((struct fapi_signal *)(mp_skb)->data)->mp_name = cpu_to_le32((u32)mp_value))
-#define fapi_set_memcpy(mp_skb, mp_name, mp_value) memcpy(((struct fapi_signal *)(mp_skb)->data)->mp_name, mp_value, sizeof(((struct fapi_signal *)(mp_skb)->data)->mp_name))
-#define fapi_set_memset(mp_skb, mp_name, mp_value) memset(((struct fapi_signal *)(mp_skb)->data)->mp_name, mp_value, sizeof(((struct fapi_signal *)(mp_skb)->data)->mp_name))
-
-/* Helper to get and set high/low 16 bits from u32 signals */
-#define fapi_get_high16_u32(mp_skb, mp_name) ((fapi_get_u32((mp_skb), mp_name) & 0xffff0000) >> 16)
-#define fapi_set_high16_u32(mp_skb, mp_name, mp_value) fapi_set_u32((mp_skb), mp_name, (fapi_get_u32((mp_skb), mp_name) & 0xffff) | ((mp_value) << 16))
-#define fapi_get_low16_u32(mp_skb, mp_name) (fapi_get_u32((mp_skb), mp_name) & 0xffff)
-#define fapi_set_low16_u32(mp_skb, mp_name, mp_value) fapi_set_u32((mp_skb), mp_name, (fapi_get_u32((mp_skb), mp_name) & 0xffff0000) | (mp_value))
-
-#define fapi_get_siglen(mp_skb) (slsi_skb_cb_get(mp_skb)->sig_length)
-#define fapi_get_datalen(mp_skb) (slsi_skb_cb_get(mp_skb)->data_length - slsi_skb_cb_get(mp_skb)->sig_length)
-#define fapi_get_data(mp_skb) (mp_skb->data + fapi_get_siglen(mp_skb))
-#define fapi_get_vif(mp_skb) le16_to_cpu(((struct fapi_vif_signal_header *)(mp_skb)->data)->vif)
-
-/* Helper to get the struct ieee80211_mgmt from the data */
-#define fapi_get_mgmt(mp_skb) ((struct ieee80211_mgmt *)fapi_get_data(mp_skb))
-#define fapi_get_mgmtlen(mp_skb) fapi_get_datalen(mp_skb)
 
 #define SLSI_BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define SLSI_BYTE_TO_BINARY(byte)  \
@@ -99,17 +70,18 @@ static inline struct sk_buff *fapi_alloc_f(size_t sig_size, size_t data_size, u1
 	struct sk_buff                *skb = NULL;
 	struct fapi_vif_signal_header *header;
 
-	if (WARN_ON(in_interrupt()))
+	if (WLBT_WARN_ON(in_interrupt()))
 		return NULL;
 	skb = alloc_skb(sig_size + data_size, GFP_KERNEL);
-	WARN_ON(sig_size < sizeof(struct fapi_signal_header));
-	if (WARN_ON(!skb))
+	WLBT_WARN_ON(sig_size < sizeof(struct fapi_signal_header));
+	if (WLBT_WARN_ON(!skb))
 		return NULL;
 
 	slsi_skb_cb_init(skb)->sig_length = sig_size;
 	slsi_skb_cb_get(skb)->data_length = sig_size;
 
 	header = (struct fapi_vif_signal_header *)skb_put(skb, sig_size);
+	memset(header, 0, sig_size);
 	header->id = cpu_to_le16(id);
 	header->receiver_pid = 0;
 	header->sender_pid = 0;
@@ -118,11 +90,66 @@ static inline struct sk_buff *fapi_alloc_f(size_t sig_size, size_t data_size, u1
 	return skb;
 }
 
+#define fapi_alloc(mp_name, mp_id, mp_vif, mp_datalen) \
+	fapi_alloc_f(fapi_sig_size(mp_name), mp_datalen, mp_id, mp_vif, __FILE__, __LINE__)
+
+#define fapi_get_siglen(mp_skb) (slsi_skb_cb_get(mp_skb)->sig_length)
+#define fapi_get_datalen(mp_skb) (slsi_skb_cb_get(mp_skb)->data_length - slsi_skb_cb_get(mp_skb)->sig_length)
+#define fapi_get_data(mp_skb) ((mp_skb)->data + fapi_get_siglen(mp_skb))
+#define fapi_get_vif(mp_skb) le16_to_cpu(((struct fapi_vif_signal_header *)(mp_skb)->data)->vif)
+#define fapi_get_fwref(mp_skb) le32_to_cpu(((struct fapi_signal *)(mp_skb)->data)->fw_reference)
+
+
+/* Helper to get the struct ieee80211_mgmt from the data */
+#define fapi_get_mgmt(mp_skb) ((struct ieee80211_mgmt *)fapi_get_data(mp_skb))
+#define fapi_get_mgmtlen(mp_skb) fapi_get_datalen(mp_skb)
+
+/* Check if a field is present in a FAPI signal by validating the signal length */
+#define fapi_is_field_present(mp_skb, mp_name) \
+	(fapi_get_siglen(mp_skb) >= \
+	(offsetof (struct fapi_signal, mp_name) + \
+	sizeof(((struct fapi_signal *)(mp_skb)->data)->mp_name) - \
+	offsetof (struct fapi_signal, id)))
+
+#define fapi_get_buff(mp_skb, mp_name) \
+	(fapi_is_field_present(mp_skb, mp_name) ? (((struct fapi_signal *)(mp_skb)->data)->mp_name) : 0)
+#define fapi_get_u16(mp_skb, mp_name) \
+	(fapi_is_field_present(mp_skb, mp_name) ? le16_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name) : 0)
+#define fapi_get_u32(mp_skb, mp_name) \
+	(fapi_is_field_present(mp_skb, mp_name) ? le32_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name) : 0)
+#define fapi_get_u64(mp_skb, mp_name) \
+	(fapi_is_field_present(mp_skb, mp_name) ? le64_to_cpu(((struct fapi_signal *)(mp_skb)->data)->mp_name) : 0)
+#define fapi_get_s16(mp_skb, mp_name)  ((s16)fapi_get_u16(mp_skb, mp_name))
+#define fapi_get_s32(mp_skb, mp_name)  ((s32)fapi_get_u32(mp_skb, mp_name))
+
+#define fapi_set_u8(mp_skb, mp_name, mp_value) \
+	(((struct fapi_signal *)(mp_skb)->data)->mp_name = mp_value & 0xffu)
+#define fapi_set_u16(mp_skb, mp_name, mp_value) \
+	(((struct fapi_signal *)(mp_skb)->data)->mp_name = cpu_to_le16(mp_value))
+#define fapi_set_u32(mp_skb, mp_name, mp_value) \
+	(((struct fapi_signal *)(mp_skb)->data)->mp_name = cpu_to_le32(mp_value))
+#define fapi_set_s16(mp_skb, mp_name, mp_value) fapi_set_u16(mp_skb, mp_name, (u16)(mp_value))
+#define fapi_set_s32(mp_skb, mp_name, mp_value) fapi_set_u32(mp_skb, mp_name, (u32)(mp_value))
+#define fapi_set_memcpy(mp_skb, mp_name, mp_value) \
+	memcpy(((struct fapi_signal *)(mp_skb)->data)->mp_name, mp_value, \
+	sizeof(((struct fapi_signal *)(mp_skb)->data)->mp_name))
+#define fapi_set_memset(mp_skb, mp_name, mp_value) \
+	memset(((struct fapi_signal *)(mp_skb)->data)->mp_name, mp_value, \
+	sizeof(((struct fapi_signal *)(mp_skb)->data)->mp_name))
+
+/* Helper to get and set high/low 16 bits from u32 fields */
+#define fapi_get_high16_u32(mp_skb, mp_name) ((u16)(fapi_get_u32(mp_skb, mp_name) >> 16))
+#define fapi_set_high16_u32(mp_skb, mp_name, mp_value) \
+	fapi_set_u32(mp_skb, mp_name, (fapi_get_u32(mp_skb, mp_name) & 0xffff) | ((u32)(mp_value) << 16))
+#define fapi_get_low16_u32(mp_skb, mp_name) ((u16)fapi_get_u32(mp_skb, mp_name))
+#define fapi_set_low16_u32(mp_skb, mp_name, mp_value) \
+	fapi_set_u32(mp_skb, mp_name, (fapi_get_u32(mp_skb, mp_name) & 0xffff0000) | (mp_value))
+
 static inline u8 *fapi_append_data(struct sk_buff *skb, const u8 *data, size_t data_len)
 {
 	u8 *p;
 
-	if (WARN_ON(skb_tailroom(skb) < data_len))
+	if (WLBT_WARN_ON(skb_tailroom(skb) < data_len))
 		return NULL;
 
 	p = skb_put(skb, data_len);
@@ -197,29 +224,11 @@ extern uint slsi_sg_host_align_mask;
 #define SLSI_UNUSED_PARAMETER(x) ((void)(x))
 
 /* Helper ERROR Macros */
-#define SLSI_ECR(func) \
-	do { \
-		int _err = (func); \
-		if (_err != 0) { \
-			SLSI_ERR_NODEV("e=%d\n", _err); \
-			return _err; \
-		} \
-	} while (0)
-
-#define SLSI_EC(func) \
-	do { \
-		int _err = (func); \
-		if (_err != 0) { \
-			SLSI_ERR_NODEV("e=%d\n", _err); \
-			return; \
-		} \
-	} while (0)
-
 #define SLSI_EC_GOTO(func, err, label) \
 	do { \
 		(err) = func; \
 		if ((err) != 0) { \
-			WARN_ON(1); \
+			WLBT_WARN_ON(1); \
 			SLSI_ERR(sdev, "fail at line:%d\n", __LINE__); \
 			goto label; \
 		} \
@@ -231,6 +240,9 @@ extern uint slsi_sg_host_align_mask;
 /* Endian conversion. */
 /*------------------------------------------------------------------*/
 #define SLSI_BUFF_LE_TO_U16(ptr)        (((u16)((u8 *)(ptr))[0]) | ((u16)((u8 *)(ptr))[1]) << 8)
+#define SLSI_BUFF_LE_TO_U32(ptr)        (((u32)((u8 *)(ptr))[3] << 24) | ((u32)((u8 *)(ptr))[2] << 16) | \
+			 ((u32)((u8 *)(ptr))[1] << 8) | ((u32)((u8 *)(ptr))[0]))
+
 #define SLSI_U16_TO_BUFF_LE(uint, ptr) \
 	do { \
 		u32 local_uint_tmp = (uint); \
@@ -264,6 +276,9 @@ extern uint slsi_sg_host_align_mask;
 		(*(u32 *)output) = cpu_to_le32(input); \
 		(output) += 4; \
 	} while (0)
+
+/* convert milliseconds to time units (TU, 1024us) */
+#define SLSI_MS_TO_TU(ms) (((u32)(ms) * 1000) >> 10)
 
 /* Android wakelock abstraction */
 #ifdef CONFIG_SCSC_WLAN_ANDROID
@@ -342,7 +357,7 @@ static inline void slsi_skb_work_enqueue_l(struct slsi_skb_work *work, struct sk
 
 	sync_ptr = rcu_dereference(work->sync_ptr);
 
-	if (WARN_ON(!sync_ptr)) {
+	if (WLBT_WARN_ON(!sync_ptr)) {
 		kfree_skb(skb);
 		rcu_read_unlock();
 		return;
@@ -362,7 +377,7 @@ static inline void slsi_skb_work_deinit(struct slsi_skb_work *work)
 {
 	rcu_read_lock();
 
-	if (WARN_ON(!work->sync_ptr)) {
+	if (WLBT_WARN_ON(!work->sync_ptr)) {
 		rcu_read_unlock();
 		return;
 	}
@@ -393,60 +408,6 @@ static inline void slsi_eth_zero_addr(u8 *addr)
 static inline void slsi_eth_broadcast_addr(u8 *addr)
 {
 	memset(addr, 0xff, ETH_ALEN);
-}
-
-static inline int slsi_str_to_int(char *str, int *result)
-{
-	int i = 0;
-	int sign = 1;
-	int err = 0;
-	long long int res = 0;
-	int digit = 0;
-
-	if (!str)
-		return 0;
-	if (*str == '-') {
-		sign = -1;
-		++str;
-	} else if (*str == '+') {
-		sign = 1;
-		++str;
-	}
-
-	*result = 0;
-	if ((str[i] >= '0') && (str[i] <= '9')) {
-		while (str[i] >= '0' && str[i] <= '9') {
-			if (res > INT_MAX / 10) {
-				err = 1;
-				break;
-			}
-			res *= 10;
-			digit = str[i] - '0';
-
-			if (res > INT_MAX - digit) {
-				if (sign == -1) {
-					res += digit;
-					if (-(res) >= INT_MIN) {
-						break;
-					} else {
-						err = 1;
-						break;
-					}
-				} else {
-					err = 1;
-					break;
-				}
-			}
-			res += digit;
-			i++;
-		}
-
-		if (!err)
-			*result = ((sign == -1) ? -(res) : res);
-		else
-			return 0;
-	}
-	return i;
 }
 
 static inline int slsi_str_cmp(const char *s1, const char *s2)
@@ -548,21 +509,30 @@ static inline u32 slsi_get_center_freq1(struct slsi_dev *sdev, u16 chann_info, u
 	case 80:
 		center_freq1 = center_freq - 20 * ((chann_info & 0xFF00) >> 8) + 30;
 		break;
+	case 160:
+		center_freq1 = center_freq - 20 * ((chann_info & 0xFF00) >> 8) + 70;
+		break;
+	case 176: /* FW encoding for 320MHz */
+		center_freq1 = center_freq - 20 * ((chann_info & 0xFF00) >> 8) + 150;
+		break;
 	default:
 		break;
 	}
 	return center_freq1;
 }
 
-/* Name: strtoint
+/* Name: slsi_str2int
  * Desc: Converts a string to a decimal or hexadecimal integer
  * s: the string to be converted
  * res: pointer to the calculated integer
- * return: 0 (success), 1(failure)
+ * return: 0 on success, <0 on failure.
  */
-static inline int strtoint(const char *s, int *res)
+static inline int slsi_str2int(const char *s, int *res)
 {
 	int base = 10;
+
+	if (!s)
+		return -EINVAL;
 
 	if (strlen(s) > 2)
 		if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))

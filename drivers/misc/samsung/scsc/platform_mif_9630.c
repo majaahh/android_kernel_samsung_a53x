@@ -546,7 +546,7 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 
 	table = platform_mif_pm_qos_get_table(platform, config);
 
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev,
 		"PM QoS update request: %u. MIF %u INT %u CL0 %u CL1 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1);
 
 	pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
@@ -707,7 +707,7 @@ static void wlbt_regdump(struct platform_mif *platform)
 	regmap_read(platform->pmureg, SYSTEM_OUT, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "SYSTEM_OUT 0x%x\n", val);
 
-	regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+	regmap_read(platform->pmureg, VGPIO_TX_MONITOR, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "VGPIO_TX_MONITOR 0x%x\n", val);
 }
 
@@ -772,7 +772,7 @@ uint32_t ka_patch[] = {
 
 static void wlbt_karam_dump(struct platform_mif *platform)
 {
-	unsigned int ka_addr = 0x1000;
+	unsigned int ka_addr = PMU_BOOT_RAM_START;
 	unsigned int val;
 	unsigned int ka_array_size = ka_addr + (ARRAY_SIZE(ka_patch) * sizeof(ka_patch[0]));
 
@@ -1506,7 +1506,7 @@ static void __iomem *platform_mif_map_region(unsigned long phys_addr, size_t siz
 #else
 	/* Reserve the table statically, but make sure .dts doesn't exceed it */
 	{
-		static struct page *mif_map_pages[(MIFRAMMAN_MAXMEM >> PAGE_SHIFT) * sizeof(*pages)];
+		static struct page *mif_map_pages[MIFRAMMAN_MAXMEM >> PAGE_SHIFT];
 
 		pages = mif_map_pages;
 

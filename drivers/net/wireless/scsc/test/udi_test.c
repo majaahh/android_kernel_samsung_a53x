@@ -7,6 +7,7 @@
 #include <linux/sysfs.h>
 #include <linux/poll.h>
 #include <linux/cdev.h>
+#include <scsc/scsc_warn.h>
 
 #include "dev.h"
 
@@ -276,7 +277,7 @@ static ssize_t slsi_test_cdev_write(struct file *filp, const char *p, size_t len
 		cb->sig_length = fapi_get_expected_size(skb);
 		cb->data_length = skb->len;
 
-		if (WARN_ON(slsi_hip_rx(sdev, skb))) {
+		if (WLBT_WARN_ON(slsi_hip_rx(sdev, skb))) {
 			kfree_skb(skb);
 			return -EINVAL;
 		}
@@ -449,22 +450,22 @@ static int udi_log_event(struct slsi_log_client *log_client, struct sk_buff *skb
 	struct udi_msg_t             msg;
 	struct udi_msg_t             *msg_skb;
 
-	if (WARN_ON(client == NULL))
+	if (WLBT_WARN_ON(client == NULL))
 		return -EINVAL;
-	if (WARN_ON(skb == NULL))
+	if (WLBT_WARN_ON(skb == NULL))
 		return -EINVAL;
-	if (WARN_ON(skb->len == 0))
+	if (WLBT_WARN_ON(skb->len == 0))
 		return -EINVAL;
 
 	skb = skb_copy_expand(skb, sizeof(msg), 0, GFP_ATOMIC);
-	if (WARN_ON(!skb))
+	if (WLBT_WARN_ON(!skb))
 		return -ENOMEM;
 
 	/* Intercept some requests */
 	if (slsi_test_process_signal(client->ufcdev->uftestdev, skb))
 		return -ECANCELED;
 
-	if (WARN_ON(skb_headroom(skb) < sizeof(msg)))
+	if (WLBT_WARN_ON(skb_headroom(skb) < sizeof(msg)))
 		return -ENOMEM;
 
 	msg.length = sizeof(msg) + skb->len;
@@ -496,9 +497,6 @@ static const struct file_operations slsi_test_cdev_fops = {
 	.compat_ioctl   = slsi_test_cdev_ioctl,
 	.poll           = slsi_test_cdev_poll,
 };
-
-#define UF_DEVICE_CREATE(_class, _parent, _devno, _priv, _fmt, _args)       \
-	device_create(_class, _parent, _devno, _priv, _fmt, _args)
 
 static int slsi_get_minor(void)
 {

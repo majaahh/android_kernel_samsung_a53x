@@ -37,6 +37,16 @@ static u16 latest_scsc_panic_code;
 
 #define SLSI_RETRY_STOP_COUNT_ERROR 1
 
+#if defined(CONFIG_SCSC_WLAN_HIP5)
+#ifdef CONFIG_SCSC_WLAN_HOST_DPD
+#define HIP_MIFRAM_ALLOC_SIZE (4.15 * 1024 * 1024)
+#else
+#define HIP_MIFRAM_ALLOC_SIZE (4.65 * 1024 * 1024)
+#endif
+#else
+#define HIP_MIFRAM_ALLOC_SIZE (2.75 * 1024 * 1024)
+#endif
+
 /* TODO: Would be good to get this removed - use module_client? */
 struct slsi_cm_ctx {
 	struct slsi_dev *sdev;
@@ -46,6 +56,43 @@ struct slsi_cm_ctx {
 static struct slsi_cm_ctx cm_ctx;
 
 static void slsi_hip_block_bh(struct slsi_dev *sdev);
+
+#ifdef CONFIG_SEC_FACTORY
+/* Only used for Factory Test */
+static char factory_wifi_disable;
+static int slsi_close_wifi_set(const char *val, const struct kernel_param *kp)
+{
+	struct net_device *dev = cm_ctx.sdev->netdev[SLSI_NET_INDEX_WLAN];
+	struct netdev_vif *ndev_vif;
+
+	if (!dev) {
+		SLSI_ERR_NODEV("factory test wlan set failed\n");
+		return 0;
+	}
+
+	factory_wifi_disable = val[0];
+	if (!(factory_wifi_disable == '1' || factory_wifi_disable == 'Y' || factory_wifi_disable == 'y'))
+		return 0;
+
+	ndev_vif = netdev_priv(dev);
+	if (!ndev_vif->is_available) {
+		SLSI_INFO_NODEV("factory test wlan is disabled already\n");
+		return 0;
+	}
+
+	rtnl_lock();
+	dev_close(cm_ctx.sdev->netdev[SLSI_NET_INDEX_WLAN]);
+	rtnl_unlock();
+
+	return 0;
+}
+
+const struct kernel_param_ops slsi_factory_test_ops = {
+	.set = &slsi_close_wifi_set,
+};
+module_param_cb(factory_wifi_disable, &slsi_factory_test_ops, &factory_wifi_disable, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(factory_wifi_disable, "factory test wifi enable/disable ops");
+#endif
 
 int slsi_wlan_service_notifier_register(struct notifier_block *nb)
 {
@@ -82,16 +129,10 @@ static void slsi_append_log_to_system_buffer(struct slsi_dev *sdev)
 	int    pos = 0;
 	int    buf_size = 128;
 	int    i = 0;
-	char   *log_to_sys_error_buffer = NULL;
+	char   log_to_sys_error_buffer[128] = { 0 };
 	struct netdev_vif   *ndev_vif;
 
-	log_to_sys_error_buffer = kzalloc(128, GFP_KERNEL);
-	if (!log_to_sys_error_buffer) {
-		SLSI_ERR_NODEV("Failed to allocate memory\n");
-		return;
-	}
-
-	scnprintf(log_to_sys_error_buffer + pos, buf_size - pos, "netdev_up_count=%d ", sdev->netdev_up_count);
+	pos = scnprintf(log_to_sys_error_buffer, buf_size, "netdev_up_count=%d ", sdev->netdev_up_count);
 
 	for (i = 1; i <= CONFIG_SCSC_WLAN_MAX_INTERFACES; i++) {
 		if (sdev->netdev[i]) {
@@ -156,8 +197,8 @@ static  bool wlan_stop_on_failure_v2(struct scsc_service_client *client, struct 
 	struct slsi_dev   *sdev = container_of(client, struct slsi_dev, mx_wlan_client);
 #ifndef SCSC_SEP_VERSION
 	struct netdev_vif *wlan_dev_vif;
-#endif
 	char              *error = "Subsystem Restart";
+#endif
 #ifdef CONFIG_SCSC_WLAN_AP_AUTO_RECOVERY
 	struct netdev_vif *ndev_vif;
 	int               i;
@@ -233,8 +274,10 @@ static  bool wlan_stop_on_failure_v2(struct scsc_service_client *client, struct 
 		SLSI_INFO_NODEV("Wi-Fi service driver not started\n");
 	}
 
+#ifndef SCSC_SEP_VERSION
 	SLSI_INFO_NODEV("Sending SLSI_NL80211_SUBSYSTEM_RESTART_EVENT\n");
 	slsi_vendor_event(sdev, SLSI_NL80211_SUBSYSTEM_RESTART_EVENT, error, strlen(error));
+#endif
 	mutex_unlock(&slsi_start_mutex);
 	SLSI_INFO_NODEV("Done!\n");
 	return true;
@@ -260,10 +303,22 @@ void slsi_wlan_service_probe(struct scsc_mx_module_client *module_client, struct
 	memset((void *)&mx_wlan_client, 0, (size_t)sizeof(mx_wlan_client));
 	mutex_lock(&slsi_start_mutex);
 
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY && !recovery_in_progress)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) {
+		SLSI_INFO_NODEV("WLAN service probe - recovery. Ignore WPAN recovery.\n");
+		goto done;
+	}
+
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN)
+		reason = SCSC_MODULE_CLIENT_REASON_RECOVERY;
+#endif
+
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN) 
+		&& !recovery_in_progress)
 		goto done;
 
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY) {
+	SLSI_INFO_NODEV("reason: %d, recovery_in_progress : %d\n", reason, recovery_in_progress);
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN) {
 		SLSI_INFO_NODEV("Probe recovery\n");
 		sdev = cm_ctx.sdev;
 		recovery_in_progress = 0;
@@ -322,7 +377,7 @@ void slsi_wlan_service_probe(struct scsc_mx_module_client *module_client, struct
 #endif
 	}
 
-	if (reason != SCSC_MODULE_CLIENT_REASON_RECOVERY)
+	if (reason != SCSC_MODULE_CLIENT_REASON_RECOVERY && reason != SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN)
 		atomic_set(&sdev->cm_if.cm_if_state, SCSC_WIFI_CM_IF_STATE_PROBED);
 	atomic_set(&sdev->cm_if.reset_level, 0);
 done:
@@ -367,9 +422,21 @@ static void slsi_wlan_service_remove(struct scsc_mx_module_client *module_client
 		return;
 	}
 
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY && !recovery_in_progress) {
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) {
+		SLSI_INFO_NODEV("WLAN service remove - recovery. Ignore WPAN recovery.\n");
+		return;
+	}
+
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN)
+		reason = SCSC_MODULE_CLIENT_REASON_RECOVERY;
+#endif
+	SLSI_INFO_NODEV("WLAN service remove - reason %d, recovery_in_progress %d\n", reason, recovery_in_progress);
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN)
+		&& !recovery_in_progress) {
 		SLSI_INFO_NODEV("WLAN service remove - recovery. Service not active.\n");
-	} else if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY && recovery_in_progress) {
+	} else if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN)
+				&& recovery_in_progress) {
 		int r;
 
 		level = atomic_read(&sdev->cm_if.reset_level);
@@ -587,6 +654,7 @@ int slsi_sm_recovery_service_close(struct slsi_dev *sdev)
 	sprintf(log_to_sys_error_buffer, "Closing WLAN service\n");
 	slsi_add_log_to_system_error_buffer(sdev, log_to_sys_error_buffer);
 
+	scsc_mx_service_mifram_free(sdev->service, sdev->hip.hip_ref);
 	err = scsc_mx_service_close(sdev->service);
 	if (err == -EILSEQ || err == -EIO)
 		SLSI_INFO(sdev, "scsc_mx_service_close failed err: %d\n", err);
@@ -620,7 +688,7 @@ int slsi_sm_recovery_service_open(struct slsi_dev *sdev)
 int slsi_sm_recovery_service_start(struct slsi_dev *sdev)
 {
 	int err = 0, err2 = 0;
-	struct slsi_hip4 *hip = &sdev->hip4_inst;
+	struct slsi_hip *hip = &sdev->hip;
 	scsc_mifram_ref  ref;
 	int              state;
 	char             log_to_sys_error_buffer[128] = { 0 };
@@ -648,11 +716,8 @@ int slsi_sm_recovery_service_start(struct slsi_dev *sdev)
 	}
 
 	atomic_set(&sdev->cm_if.cm_if_state, SCSC_WIFI_CM_IF_STATE_STARTING);
-#ifdef CONFIG_SCSC_PCIE
-	err = scsc_mx_service_mifram_alloc(sdev->service, 1.5 * 1024 * 1024, &sdev->hip4_inst.hip_ref, 4096);
-#else
-	err = scsc_mx_service_mifram_alloc(sdev->service, 2.5 * 1024 * 1024, &sdev->hip4_inst.hip_ref, 4096);
-#endif
+
+	err = scsc_mx_service_mifram_alloc(sdev->service, HIP_MIFRAM_ALLOC_SIZE, &sdev->hip.hip_ref, 4096);
 	if (err) {
 		SLSI_WARN(sdev, "scsc_mx_service_mifram_alloc failed err: %d\n", err);
 		sprintf(log_to_sys_error_buffer, "scsc_mx_service_mifram_alloc failed err: %d\n", err);
@@ -698,7 +763,7 @@ int slsi_sm_recovery_service_start(struct slsi_dev *sdev)
 		mutex_unlock(&slsi_start_mutex);
 		return err;
 	}
-	err = slsi_hip_setup(sdev);
+	err = slsi_hip_setup_ext(sdev);
 	if (err) {
 		SLSI_WARN(sdev, "slsi_hip_setup failed err: %d\n", err);
 		sprintf(log_to_sys_error_buffer, "slsi_hip_setup failed err: %d\n", err);
@@ -787,7 +852,7 @@ exit:
 
 int slsi_sm_wlan_service_start(struct slsi_dev *sdev)
 {
-	struct slsi_hip4 *hip = &sdev->hip4_inst;
+	struct slsi_hip *hip = &sdev->hip;
 	scsc_mifram_ref  ref;
 	int              err = 0;
 	int              err2 = 0;
@@ -828,13 +893,9 @@ int slsi_sm_wlan_service_start(struct slsi_dev *sdev)
 #endif
 
 	/* Get RAM from the MIF */
-	SLSI_INFO(sdev, "Allocate mifram\n");
+	SLSI_INFO(sdev, "Allocate mifram size %d Bytes\n", HIP_MIFRAM_ALLOC_SIZE);
 
-#ifdef CONFIG_SCSC_PCIE
-	err = scsc_mx_service_mifram_alloc(sdev->service, 1.5 * 1024 * 1024, &sdev->hip4_inst.hip_ref, 4096);
-#else
-	err = scsc_mx_service_mifram_alloc(sdev->service, 2.5 * 1024 * 1024, &sdev->hip4_inst.hip_ref, 4096);
-#endif
+	err = scsc_mx_service_mifram_alloc(sdev->service, HIP_MIFRAM_ALLOC_SIZE, &sdev->hip.hip_ref, 4096);
 	if (err) {
 		SLSI_WARN(sdev, "scsc_mx_service_mifram_alloc failed err: %d\n", err);
 		atomic_set(&sdev->cm_if.cm_if_state, SCSC_WIFI_CM_IF_STATE_STOPPED);
@@ -874,7 +935,7 @@ int slsi_sm_wlan_service_start(struct slsi_dev *sdev)
 		mutex_unlock(&slsi_start_mutex);
 		return err;
 	}
-	err = slsi_hip_setup(sdev);
+	err = slsi_hip_setup_ext(sdev);
 	if (err) {
 		SLSI_WARN(sdev, "slsi_hip_setup failed err: %d\n", err);
 		atomic_set(&sdev->cm_if.cm_if_state, SCSC_WIFI_CM_IF_STATE_STOPPED);
@@ -1055,7 +1116,7 @@ void slsi_sm_wlan_service_close(struct slsi_dev *sdev)
 	sdev->wlan_service_on = 0;
 	cm_if_state = atomic_read(&sdev->cm_if.cm_if_state);
 	if (cm_if_state != SCSC_WIFI_CM_IF_STATE_STOPPED) {
-		SLSI_INFO(sdev, "Service not stopped. cm_if_state = %d service is = %d\n", cm_if_state, sdev->service);
+		SLSI_INFO(sdev, "Service not stopped. cm_if_state = %d service is = %p\n", cm_if_state, sdev->service);
 
 		/**
 		 * Close the service if failure has occurred after service has successfully opened
@@ -1071,11 +1132,11 @@ void slsi_sm_wlan_service_close(struct slsi_dev *sdev)
 
 	SLSI_INFO_NODEV("Closing WLAN service. Service is %d\n", sdev->service);
 
-	sprintf(log_to_sys_error_buffer, "%s: Closing WLAN service. Service is %d\n", __func__, sdev->service);
+	sprintf(log_to_sys_error_buffer, "%s: Closing WLAN service. Service is %p\n", __func__, sdev->service);
 	slsi_add_log_to_system_error_buffer(sdev, log_to_sys_error_buffer);
 
 	if (sdev->service) {
-		scsc_mx_service_mifram_free(sdev->service, sdev->hip4_inst.hip_ref);
+		scsc_mx_service_mifram_free(sdev->service, sdev->hip.hip_ref);
 		r = scsc_mx_service_close(sdev->service);
 		if (r == -EIO) {
 			/**

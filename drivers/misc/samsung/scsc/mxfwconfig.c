@@ -11,13 +11,19 @@
 #include "miframman.h"
 #include "scsc_mx_impl.h"
 #include "mxconf.h"
+#include <scsc/scsc_warn.h>
 
 #if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
 #include <scsc/scsc_log_collector.h>
 #endif
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mxfwconfig.c"
+#endif
+
 #define MXFWCONFIG_CFG_SUBDIR	"common"
 #define MXFWCONFIG_CFG_FILE_HW	"common.hcf"
+#define MXFWCONFIG_CFG_FILE_SW	"common_sw.hcf"
 
 static void mxfwconfig_get_dram_ref(struct scsc_mx *mx, struct mxmibref *cfg_ref);
 
@@ -299,9 +305,17 @@ int mxfwconfig_load(struct scsc_mx *mx, struct mxmibref *cfg_ref)
 			r = mxfwconfig_load_cfg(mx, cfg, filename);
 			if (r)
 				goto done;
+			memset(filename, 0, MX_WLAN_FILE_LEN_MAX);
+			scnprintf(filename, sizeof(filename), "%s.rev%d", MXFWCONFIG_CFG_FILE_SW, value);
+			r = mxfwconfig_load_cfg(mx, cfg, filename);
+			if (r == -EINVAL)
+				goto done;
 		} else {
 			r = mxfwconfig_load_cfg(mx, cfg, MXFWCONFIG_CFG_FILE_HW);
 			if (r)
+				goto done;
+			r = mxfwconfig_load_cfg(mx, cfg, MXFWCONFIG_CFG_FILE_SW);
+			if (r == -EINVAL)
 				goto done;
 		}
 	} else {
@@ -310,6 +324,13 @@ int mxfwconfig_load(struct scsc_mx *mx, struct mxmibref *cfg_ref)
 		r = mxfwconfig_load_cfg(mx, cfg, MXFWCONFIG_CFG_FILE_HW);
 		if (r)
 			goto done;
+
+		/* SW file is optional, but not without HW file */
+		r = mxfwconfig_load_cfg(mx, cfg, MXFWCONFIG_CFG_FILE_SW);
+		if (r == -EINVAL) {
+			/* If SW file is corrupt, abandon both HW and SW */
+			goto done;
+		}
 #if defined SCSC_SEP_VERSION
 	}
 #endif
@@ -409,7 +430,7 @@ void mxfwconfig_deinit(struct scsc_mx *mx)
 	struct mxfwconfig *cfg = scsc_mx_get_mxfwconfig(mx);
 
 	/* Leaked memory? */
-	WARN_ON(cfg->configs > 0);
-	WARN_ON(cfg->shdram);
+	WLBT_WARN_ON(cfg->configs > 0);
+	WLBT_WARN_ON(cfg->shdram);
 }
 

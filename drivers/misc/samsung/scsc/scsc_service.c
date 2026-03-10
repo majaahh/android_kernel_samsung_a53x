@@ -8,7 +8,7 @@
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/firmware.h>
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #include <scsc/scsc_wakelock.h>
 #else
@@ -38,6 +38,7 @@
 #include "srvman.h"
 #include "servman_messages.h"
 #include "mxmgmt_transport.h"
+#include "mxlog_transport.h"
 
 static ulong sm_completion_timeout_ms = 3000;
 module_param(sm_completion_timeout_ms, ulong, S_IRUGO | S_IWUSR);
@@ -50,6 +51,31 @@ MODULE_PARM_DESC(sm_completion_timeout_ms, "Timeout Service Manager start/stop (
 #define reinit_completion(completion) INIT_COMPLETION(*(completion))
 #endif
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+extern int scsc_pcie_claim(void);
+extern void scsc_pcie_release(void);
+extern bool scsc_pcie_in_deferred(void);
+extern int scsc_pcie_complete(void);
+extern int exynos_pcie_rc_chk_link_status(int ch_num);
+
+static u32 claim_bitmap;
+module_param(claim_bitmap, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(claim_bitmap, "claim_bitmap");
+static u32 err_bitmap;
+module_param(err_bitmap, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(err_bitmap, "err_bitmap");
+static int claim_cnt[32];
+module_param_array(claim_cnt, int, NULL, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(claim_cnt, "claim_cnt each bit is count of claim_bit");
+static const char *users[26] = {"DEFAULT", "RX_CTRL", "RB", "RX_DATA",
+"TX_DATA", "TX_CTRL","MLME_SEND_FRAME", "MLME_REQ_CFM_IND", "MLME_REQ",
+"UDI", "GDB", "RAMRP", "LOGGER_GERERATE", "LOGGER_COLLECT", "LOGGER_UNREGISTER",
+"FAILURE_WORK_WLAN", "FAILURE_WORK_WPAN", "FAILURE_WORK", "FREEZE", "FORCE_PANIC",
+"LERNA", "SERVICE_START", "SERVICE_STOP", "SERVICE_CLOSE", "SERVICE_OPEN", "LAST"};
+#endif
+
+
+
 struct scsc_service {
 	struct list_head           list;
 	struct scsc_mx             *mx;
@@ -57,22 +83,28 @@ struct scsc_service {
 	struct scsc_service_client *client;
 	struct completion          sm_msg_start_completion;
 	struct completion          sm_msg_stop_completion;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_subsystem        subsystem_type;
 #endif
 };
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-enum scsc_subsystem scsc_service_id_subsystem_mapping(enum scsc_service_id id){
-        switch (id) {
-                case SCSC_SERVICE_ID_NULL:      return SCSC_SUBSYSTEM_WLAN;
-                case SCSC_SERVICE_ID_WLAN:      return SCSC_SUBSYSTEM_WLAN;
-                case SCSC_SERVICE_ID_BT:        return SCSC_SUBSYSTEM_WPAN;
-                case SCSC_SERVICE_ID_ANT:       return SCSC_SUBSYSTEM_WPAN;
-                case SCSC_SERVICE_ID_NULL_BT:   return SCSC_SUBSYSTEM_WPAN;
-                case SCSC_SERVICE_ID_FM:        return SCSC_SUBSYSTEM_WPAN;
-                default: return SCSC_SUBSYSTEM_INVALID;
-        }
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_scsc_service.c"
+#endif
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+enum scsc_subsystem scsc_service_id_subsystem_mapping(enum scsc_service_id id)
+{
+	switch (id) {
+	case SCSC_SERVICE_ID_NULL: 	return SCSC_SUBSYSTEM_WLAN;
+	case SCSC_SERVICE_ID_WLAN: 	return SCSC_SUBSYSTEM_WLAN;
+	case SCSC_SERVICE_ID_BT:	return SCSC_SUBSYSTEM_WPAN;
+	case SCSC_SERVICE_ID_ANT:	return SCSC_SUBSYSTEM_WPAN;
+	case SCSC_SERVICE_ID_WLANDBG:	return SCSC_SUBSYSTEM_WLAN;
+	case SCSC_SERVICE_ID_FLASH:	return SCSC_SUBSYSTEM_WLAN;
+	case SCSC_SERVICE_ID_FM:        return SCSC_SUBSYSTEM_WPAN;
+	default: return SCSC_SUBSYSTEM_INVALID;
+	}
 }
 #endif
 
@@ -80,6 +112,51 @@ enum scsc_subsystem scsc_service_id_subsystem_mapping(enum scsc_service_id id){
 #define SERVICE_IN_SUBSYSTEM(service, subsys) \
 	(((subsys == SYSERR_SUBSYS_WLAN) && (service == SCSC_SERVICE_ID_WLAN)) || \
 	((subsys == SYSERR_SUBSYS_BT) && ((service == SCSC_SERVICE_ID_BT) || (service == SCSC_SERVICE_ID_ANT))))
+
+static void (*check_bt_status_cb)(bool bt_on);
+struct mutex check_bt_status_mutex;
+#define BT_SERVICE_ON true
+#define BT_SERVICE_OFF false
+
+int scsc_service_register_check_bt_status_cb(void(*status_cb)(bool bt_on))
+{
+	SCSC_TAG_INFO(MXMAN, "register check_bt_status_cb");
+
+	mutex_lock(&check_bt_status_mutex);
+
+	if(check_bt_status_cb) {
+		SCSC_TAG_INFO(MXMAN, "already registered check_bt_status_cb");
+		mutex_unlock(&check_bt_status_mutex);
+		return -EINVAL;
+	}
+
+	check_bt_status_cb = status_cb;
+
+	mutex_unlock(&check_bt_status_mutex);
+
+	return 0;
+}
+EXPORT_SYMBOL(scsc_service_register_check_bt_status_cb);
+
+int scsc_service_unregister_check_bt_status_cb(void)
+{
+	SCSC_TAG_INFO(MXMAN, "register check_bt_status_cb");
+
+	mutex_lock(&check_bt_status_mutex);
+
+	if(!check_bt_status_cb) {
+		SCSC_TAG_INFO(MXMAN, "already unregistered check_bt_status_cb");
+		mutex_unlock(&check_bt_status_mutex);
+		return -EINVAL;
+	}
+
+	check_bt_status_cb = NULL;
+
+	mutex_unlock(&check_bt_status_mutex);
+
+	return 0;
+}
+EXPORT_SYMBOL(scsc_service_unregister_check_bt_status_cb);
 
 void srvman_init(struct srvman *srvman, struct scsc_mx *mx)
 {
@@ -89,13 +166,15 @@ void srvman_init(struct srvman *srvman, struct scsc_mx *mx)
 	mutex_init(&srvman->service_list_mutex);
 	mutex_init(&srvman->api_access_mutex);
 	mutex_init(&srvman->error_state_mutex);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 	wake_lock_init(&srvman->sm_wake_lock, WAKE_LOCK_SUSPEND, "srvman_wakelock");
 #else
 	wake_lock_init(NULL, &srvman->sm_wake_lock.ws, "srvman_wakelock");
 #endif
 #endif
+	mutex_init(&check_bt_status_mutex);
+	check_bt_status_cb = NULL;
 	srvman_set_error(srvman, ALLOWED_START_STOP);
 }
 
@@ -112,10 +191,32 @@ void srvman_deinit(struct srvman *srvman)
 	mutex_destroy(&srvman->api_access_mutex);
 	mutex_destroy(&srvman->service_list_mutex);
 	mutex_destroy(&srvman->error_state_mutex);
-#ifdef CONFIG_ANDROID
+	mutex_destroy(&check_bt_status_mutex);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock_destroy(&srvman->sm_wake_lock);
 #endif
 }
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+void srvman_set_error_subsystem_complete(struct srvman *srvman, enum scsc_subsystem sub, enum error_status s)
+{
+	struct scsc_service *service;
+
+	SCSC_TAG_INFO(MXMAN, "Subsytem %d\n", sub);
+	/* For the time being set srvman->error to also block
+	 * another subsystem start/stop while on recovery.
+	 * This can be easily addressed by having error variables/states */
+	srvman_set_error(srvman, s);
+	mutex_lock(&srvman->service_list_mutex);
+	list_for_each_entry(service, &srvman->service_list, list) {
+		if (service->subsystem_type == sub) {
+			complete(&service->sm_msg_start_completion);
+			complete(&service->sm_msg_stop_completion);
+		}
+	}
+	mutex_unlock(&srvman->service_list_mutex);
+}
+#endif
 
 bool srvman_start_stop_not_allowed(struct srvman *srvman)
 {
@@ -206,6 +307,32 @@ void srvman_clear_error(struct srvman *srvman)
 	SCSC_TAG_INFO(MXMAN, "error:%d\n", ALLOWED_START_STOP);
 }
 
+void srvman_forward_bt_fw_log(struct srvman *srvman, size_t length, u32 level, const void *message)
+{
+	/* BT FW log to btsnoop (fwsnoop) */
+	struct scsc_service *service;
+
+	/* Forward binary FW log to BT driver to insert it to btsnoop */
+	mutex_lock(&srvman->service_list_mutex);
+	list_for_each_entry(service, &srvman->service_list, list) {
+		if (service->client->fw_log)
+			service->client->fw_log(service->client, length, level, message);
+	}
+	mutex_unlock(&srvman->service_list_mutex);
+}
+
+void srvman_wake_up_mxlog_thread_for_fwsnoop(void *data)
+{
+	struct scsc_service *service = (struct scsc_service *)data;
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	mxlog_thread_wake_up_for_fwsnoop(service->mx);
+#else
+	SCSC_TAG_INFO(MXMAN, "CONFIG_SCSC_INDEPENDENT_SUBSYSTEM is NOT Applied\n");
+#endif
+}
+EXPORT_SYMBOL(srvman_wake_up_mxlog_thread_for_fwsnoop);
+
 static int wait_for_sm_msg_start_cfm(struct scsc_service *service)
 {
 	int r;
@@ -269,7 +396,7 @@ static int send_sm_msg_start_blocking(struct scsc_service *service, scsc_mifram_
 					    .msg = SM_MSG_START_REQ,
 					    .optional_data = ref };
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		mxmgmt_transport = scsc_mx_get_mxmgmt_transport(mx);
 	else
@@ -284,6 +411,7 @@ static int send_sm_msg_start_blocking(struct scsc_service *service, scsc_mifram_
 	r = wait_for_sm_msg_start_cfm(service);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "wait_for_sm_msg_start_cfm() failed: r=%d\n", r);
+		mxmgmt_print_sent_data_dump(true);
 
 		/* Report the error in order to get a moredump. Avoid auto-recovering this type of failure */
 		if (mxman_recovery_disabled())
@@ -301,7 +429,7 @@ static int send_sm_msg_stop_blocking(struct scsc_service *service)
 	struct sm_msg_packet	message = { .service_id = service->id,
 					    .msg = SM_MSG_STOP_REQ,
 					    .optional_data = 0 };
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		mxmgmt_transport = scsc_mx_get_mxmgmt_transport(mx);
 	else
@@ -323,8 +451,10 @@ static int send_sm_msg_stop_blocking(struct scsc_service *service)
 	/* Send to FW in MM stream */
 	mxmgmt_transport_send(mxmgmt_transport, MMTRANS_CHAN_ID_SERVICE_MANAGEMENT, &message, sizeof(message));
 	r = wait_for_sm_msg_stop_cfm(service);
-	if (r)
+	if (r) {
 		SCSC_TAG_ERR(MXMAN, "wait_for_sm_msg_stop_cfm() for service=%p service->id=%d failed: r=%d\n", service, service->id, r);
+		mxmgmt_print_sent_data_dump(true);
+	}
 	return r;
 }
 
@@ -346,7 +476,7 @@ static void srv_message_handler(const void *message, void *data)
 		}
 	}
 	if (!found) {
-		SCSC_TAG_ERR(MXMAN, "No service for msg->service_id=%d", msg->service_id);
+		SCSC_TAG_ERR(MXMAN, "No service for msg->service_id=%d\n", msg->service_id);
 		mutex_unlock(&srvman->service_list_mutex);
 		return;
 	}
@@ -383,13 +513,18 @@ int scsc_mx_service_start(struct scsc_service *service, scsc_mifram_ref ref)
 	struct timeval tval = {};
 #endif
 
-	SCSC_TAG_INFO(MXMAN, "%d\n", service->id);
+	SCSC_TAG_INFO(MXMAN, "service id: %d\n", service->id);
 #ifdef CONFIG_SCSC_CHV_SUPPORT
 	if (chv_run)
 		return 0;
 #endif
+	if (scsc_mx_service_claim(SERVICE_START)) {
+		SCSC_TAG_INFO(MXMAN, "Error claiming link\n");
+		return -EFAULT;
+	}
+
 	mutex_lock(&srvman->api_access_mutex);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock(&srvman->sm_wake_lock);
 #endif
 	if (srvman_start_not_allowed(srvman)) {
@@ -417,8 +552,8 @@ int scsc_mx_service_start(struct scsc_service *service, scsc_mifram_ref ref)
 		mxman_show_last_panic(mxman);
 #endif
 
-
-#ifdef CONFIG_ANDROID
+		scsc_mx_service_release(SERVICE_START);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&srvman->sm_wake_lock);
 #endif
 		mutex_unlock(&srvman->api_access_mutex);
@@ -428,20 +563,165 @@ int scsc_mx_service_start(struct scsc_service *service, scsc_mifram_ref ref)
 	r = send_sm_msg_start_blocking(service, ref);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "send_sm_msg_start_blocking() failed: r=%d\n", r);
-#ifdef CONFIG_ANDROID
+		scsc_mx_service_release(SERVICE_START);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&srvman->sm_wake_lock);
 #endif
 		mutex_unlock(&srvman->api_access_mutex);
 		return r;
 	}
 
-#ifdef CONFIG_ANDROID
+	mutex_lock(&check_bt_status_mutex);
+	if (service->id == SCSC_SERVICE_ID_BT && check_bt_status_cb)
+		check_bt_status_cb(BT_SERVICE_ON);
+	mutex_unlock(&check_bt_status_mutex);
+
+	scsc_mx_service_release(SERVICE_START);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_unlock(&srvman->sm_wake_lock);
 #endif
 	mutex_unlock(&srvman->api_access_mutex);
 	return 0;
 }
 EXPORT_SYMBOL(scsc_mx_service_start);
+
+void scsc_mx_service_control_suspend_gpio(struct scsc_mx *mx, u8 value)
+{
+	struct mxman *mxman = scsc_mx_get_mxman(mx);
+	mxman_if_control_suspend_gpio(mxman, value);
+}
+EXPORT_SYMBOL(scsc_mx_service_control_suspend_gpio);
+
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+static bool in_wait;
+static DEFINE_SPINLOCK(pcie_users_lock);
+static DEFINE_MUTEX(claim);
+#define ADD_BITMAP(x, y)( x = x | (1 << (y)))
+#define DEL_BITMAP(x, y)( x = x & ~(1 << (y)))
+
+static void pcie_users_claim(enum CLAIM_TYPE claim_type)
+{
+	ADD_BITMAP(claim_bitmap,claim_type);
+	claim_cnt[claim_type] += 1;
+}
+
+static void pcie_users_release(enum CLAIM_TYPE claim_type)
+{
+	if(claim_cnt[claim_type]){
+		claim_cnt[claim_type] -= 1;
+		if(!claim_cnt[claim_type]){
+			DEL_BITMAP(claim_bitmap, claim_type);
+		}
+	}else{
+		SCSC_TAG_ERR(MXMAN, "Wrong release PCIE %s\n", users[claim_type]);
+		ADD_BITMAP(err_bitmap, claim_type);
+	}
+}
+
+void pcie_users_print(void)
+{
+	int i =0;
+	enum CLAIM_TYPE claim_type = LAST_CLAIM_TYPE;
+	SCSC_TAG_ERR(MXMAN, "err_bitmap 0x%x\n", err_bitmap);
+	for(i=0;i < claim_type;i++){
+		SCSC_TAG_ERR(MXMAN, "claim cnt %s %d\n",users[i], claim_cnt[i]);
+	}
+}
+EXPORT_SYMBOL(pcie_users_print);
+#endif
+/*
+ * Request host interface on
+ *
+ * If claim_complete is NULL, request returns 0 when link is ready
+ * If claim_complete is provided, it is called when link is ready, and function
+ * returns -EAGAIN.
+ */
+/* Can be called from IRQ context */
+int scsc_mx_service_claim_deferred(struct scsc_service *service, int (*claim_complete)(void *service, void *data), void *dev, enum CLAIM_TYPE claim_type)
+{
+	int ret = 0;
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	unsigned long flags;
+	struct scsc_mif_abs *mif_abs = scsc_mx_get_mif_abs(service->mx);
+
+	spin_lock_irqsave(&pcie_users_lock, flags);
+	if (!claim_bitmap || scsc_pcie_in_deferred()| in_wait) {
+		/* PCIE is off */
+		SCSC_TAG_DEBUG(MXMAN, "register deferred call\n");
+		/* Kick the wq to turn on the PCIE link */
+		if (mif_abs->hostif_wakeup)
+			ret = mif_abs->hostif_wakeup(mif_abs, claim_complete, service, dev);
+		SCSC_TAG_DEBUG(MXMAN, "register deferred call return %d\n", ret);
+	}
+	pcie_users_claim(claim_type);
+	spin_unlock_irqrestore(&pcie_users_lock, flags);
+#endif
+	return ret;
+}
+EXPORT_SYMBOL(scsc_mx_service_claim_deferred);
+
+/* Can't be called from IRQ/BH context!!*/
+int scsc_mx_service_claim(enum CLAIM_TYPE claim_type)
+{
+	int ret = 0;
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	unsigned long flags;
+
+	/* Mutex to serialize consecutive claims when the first claim is wating for complete */
+	mutex_lock(&claim);
+	spin_lock_irqsave(&pcie_users_lock, flags);
+	if (!claim_bitmap || scsc_pcie_in_deferred()) {
+		pcie_users_claim(claim_type);
+		/* This will directly enable PCIe. Blocking call */
+		SCSC_TAG_DEBUG(MXMAN, "claim PCIE\n");
+		in_wait = true;
+		scsc_pcie_claim(); /* blocking call to turn on PCIE */
+		spin_unlock_irqrestore(&pcie_users_lock, flags);
+		ret = scsc_pcie_complete();
+		in_wait = false;
+		if (ret) {
+			spin_lock_irqsave(&pcie_users_lock, flags);
+			pcie_users_release(claim_type);
+			spin_unlock_irqrestore(&pcie_users_lock, flags);
+		}
+		mutex_unlock(&claim);
+		return ret;
+	}else{
+		pcie_users_claim(claim_type);
+		spin_unlock_irqrestore(&pcie_users_lock, flags);
+	}
+	mutex_unlock(&claim);
+#endif
+	return ret;
+}
+EXPORT_SYMBOL(scsc_mx_service_claim);
+
+int scsc_mx_service_release(enum CLAIM_TYPE claim_type)
+{
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	unsigned long flags;
+
+	spin_lock_irqsave(&pcie_users_lock, flags);
+	if (!claim_bitmap) {
+		SCSC_TAG_ERR(MXMAN, "Wrong release PCIE %s\n", users[claim_type]);
+		pcie_users_print();
+		ADD_BITMAP(err_bitmap, claim_type);
+		spin_unlock_irqrestore(&pcie_users_lock, flags);
+		return -EIO;
+	}
+	pcie_users_release(claim_type);
+	if (!claim_bitmap) {
+		/* This will directly enable PCIe. Blocking call */
+		SCSC_TAG_DEBUG(MXMAN, "release PCIE\n");
+		scsc_pcie_release();
+		spin_unlock_irqrestore(&pcie_users_lock, flags);
+		return 0;
+	}
+	spin_unlock_irqrestore(&pcie_users_lock, flags);
+#endif
+       return 0;
+}
+EXPORT_SYMBOL(scsc_mx_service_release);
 
 int scsc_mx_list_services(struct scsc_mx *mx, char *buf, const size_t bufsz)
 {
@@ -463,8 +743,8 @@ int scsc_mx_list_services(struct scsc_mx *mx, char *buf, const size_t bufsz)
 		case SCSC_SERVICE_ID_ANT:
 			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "ant");
 			break;
-		case SCSC_SERVICE_ID_R4DBG:
-			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "r4dbg");
+		case SCSC_SERVICE_ID_WLANDBG:
+			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "wlandbg");
 			break;
 		case SCSC_SERVICE_ID_ECHO:
 			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "echo");
@@ -477,6 +757,9 @@ int scsc_mx_list_services(struct scsc_mx *mx, char *buf, const size_t bufsz)
 			break;
 		case SCSC_SERVICE_ID_FM:
 			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "fm");
+			break;
+		case SCSC_SERVICE_ID_FLASH:
+			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "flash");
 			break;
 		case SCSC_SERVICE_ID_INVALID:
 		default:
@@ -500,13 +783,18 @@ int scsc_mx_service_stop(struct scsc_service *service)
 	struct timeval tval = {};
 #endif
 
-	SCSC_TAG_INFO(MXMAN, "%d\n", service->id);
+	SCSC_TAG_INFO(MXMAN, "service id: %d\n", service->id);
 #ifdef CONFIG_SCSC_CHV_SUPPORT
 	if (chv_run)
 		return 0;
 #endif
+	if (scsc_mx_service_claim(SERVICE_STOP)) {
+		SCSC_TAG_INFO(MXMAN, "Error claiming link\n");
+		return -EFAULT;
+	}
+
 	mutex_lock(&srvman->api_access_mutex);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock(&srvman->sm_wake_lock);
 #endif
 	if (srvman_start_stop_not_allowed(srvman)) {
@@ -533,8 +821,9 @@ int scsc_mx_service_stop(struct scsc_service *service)
 		/* Print the last panic record to help track ancient failures */
 		mxman_show_last_panic(mxman);
 #endif
+		scsc_mx_service_release(SERVICE_STOP);
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&srvman->sm_wake_lock);
 #endif
 		mutex_unlock(&srvman->api_access_mutex);
@@ -549,18 +838,30 @@ int scsc_mx_service_stop(struct scsc_service *service)
 			return -EILSEQ; /* operation rejected due to prior failure */
 		}
 	}
-
-	r = send_sm_msg_stop_blocking(service);
-	if (r) {
-		SCSC_TAG_ERR(MXMAN, "send_sm_msg_stop_blocking() failed: r=%d\n", r);
-#ifdef CONFIG_ANDROID
-		wake_unlock(&srvman->sm_wake_lock);
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+	if (!mxman_if_warm_reset_in_progress()){
 #endif
-		mutex_unlock(&srvman->api_access_mutex);
-		return -EIO; /* operation failed */
+		r = send_sm_msg_stop_blocking(service);
+		if (r) {
+			SCSC_TAG_ERR(MXMAN, "send_sm_msg_stop_blocking() failed: r=%d\n", r);
+			scsc_mx_service_release(SERVICE_STOP);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
+			wake_unlock(&srvman->sm_wake_lock);
+#endif
+			mutex_unlock(&srvman->api_access_mutex);
+			return -EIO; /* operation failed */
+		}
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
 	}
+#endif
+	mutex_lock(&check_bt_status_mutex);
+	if (service->id == SCSC_SERVICE_ID_BT && check_bt_status_cb)
+		check_bt_status_cb(BT_SERVICE_OFF);
+	mutex_unlock(&check_bt_status_mutex);
 
-#ifdef CONFIG_ANDROID
+	scsc_mx_service_release(SERVICE_STOP);
+
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_unlock(&srvman->sm_wake_lock);
 #endif
 	mutex_unlock(&srvman->api_access_mutex);
@@ -657,9 +958,7 @@ void srvman_freeze_services(struct srvman *srvman, struct mx_syserr_decode *syse
 void srvman_freeze_sub_system(struct srvman *srvman, struct mx_syserr_decode *syserr)
 {
 	struct scsc_service *service;
-#if !defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	struct mxman        *mxman = scsc_mx_get_mxman(srvman->mx);
-#endif
 
 	SCSC_TAG_INFO(MXMAN, "\n");
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
@@ -677,6 +976,11 @@ void srvman_freeze_sub_system(struct srvman *srvman, struct mx_syserr_decode *sy
 				mxman->notify = true;
 #endif
 	}
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	mxman_if_reinit_completion(mxman);
+#else
+	reinit_completion(&mxman->recovery_completion);
+#endif
 	mutex_unlock(&srvman->service_list_mutex);
 	SCSC_TAG_INFO(MXMAN, "OK\n");
 }
@@ -777,10 +1081,10 @@ u8 srvman_notify_sub_system(struct srvman *srvman, struct mx_syserr_decode *syse
 	mutex_unlock(&srvman->service_list_mutex);
 
 	if (final_level >= MX_SYSERR_LEVEL_7)
-		SCSC_TAG_INFO(MXMAN, "System error level %d raised to full reset level %d", initial_level, final_level);
+		SCSC_TAG_INFO(MXMAN, "System error level %d raised to full reset level %d\n", initial_level, final_level);
 	else if ((!(wlan_active && bt_active)) && (final_level >= MX_SYSERR_LEVEL_5)) {
 		final_level = MX_SYSERR_LEVEL_6; /* Still a sub-system reset even though we will do a full restart */
-		SCSC_TAG_INFO(MXMAN, "System error %d now level %d with 1 service active", initial_level, final_level);
+		SCSC_TAG_INFO(MXMAN, "System error %d now level %d with 1 service active\n", initial_level, final_level);
 	}
 
 	SCSC_TAG_INFO(MXMAN, "OK\n");
@@ -789,7 +1093,7 @@ u8 srvman_notify_sub_system(struct srvman *srvman, struct mx_syserr_decode *syse
 	 * should not be possible, but best be careful anyway
 	 */
 	if ((!affected_service_found) && (final_level >= MX_SYSERR_LEVEL_5)) {
-		SCSC_TAG_INFO(MXMAN, "System error %d demoted to 4 as no services affected", final_level);
+		SCSC_TAG_INFO(MXMAN, "System error %d demoted to 4 as no services affected\n", final_level);
 		final_level = MX_SYSERR_LEVEL_4;
 	}
 
@@ -848,14 +1152,19 @@ int scsc_mx_service_close(struct scsc_service *service)
 #else
 	struct timeval tval = {};
 #endif
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_subsystem sub = service->subsystem_type;
 #endif
 
-	SCSC_TAG_INFO(MXMAN, "%d\n", service->id);
+	SCSC_TAG_INFO(MXMAN, "service id: %d\n", service->id);
+
+	if (scsc_mx_service_claim(SERVICE_CLOSE)) {
+		SCSC_TAG_INFO(MXMAN, "Error claiming link\n");
+		return -EFAULT;
+	}
 
 	mutex_lock(&srvman->api_access_mutex);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock(&srvman->sm_wake_lock);
 #endif
 
@@ -884,8 +1193,9 @@ int scsc_mx_service_close(struct scsc_service *service)
 		mxman_show_last_panic(mxman);
 #endif
 
+		scsc_mx_service_release(SERVICE_CLOSE);
 		mutex_unlock(&srvman->api_access_mutex);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&srvman->sm_wake_lock);
 #endif
 
@@ -906,13 +1216,17 @@ int scsc_mx_service_close(struct scsc_service *service)
 	list_del(&service->list);
 	empty = list_empty(&srvman->service_list);
 	mutex_unlock(&srvman->service_list_mutex);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (empty) {
-		/* Unregister both channgel handlers */
-		mxmgmt_transport_register_channel_handler(scsc_mx_get_mxmgmt_transport(mx), MMTRANS_CHAN_ID_SERVICE_MANAGEMENT,
+		/* Unregister channgel handlers */
+		if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
+			mxmgmt_transport_register_channel_handler(scsc_mx_get_mxmgmt_transport(mx), MMTRANS_CHAN_ID_SERVICE_MANAGEMENT,
 								  NULL, NULL);
-		mxmgmt_transport_register_channel_handler(scsc_mx_get_mxmgmt_transport_wpan(mx), MMTRANS_CHAN_ID_SERVICE_MANAGEMENT,
+
+		else if (service->subsystem_type == SCSC_SUBSYSTEM_WPAN)
+			mxmgmt_transport_register_channel_handler(scsc_mx_get_mxmgmt_transport_wpan(mx), MMTRANS_CHAN_ID_SERVICE_MANAGEMENT,
 								  NULL, NULL);
+
 		/* Clear any system error information */
 		mxman_if_set_syserr_recovery_in_progress(mxman, false);
 		mxman_if_set_last_syserr_recovery_time(mxman, 0);
@@ -962,12 +1276,14 @@ int scsc_mx_service_close(struct scsc_service *service)
 
 	kfree(service);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	mxman_if_close(mxman, sub);
 #else
 	mxman_close(mxman);
 #endif
-#ifdef CONFIG_ANDROID
+	scsc_mx_service_release(SERVICE_CLOSE);
+
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_unlock(&srvman->sm_wake_lock);
 #endif
 	mutex_unlock(&srvman->api_access_mutex);
@@ -975,13 +1291,16 @@ int scsc_mx_service_close(struct scsc_service *service)
 }
 EXPORT_SYMBOL(scsc_mx_service_close);
 
+#if IS_ENABLED(CONFIG_SCSC_FLASH_SERVICE_ON_BOOT)
+static bool has_flash_service_open;
+#endif
 static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc_service_id id, struct scsc_service_client *client, int *status, void *data, size_t data_sz)
 {
 	int                 ret;
-	struct scsc_service *service;
+	struct scsc_service *service = NULL;
 	struct srvman       *srvman = scsc_mx_get_srvman(mx);
 	struct mxman        *mxman = scsc_mx_get_mxman(mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_subsystem sub;
 #endif
 	bool                empty;
@@ -991,18 +1310,49 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 	struct timeval tval = {};
 #endif
 
-	SCSC_TAG_INFO(MXMAN, "%d\n", id);
+#ifdef CONFIG_HDM_WLBT_SUPPORT
+	if(id == SCSC_SERVICE_ID_WLAN){
+		if (mxman_if_get_hdm_wlan_support()) {
+				SCSC_TAG_ERR(MXMAN, "hdm wlan support enabled. Reject wlan service\n");
+				return NULL;
+		} else {
+			SCSC_TAG_DEBUG(MXMAN, "hdm wlan support disabled.\n");
+		}
+	}
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if(id == SCSC_SERVICE_ID_BT){
+		if (mxman_if_get_hdm_bt_support()) {
+				SCSC_TAG_ERR(MXMAN, "hdm bt support enabled. Reject bt service\n");
+				return NULL;
+		} else {
+			SCSC_TAG_DEBUG(MXMAN, "hdm bt support disabled.\n");
+		}
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_SCSC_FLASH_SERVICE_ON_BOOT)
+	if (has_flash_service_open == false && id != SCSC_SERVICE_ID_FLASH) {
+		SCSC_TAG_ERR(MXMAN, "FLASH_SERVICE_ON_BOOT is enabled but service %d is starting before\n", id);
+		return NULL;
+	}
+
+	if (has_flash_service_open == false && id == SCSC_SERVICE_ID_FLASH) {
+		SCSC_TAG_ERR(MXMAN, "FLASH_SERVICE_ON_BOOT is enabled. Service FLASH is starting for first time\n");
+		has_flash_service_open = true;
+	}
+#endif
+
+	SCSC_TAG_INFO(MXMAN, "service id: %d\n", id);
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	sub = scsc_service_id_subsystem_mapping(id);
 	if (sub == SCSC_SUBSYSTEM_INVALID) {
 		SCSC_TAG_ERR(MXMAN, "Incorrect subsystem for service_id %u\n", id);
 		return NULL;
 	}
 #endif
-
 	mutex_lock(&srvman->api_access_mutex);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock(&srvman->sm_wake_lock);
 #endif
 	if (srvman_start_not_allowed(srvman)) {
@@ -1028,7 +1378,7 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 		/* Print the last panic record to help track ancient failures */
 		mxman_show_last_panic(mxman);
 #endif
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&srvman->sm_wake_lock);
 #endif
 		mutex_unlock(&srvman->api_access_mutex);
@@ -1045,7 +1395,6 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		SCSC_TAG_INFO(MXMAN, "state = %d\n", mxman_if_get_state(mxman));
-
 		mutex_unlock(&srvman->api_access_mutex);
 		r = mxman_if_wait_for_completion_timeout(mxman, SCSC_MX_SERVICE_RECOVERY_TIMEOUT);
 #else
@@ -1057,29 +1406,39 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 #endif
 		if (r == 0) {
 			SCSC_TAG_ERR(MXMAN, "Recovery timeout\n");
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 			wake_unlock(&srvman->sm_wake_lock);
 #endif
 			*status = -EIO;
 			return NULL;
 		}
-
 		mutex_lock(&srvman->api_access_mutex);
 	}
 
 	service = kmalloc(sizeof(struct scsc_service), GFP_KERNEL);
 	if (service) {
+		if (scsc_mx_service_claim(SERVICE_OPEN)) {
+			kfree(service);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
+			wake_unlock(&srvman->sm_wake_lock);
+#endif
+			mutex_unlock(&srvman->api_access_mutex);
+			*status = -EFAULT;
+			SCSC_TAG_INFO(MXMAN, "Error claiming link\n");
+			return NULL;
+		}
 		/* MaxwellManager Should allocate Mem and download FW */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		ret = mxman_if_open(mxman, sub, data, data_sz);
 #else
 		ret = mxman_open(mxman);
 #endif
 		if (ret) {
 			kfree(service);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 			wake_unlock(&srvman->sm_wake_lock);
 #endif
+			scsc_mx_service_release(SERVICE_OPEN);
 			mutex_unlock(&srvman->api_access_mutex);
 			*status = ret;
 			return NULL;
@@ -1088,7 +1447,7 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 		service->mx = mx;
 		service->id = id;
 		service->client = client;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		service->subsystem_type = sub;
 #endif
 		init_completion(&service->sm_msg_start_completion);
@@ -1097,7 +1456,7 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 		empty = list_empty(&srvman->service_list);
 		mutex_unlock(&srvman->service_list_mutex);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 		/* Create service management transports */
 		if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 			mxmgmt_transport_register_channel_handler(scsc_mx_get_mxmgmt_transport(mx), MMTRANS_CHAN_ID_SERVICE_MANAGEMENT,
@@ -1118,22 +1477,71 @@ static struct scsc_service *__scsc_mx_service_open(struct scsc_mx *mx, enum scsc
 		*status = -ENOMEM;
 	}
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_unlock(&srvman->sm_wake_lock);
 #endif
+	scsc_mx_service_release(SERVICE_OPEN);
 	mutex_unlock(&srvman->api_access_mutex);
 
 	return service;
 }
 
+#if IS_ENABLED(CONFIG_SCSC_FLASH_SERVICE)
+static bool service_lock = false;
+static enum scsc_service_id service_locked;
+
+void scsc_mx_service_lock_open(struct scsc_mx *mx, enum scsc_service_id id)
+{
+	if (service_lock == false) {
+		service_lock = true;
+		service_locked = id;
+		SCSC_TAG_INFO(MXMAN, "Service id %d has locked scsc_mx_open\n", service_locked);
+	} else {
+		SCSC_TAG_INFO(MXMAN, "Service id %d failed to lock scsc_mx_open\n", service_locked);
+	}
+}
+EXPORT_SYMBOL(scsc_mx_service_lock_open);
+
+void scsc_mx_service_unlock_open(struct scsc_mx *mx, enum scsc_service_id id)
+{
+	if (service_lock == true && id == service_locked) {
+		SCSC_TAG_INFO(MXMAN, "Service id %d has unlocked scsc_mx_open\n", service_locked);
+		service_lock = false;
+		service_locked = SCSC_SERVICE_ID_INVALID;
+	} else {
+		SCSC_TAG_INFO(MXMAN, "Service id %d failed to unlock scsc_mx_open\n", service_locked);
+	}
+}
+EXPORT_SYMBOL(scsc_mx_service_unlock_open);
+
+bool scsc_mx_service_users_active(struct scsc_mx *mx)
+{
+	struct mxman *mxman = scsc_mx_get_mxman(mx);
+	return mxman_if_users_active(mxman);
+}
+EXPORT_SYMBOL(scsc_mx_service_users_active);
+#endif
+
 struct scsc_service *scsc_mx_service_open(struct scsc_mx *mx, enum scsc_service_id id, struct scsc_service_client *client, int *status)
 {
+#if IS_ENABLED(CONFIG_SCSC_FLASH_SERVICE)
+	if (service_lock == true && id != service_locked) {
+		SCSC_TAG_INFO(MXMAN, "scsc_mx_open blocked by service id %d\n", service_locked);
+		return NULL;
+	}
+#endif
 	return __scsc_mx_service_open(mx, id, client, status, NULL, 0);
 }
 EXPORT_SYMBOL(scsc_mx_service_open);
 
 struct scsc_service *scsc_mx_service_open_boot_data(struct scsc_mx *mx, enum scsc_service_id id, struct scsc_service_client *client, int *status, void *data, size_t data_sz)
 {
+#if IS_ENABLED(CONFIG_SCSC_FLASH_SERVICE)
+	if (service_lock == true && id != service_locked) {
+		SCSC_TAG_INFO(MXMAN, "scsc_mx_open_boot_data blocked by service id %d\n", service_locked);
+		return NULL;
+	}
+#endif
 	return __scsc_mx_service_open(mx, id, client, status, data, data_sz);
 }
 EXPORT_SYMBOL(scsc_mx_service_open_boot_data);
@@ -1177,7 +1585,7 @@ int scsc_mx_service_mifram_alloc_extended(struct scsc_service *service, size_t n
 		ramman = scsc_mx_get_ramman(mx);
 	} else if (flags & MIFRAMMAN_MEM_POOL_LOGGING) {
 		ramman = scsc_mx_get_ramman2(mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	} else if (flags & MIFRAMMAN_MEM_POOL_WPAN) {
 		ramman = scsc_mx_get_ramman_wpan(mx);
 #endif
@@ -1211,7 +1619,7 @@ EXPORT_SYMBOL(scsc_mx_service_mifram_alloc_extended);
 
 int scsc_mx_service_mifram_alloc(struct scsc_service *service, size_t nbytes, scsc_mifram_ref *ref, u32 align)
 {
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WPAN)
 		return scsc_mx_service_mifram_alloc_extended(service, nbytes, ref, align, MIFRAMMAN_MEM_POOL_WPAN);
 #endif
@@ -1230,7 +1638,7 @@ void scsc_mx_service_mifram_free_extended(struct scsc_service *service, scsc_mif
 		ramman = scsc_mx_get_ramman(mx);
 	} else if (flags & MIFRAMMAN_MEM_POOL_LOGGING) {
 		ramman = scsc_mx_get_ramman2(mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	} else if (flags & MIFRAMMAN_MEM_POOL_WPAN) {
 		ramman = scsc_mx_get_ramman_wpan(mx);
 #endif
@@ -1249,7 +1657,7 @@ EXPORT_SYMBOL(scsc_mx_service_mifram_free_extended);
 
 void scsc_mx_service_mifram_free(struct scsc_service *service, scsc_mifram_ref ref)
 {
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WPAN)
 		scsc_mx_service_mifram_free_extended(service, ref, MIFRAMMAN_MEM_POOL_WPAN);
 	else
@@ -1284,7 +1692,7 @@ u32 *scsc_mx_service_get_mbox_ptr(struct scsc_service *service, int mbox_index)
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !defined(CONFIG_SCSC_PCIE_CHIP)
 	return mifmboxman_get_mbox_ptr(scsc_mx_get_mboxman(mx), mif_abs, mbox_index);
 #else
 	return NULL;
@@ -1299,7 +1707,7 @@ int scsc_service_mifintrbit_bit_mask_status_get(struct scsc_service *service)
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		return mif_abs->irq_bit_mask_status_get(mif_abs, SCSC_MIF_ABS_TARGET_WLAN);
 	else
@@ -1317,7 +1725,7 @@ int scsc_service_mifintrbit_get(struct scsc_service *service)
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		return mif_abs->irq_get(mif_abs, SCSC_MIF_ABS_TARGET_WLAN);
 	else
@@ -1334,7 +1742,7 @@ void scsc_service_mifintrbit_bit_set(struct scsc_service *service, int which_bit
 	struct scsc_mif_abs *mif_abs;
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		return mif_abs->irq_bit_set(mif_abs, which_bit, SCSC_MIF_ABS_TARGET_WLAN);
 	else
@@ -1353,7 +1761,7 @@ void scsc_service_mifintrbit_bit_clear(struct scsc_service *service, int which_b
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		return mif_abs->irq_bit_clear(mif_abs, which_bit, SCSC_MIF_ABS_TARGET_WLAN);
 	else
@@ -1371,7 +1779,7 @@ void scsc_service_mifintrbit_bit_mask(struct scsc_service *service, int which_bi
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		return mif_abs->irq_bit_mask(mif_abs, which_bit, SCSC_MIF_ABS_TARGET_WLAN);
 	else
@@ -1389,7 +1797,7 @@ void scsc_service_mifintrbit_bit_unmask(struct scsc_service *service, int which_
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (service->subsystem_type == SCSC_SUBSYSTEM_WLAN)
 		return mif_abs->irq_bit_unmask(mif_abs, which_bit, SCSC_MIF_ABS_TARGET_WLAN);
 	else
@@ -1405,7 +1813,7 @@ int scsc_service_mifintrbit_alloc_fromhost(struct scsc_service *service, enum sc
 	struct scsc_mx *mx = service->mx;
 	struct mifintrbit  *mifirq;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Get mifintbit instance - wLAN or BT */
 	if (dir == SCSC_MIFINTR_TARGET_WLAN)
 		mifirq = scsc_mx_get_intrbit(mx);
@@ -1421,7 +1829,7 @@ int scsc_service_mifintrbit_alloc_fromhost(struct scsc_service *service, enum sc
 		return -EIO;
 	}
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	return mifintrbit_alloc_fromhost(mifirq);
 #else
 	/* on single subsystems all the IRQ will go to WLAN Abstract core*/
@@ -1435,7 +1843,7 @@ int scsc_service_mifintrbit_free_fromhost(struct scsc_service *service, int whic
 	struct scsc_mx *mx = service->mx;
 	struct mifintrbit  *mifirq;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Get mifintbit instance - wLAN or BT */
 	if (dir == SCSC_MIFINTR_TARGET_WLAN)
 		mifirq = scsc_mx_get_intrbit(mx);
@@ -1446,7 +1854,7 @@ int scsc_service_mifintrbit_free_fromhost(struct scsc_service *service, int whic
 	mifirq = scsc_mx_get_intrbit(mx);
 #endif
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	return mifintrbit_free_fromhost(mifirq, which_bit);
 #else
 	/* on single subsystems all the IRQ will go to WLAN Abstract core*/
@@ -1455,14 +1863,14 @@ int scsc_service_mifintrbit_free_fromhost(struct scsc_service *service, int whic
 }
 EXPORT_SYMBOL(scsc_service_mifintrbit_free_fromhost);
 
-int scsc_service_mifintrbit_register_tohost(struct scsc_service *service, void (*handler)(int irq, void *data), void *data, enum scsc_mifintr_target dir)
+int scsc_service_mifintrbit_register_tohost(struct scsc_service *service, void (*handler)(int irq, void *data), void *data, enum scsc_mifintr_target dir, enum IRQ_TYPE irq_type)
 {
 	struct scsc_mx *mx = service->mx;
 	struct mifintrbit  *mifirq;
 
 	SCSC_TAG_DEBUG(MXMAN, "Registering %pS\n", handler);
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Get mifintbit instance - wLAN or BT */
 	if (dir == SCSC_MIFINTR_TARGET_WLAN)
 		mifirq = scsc_mx_get_intrbit(mx);
@@ -1473,7 +1881,7 @@ int scsc_service_mifintrbit_register_tohost(struct scsc_service *service, void (
 	mifirq = scsc_mx_get_intrbit(mx);
 #endif
 
-	return mifintrbit_alloc_tohost(mifirq, handler, data);
+	return mifintrbit_alloc_tohost(mifirq, handler, data, irq_type);
 }
 EXPORT_SYMBOL(scsc_service_mifintrbit_register_tohost);
 
@@ -1483,7 +1891,7 @@ int scsc_service_mifintrbit_unregister_tohost(struct scsc_service *service, int 
 	struct mifintrbit  *mifirq;
 
 	SCSC_TAG_DEBUG(MXMAN, "Deregistering int for bit %d\n", which_bit);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Get mifintbit instance - wLAN or BT */
 	if (dir == SCSC_MIFINTR_TARGET_WLAN)
 		mifirq = scsc_mx_get_intrbit(mx);
@@ -1497,6 +1905,21 @@ int scsc_service_mifintrbit_unregister_tohost(struct scsc_service *service, int 
 	return mifintrbit_free_tohost(mifirq, which_bit);
 }
 EXPORT_SYMBOL(scsc_service_mifintrbit_unregister_tohost);
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+__iomem void *scsc_mx_service_get_ramrp_ptr(struct scsc_service *service)
+{
+	struct scsc_mx      *mx = service->mx;
+	struct scsc_mif_abs *mif_abs;
+
+	mif_abs = scsc_mx_get_mif_abs(mx);
+
+	return mif_abs->get_ramrp_ptr(mif_abs);
+}
+EXPORT_SYMBOL(scsc_mx_service_get_ramrp_ptr);
+#endif
+#endif
 
 void *scsc_mx_service_mif_addr_to_ptr(struct scsc_service *service, scsc_mifram_ref ref)
 {
@@ -1650,12 +2073,20 @@ EXPORT_SYMBOL(scsc_service_mifsmapper_get_bank_base_address);
 #endif
 
 #ifdef CONFIG_SCSC_QOS
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+int scsc_service_set_affinity_cpu(struct scsc_service *service, u8 msi, u8 cpu)
+#else
 int scsc_service_set_affinity_cpu(struct scsc_service *service, u8 cpu)
+#endif
 {
 	struct scsc_mx      *mx = service->mx;
 	int ret = 0;
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	ret = mifqos_set_affinity_cpu(scsc_mx_get_qos(mx), msi, cpu);
+#else
 	ret = mifqos_set_affinity_cpu(scsc_mx_get_qos(mx), cpu);
+#endif
 
 	return ret;
 }
@@ -1731,6 +2162,82 @@ int scsc_service_unregister_observer(struct scsc_service *service, char *name)
 }
 EXPORT_SYMBOL(scsc_service_unregister_observer);
 #endif
+
+bool scsc_mx_service_property_read_bool(struct scsc_service *service, const char *propname)
+{
+	struct scsc_mx      *mx = service->mx;
+	struct scsc_mif_abs *mif_abs;
+
+	mif_abs = scsc_mx_get_mif_abs(mx);
+
+	if (!mif_abs->wlbt_property_read_bool)
+		return false;
+
+	return mif_abs->wlbt_property_read_bool(mif_abs, propname);
+}
+EXPORT_SYMBOL(scsc_mx_service_property_read_bool);
+
+int scsc_mx_service_property_read_u8(struct scsc_service *service, const char *propname, u8 *out_value, size_t size)
+{
+	struct scsc_mx      *mx = service->mx;
+	struct scsc_mif_abs *mif_abs;
+
+	mif_abs = scsc_mx_get_mif_abs(mx);
+
+	if (!mif_abs->wlbt_property_read_u8)
+		return -ENOSYS;
+
+	return mif_abs->wlbt_property_read_u8(mif_abs, propname, out_value, size);
+}
+EXPORT_SYMBOL(scsc_mx_service_property_read_u8);
+
+int scsc_mx_service_property_read_u16(struct scsc_service *service, const char *propname, u16 *out_value, size_t size)
+{
+	struct scsc_mx      *mx = service->mx;
+	struct scsc_mif_abs *mif_abs;
+
+	mif_abs = scsc_mx_get_mif_abs(mx);
+
+	if (!mif_abs->wlbt_property_read_u16)
+		return -ENOSYS;
+
+	return mif_abs->wlbt_property_read_u16(mif_abs, propname, out_value, size);
+}
+EXPORT_SYMBOL(scsc_mx_service_property_read_u16);
+
+int scsc_mx_service_property_read_u32(struct scsc_service *service, const char *propname, u32 *out_value, size_t size)
+{
+	struct scsc_mx      *mx = service->mx;
+
+	return scsc_mx_property_read_u32(mx, propname, out_value, size);
+}
+EXPORT_SYMBOL(scsc_mx_service_property_read_u32);
+
+int scsc_mx_property_read_u32(struct scsc_mx *mx, const char *propname, u32 *out_value, size_t size)
+{
+	struct scsc_mif_abs *mif_abs = scsc_mx_get_mif_abs(mx);
+
+	if (!mif_abs->wlbt_property_read_u32)
+		return -ENOSYS;
+
+	return mif_abs->wlbt_property_read_u32(mif_abs, propname, out_value, size);
+}
+EXPORT_SYMBOL(scsc_mx_property_read_u32);
+
+int scsc_mx_service_property_read_string(struct scsc_service *service,
+					 const char *propname, char **out_value, size_t size)
+{
+	struct scsc_mx      *mx = service->mx;
+	struct scsc_mif_abs *mif_abs;
+
+	mif_abs = scsc_mx_get_mif_abs(mx);
+
+	if (!mif_abs->wlbt_property_read_string)
+		return -EINVAL;
+
+	return mif_abs->wlbt_property_read_string(mif_abs, propname, out_value, size);
+}
+EXPORT_SYMBOL(scsc_mx_service_property_read_string);
 
 static int __service_phandle_property_read_u32(struct scsc_mx *mx, const char *phandle_name,
 					const char *propname, u32 *out_value, size_t size)
@@ -1871,4 +2378,30 @@ exit:
 #endif
 }
 EXPORT_SYMBOL(scsc_service_collect_buffer);
+#endif
+
+#if defined(CONFIG_SCSC_WLAN_LPC)
+void* scsc_service_mxlogger_buff(struct scsc_service *service)
+{
+#if IS_ENABLED(CONFIG_SCSC_MXLOGGER) && IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
+	struct scsc_mx *mx;
+
+	if (!service) {
+		SCSC_TAG_DEBUG(MXMAN, "Service is NULL\n");
+		return NULL;
+	}
+
+	mx = service->mx;
+	if (!mx) {
+		SCSC_TAG_DEBUG(MXMAN, "mx is NULL\n");
+		return NULL;
+	}
+
+	return mxlogger_get_fw_buf_for_wlan_lpc(scsc_mx_get_mxlogger(mx));
+#else
+	SCSC_TAG_INFO(MXMAN, "MX LOGGING and LOG collection is disabled\n");
+	return NULL;
+#endif
+}
+EXPORT_SYMBOL(scsc_service_mxlogger_buff);
 #endif

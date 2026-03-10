@@ -1,19 +1,21 @@
 /******************************************************************************
  *
- * Copyright (c) 2012 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2012 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
-
 #include "dev.h"
 #include "debug.h"
 #include "mgt.h"
 #include "mlme.h"
 #include "netif.h"
 #include "log_clients.h"
+#include "hip.h"
 #include "hip4_sampler.h"
 #include "traffic_monitor.h"
 #include "scsc_wifilogger_ring_pktfate_api.h"
 #include "log2us.h"
+#include "tx.h"
+#include "tdls_manager.h"
 
 static bool msdu_enable = true;
 module_param(msdu_enable, bool, S_IRUGO | S_IWUSR);
@@ -30,19 +32,6 @@ __always_inline bool is_msdu_enable(void)
 #include "scsc_wifilogger_rings.h"
 #endif
 
-/**
- * Needed to get HIP4_DAT)SLOTS...should be part
- * of initialization and callbacks registering
- */
-#include "hip4.h"
-
-#ifdef CONFIG_SCSC_WLAN_TX_API
-#include "tx_api.h"
-#endif
-
-#include <linux/spinlock.h>
-
-
 static int slsi_get_miclen(struct net_device *dev, u32 akm_suite)
 {
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
@@ -50,10 +39,8 @@ static int slsi_get_miclen(struct net_device *dev, u32 akm_suite)
 	switch (akm_suite) {
 	case SLSI_KEY_MGMT_802_1X_SUITE_B_192:
 	case SLSI_KEY_MGMT_FT_802_1X_SHA384:
-	case SLSI_KEY_MGMT_802_1X_SUITE_B_192_REV:
 		return 24;
 	case SLSI_KEY_MGMT_OWE:
-	case SLSI_KEY_MGMT_OWE_REV:
 		if (ndev_vif->sta.owe_group_during_connection == 20)
 			return 24;
 		else if (ndev_vif->sta.owe_group_during_connection == 21)
@@ -92,8 +79,7 @@ int slsi_get_dwell_time_for_wps(struct slsi_dev *sdev, struct netdev_vif *ndev_v
 	return 0;
 }
 
-#ifndef CONFIG_SCSC_WLAN_TX_API
-static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
+int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
 	struct slsi_peer *peer;
@@ -141,12 +127,14 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 
 		if (key->type == SLSI_IEEE8021X_TYPE_EAPOL_KEY && frame_len >= 99) {
 			msg_type = FAPI_MESSAGETYPE_EAPOL_KEY_M123;
+
 			if ((key->key_info[0] & SLSI_EAPOL_KEY_INFO_REQUEST_BIT_IN_HIGHER_BYTE) ||
 			    !(key->key_info[1] & SLSI_EAPOL_KEY_INFO_KEY_TYPE_BIT_IN_LOWER_BYTE)) {
 				msg_type = FAPI_MESSAGETYPE_EAPOL_KEY_M123;
 			} else {
 				if (!(key->key_info[1] & SLSI_EAPOL_KEY_INFO_ACK_BIT_IN_LOWER_BYTE)) {
-					if ((key->key_info[0] & SLSI_EAPOL_KEY_INFO_SECURE_BIT_IN_HIGHER_BYTE) ||
+					if (((key->key_info[0] & SLSI_EAPOL_KEY_INFO_SECURE_BIT_IN_HIGHER_BYTE) &&
+					    ndev_vif->sta.valid_links) ||
 					    keydatalen == 0 ||
 					    ((key->key_info[0] & SLSI_EAPOL_KEY_INFO_MIC_BIT_IN_HIGHER_BYTE) &&
 					    (key->key_info[0] & SLSI_EAPOL_KEY_INFO_ENCR_DATA_BIT_IN_HIGHER_BYTE) &&
@@ -163,6 +151,7 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 			dwell_time = 0;
 			if (frame_len >= 9 && eapol[SLSI_EAPOL_IEEE8021X_TYPE_POS] ==
 			    SLSI_IEEE8021X_TYPE_EAP_PACKET) {
+				sdev->conn_log2us_ctx.host_tag_eap_type = SLSI_IEEE8021X_TYPE_EAP_PACKET;
 				eap_length = (skb->len - sizeof(struct ethhdr)) - 4;
 				if (eapol[SLSI_EAP_CODE_POS] == SLSI_EAP_PACKET_REQUEST) {
 					SLSI_INFO(sdev, "Send EAP-Request (%d)\n", eap_length);
@@ -180,6 +169,13 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 				 * EAP identity frame for P2P
 				 */
 				dwell_time = slsi_get_dwell_time_for_wps(sdev, ndev_vif, eapol, eap_length);
+			} else if (ndev_vif->iftype == NL80211_IFTYPE_STATION &&
+				   (eapol[SLSI_EAPOL_IEEE8021X_TYPE_POS] ==
+				    SLSI_IEEE8021X_TYPE_EAP_START)) {
+				sdev->conn_log2us_ctx.host_tag_eap_type = SLSI_IEEE8021X_TYPE_EAP_START;
+				eap_length = (skb->len - sizeof(struct ethhdr)) - 4;
+				SLSI_INFO(sdev, "Send EAP-Start (%d)\n", eap_length);
+				sdev->conn_log2us_ctx.eap_start_len = eap_length;
 			}
 		}
 	break;
@@ -206,7 +202,7 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 	return ret;
 }
 
-static int slsi_tx_arp(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
+int slsi_tx_arp(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
 	struct netdev_vif	*ndev_vif = netdev_priv(dev);
 	struct slsi_peer	*peer;
@@ -225,6 +221,14 @@ static int slsi_tx_arp(struct slsi_dev *sdev, struct net_device *dev, struct sk_
 	}
 
 	if (peer) {
+#ifdef CONFIG_SCSC_WLAN_TX_API
+		if (!peer->authorized) {
+			slsi_spinlock_unlock(&ndev_vif->peer_lock);
+			SLSI_NET_WARN(dev, "Peer is not authorized:" MACSTR ", drop ARP frame\n",
+				      MAC2STR(eth_hdr(skb)->h_dest));
+			return -EINVAL;
+		}
+#else
 		spin_lock_bh(&peer->data_qs.cp_lock);
 		/* Controlled port is not yet open; so can't send ARP frame */
 		if (peer->data_qs.controlled_port_state == SCSC_WIFI_FCQ_8021x_STATE_BLOCKED) {
@@ -234,6 +238,7 @@ static int slsi_tx_arp(struct slsi_dev *sdev, struct net_device *dev, struct sk_
 			return -EPERM;
 		}
 		spin_unlock_bh(&peer->data_qs.cp_lock);
+#endif
 	}
 
 	frame = skb->data + sizeof(struct ethhdr);
@@ -277,7 +282,7 @@ void slsi_dump_msgtype(struct slsi_dev *sdev, u32 dhcp_message_type)
 		SLSI_INFO(sdev, "Send DHCP [INVALID]\n");
 }
 
-static int slsi_tx_dhcp(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
+int slsi_tx_dhcp(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
 	struct netdev_vif	*ndev_vif = netdev_priv(dev);
 	struct slsi_peer	*peer;
@@ -296,6 +301,14 @@ static int slsi_tx_dhcp(struct slsi_dev *sdev, struct net_device *dev, struct sk
 	}
 
 	if (peer) {
+#ifdef CONFIG_SCSC_WLAN_TX_API
+		if (!peer->authorized) {
+			slsi_spinlock_unlock(&ndev_vif->peer_lock);
+			SLSI_NET_WARN(dev, "Peer is not authorized:" MACSTR ", drop ARP frame\n",
+				      MAC2STR(eth_hdr(skb)->h_dest));
+			return -EINVAL;
+		}
+#else
 		spin_lock_bh(&peer->data_qs.cp_lock);
 		/* Controlled port is not yet open; so can't send DHCP frame */
 		if (peer->data_qs.controlled_port_state == SCSC_WIFI_FCQ_8021x_STATE_BLOCKED) {
@@ -305,6 +318,7 @@ static int slsi_tx_dhcp(struct slsi_dev *sdev, struct net_device *dev, struct sk
 			return -EPERM;
 		}
 		spin_unlock_bh(&peer->data_qs.cp_lock);
+#endif
 	}
 
 	if (skb->len >= 285 && slsi_is_dhcp_packet(skb->data) != SLSI_TX_IS_NOT_DHCP) {
@@ -335,7 +349,6 @@ static int slsi_tx_dhcp(struct slsi_dev *sdev, struct net_device *dev, struct sk
 	slsi_spinlock_unlock(&ndev_vif->peer_lock);
 	return ret;
 }
-#endif
 uint slsi_sg_host_align_mask; /* TODO -- this needs to be resolved! */
 
 /**
@@ -358,6 +371,8 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 	u8                  vif_index = 0;
 	u8                  peer_index = 0;
 	enum slsi_traffic_q tq;
+	void *header = NULL;
+	int group_key_index = 0;
 #endif
 
 	if (slsi_is_test_mode_enabled()) {
@@ -426,8 +441,10 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 #endif
 
 	/* Align mac_header with skb->data */
-	if (skb_headroom(skb) != skb->mac_header)
+	if (skb_headroom(skb) != skb->mac_header) {
+		SLSI_NET_DBG3(dev, SLSI_TX, "align mac_header headroom (%d) mac_header (%d)\n", skb_headroom(skb), skb->mac_header);
 		skb_pull(skb, skb->mac_header - skb_headroom(skb));
+	}
 
 #ifdef CONFIG_SCSC_WLAN_TX_API
 	return slsi_tx_transmit_data(sdev, dev, skb);
@@ -438,9 +455,17 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 
 	len = skb->len;
 
-	(void)skb_push(skb, fapi_sig_size(ma_unitdata_req));
+	header = (void *)skb_push(skb, fapi_sig_size(ma_unitdata_req));
+	memset(header, 0, fapi_sig_size(ma_unitdata_req));
 	tq = slsi_frame_priority_to_ac_queue(skb->priority);
-	vif_index = ndev_vif->ifnum;
+	if (ndev_vif->iftype == NL80211_IFTYPE_AP_VLAN) {
+		group_key_index = ndev_vif->group_key_index;
+		rcu_read_lock();
+		vif_index = ((struct netdev_vif *)netdev_priv(ndev_vif->netdev_ap))->ifnum;
+		rcu_read_unlock();
+	} else {
+		vif_index = ndev_vif->ifnum;
+	}
 	peer_index = MAP_QS_TO_AID(slsi_netif_get_qs_from_queue(skb->queue_mapping, tq));
 	fapi_set_u16(skb, id,           MA_UNITDATA_REQ);
 	fapi_set_u16(skb, receiver_pid, 0);
@@ -455,12 +480,13 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 	cb->data_length = skb->len;
 
 	/* ACCESS POINT MODE */
-	if (ndev_vif->vif_type == FAPI_VIFTYPE_AP) {
+	if (ndev_vif->vif_type == FAPI_VIFTYPE_AP || ndev_vif->iftype == NL80211_IFTYPE_AP_VLAN) {
 		struct ethhdr *ehdr = eth_hdr(skb);
 
 		if (is_multicast_ether_addr(ehdr->h_dest)) {
 			fapi_set_u16(skb, u.ma_unitdata_req.flow_id, FAPI_PRIORITY_CONTENTION >> 8);
 			fapi_set_memcpy(skb, u.ma_unitdata_req.address, ehdr->h_source);
+			fapi_set_u16(skb, u.ma_unitdata_req.spare_1, group_key_index);
 			ret = scsc_wifi_fcq_transmit_data(dev,
 							  &ndev_vif->ap.group_data_qs,
 							  slsi_frame_priority_to_ac_queue(skb->priority),
@@ -472,11 +498,11 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 				return ret;
 			}
 
-			ret = scsc_wifi_transmit_frame(&sdev->hip4_inst, skb, false, vif_index, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
+			ret = slsi_hip_transmit_frame(&sdev->hip, skb, false, vif_index, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
 			if (ret == NETDEV_TX_OK) {
 				return ret;
 			} else if (ret < 0) {
-				/* scsc_wifi_transmit_frame failed, decrement BoT counters */
+				/* slsi_hip_transmit_frame failed, decrement BoT counters */
 				scsc_wifi_fcq_receive_data(dev,
 							   &ndev_vif->ap.group_data_qs,
 							   slsi_frame_priority_to_ac_queue(skb->priority),
@@ -511,11 +537,9 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 
 		if (is_multicast_ether_addr(eth_hdr(skb)->h_dest)) {
 			SLSI_NET_DBG1(dev, SLSI_TX, "multicast on NAN interface: Source=%pM\n", eth_hdr(skb)->h_source);
-			/* TODO: group option will be added to next fapi.xml.
-			 * Until then, set configuration_option for NAN multicast with 0x0010
-			 */
+
 			fapi_set_u16(skb, u.ma_unitdata_req.configuration_option,
-				     FAPI_OPTION_INLINE | 0x0010);
+				     FAPI_OPTION_INLINE | FAPI_OPTION_GROUP);
 			/**
 			 * The driver shall send (duplicate) frames to all VIFs that
 			 * have the same source address (SA).  i.e. find other peers on same
@@ -560,14 +584,14 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 						continue;
 					}
 
-					ret = scsc_wifi_transmit_frame(&sdev->hip4_inst,
+					ret = slsi_hip_transmit_frame(&sdev->hip,
 								       duplicate_skb,
 								       false,
 								       vif_index,
 								       ndev_vif->peer_sta_record[i]->aid,
 								       slsi_frame_priority_to_ac_queue(duplicate_skb->priority));
 					if (ret != NETDEV_TX_OK) {
-						/* scsc_wifi_transmit_frame failed, decrement BoT counters */
+						/* slsi_hip_transmit_frame failed, decrement BoT counters */
 						scsc_wifi_fcq_receive_data(dev, &ndev_vif->peer_sta_record[i]->data_qs,
 									   slsi_frame_priority_to_ac_queue(duplicate_skb->priority),
 									   sdev,
@@ -600,7 +624,7 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 			fapi_set_memcpy(skb, u.ma_unitdata_req.address, ndev_vif->sta.bssid);
 		else
 			fapi_set_memcpy(skb, u.ma_unitdata_req.address, eth_hdr(skb)->h_dest);
-	} else if (ndev_vif->vif_type == FAPI_VIFTYPE_AP)
+	} else if (ndev_vif->vif_type == FAPI_VIFTYPE_AP || ndev_vif->iftype == NL80211_IFTYPE_AP_VLAN)
 		fapi_set_memcpy(skb, u.ma_unitdata_req.address, eth_hdr(skb)->h_source);
 #ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
 	else if (ndev_vif->ifnum >= SLSI_NAN_DATA_IFINDEX_START)
@@ -618,13 +642,13 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 		return ret;
 	}
 
-	/* SKB is owned by scsc_wifi_transmit_frame() unless the transmission is
+	/* SKB is owned by slsi_hip_transmit_frame() unless the transmission is
 	 * unsuccesful.
 	 */
-	slsi_traffic_mon_event_tx(sdev, dev, skb);
-	ret = scsc_wifi_transmit_frame(&sdev->hip4_inst, skb, false, vif_index, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
+	slsi_tdls_manager_event_tx(sdev, dev, skb, slsi_frame_priority_to_ac_queue(skb->priority));
+	ret = slsi_hip_transmit_frame(&sdev->hip, skb, false, vif_index, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
 	if (ret != NETDEV_TX_OK) {
-		/* scsc_wifi_transmit_frame failed, decrement BoT counters */
+		/* slsi_hip_transmit_frame failed, decrement BoT counters */
 		scsc_wifi_fcq_receive_data(dev, &peer->data_qs, slsi_frame_priority_to_ac_queue(skb->priority),
 					   sdev,
 					   vif_index,
@@ -640,6 +664,7 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 	/* Frame has been successfully sent, and freed by lower layers */
 	slsi_spinlock_unlock(&ndev_vif->peer_lock);
 	/* What about the original if we passed in a copy ? */
+	slsi_traffic_mon_event_tx(sdev, dev, len);
 	peer->sinfo.tx_bytes += len;
 	return ret;
 #endif
@@ -692,7 +717,7 @@ int slsi_tx_data_lower(struct slsi_dev *sdev, struct sk_buff *skb)
 			SLSI_NET_DBG3(dev, SLSI_TX, "no fcq for groupcast, dropping TX frame\n");
 			return -EINVAL;
 		}
-		ret = scsc_wifi_transmit_frame(&sdev->hip4_inst, skb, false, vif, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
+		ret = slsi_hip_transmit_frame(&sdev->hip, skb, false, vif, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
 		if (ret == NETDEV_TX_OK)
 			return ret;
 		/**
@@ -703,7 +728,7 @@ int slsi_tx_data_lower(struct slsi_dev *sdev, struct sk_buff *skb)
 			SLSI_NET_DBG1(dev, SLSI_TX, "TX_LOWER...Queue Full... BUT Dropping packet\n");
 		else
 			SLSI_NET_DBG1(dev, SLSI_TX, "TX_LOWER...Generic Error...Dropping packet\n");
-		/* scsc_wifi_transmit_frame failed, decrement BoT counters */
+		/* slsi_hip_transmit_frame failed, decrement BoT counters */
 		scsc_wifi_fcq_receive_data(dev, &ndev_vif->ap.group_data_qs,
 					   slsi_frame_priority_to_ac_queue(skb->priority),
 					   sdev,
@@ -738,13 +763,13 @@ int slsi_tx_data_lower(struct slsi_dev *sdev, struct sk_buff *skb)
 		return -EINVAL;
 	}
 
-	/* SKB is owned by scsc_wifi_transmit_frame() unless the transmission is
+	/* SKB is owned by slsi_hip_transmit_frame() unless the transmission is
 	 * unsuccesful.
 	 */
-	ret = scsc_wifi_transmit_frame(&sdev->hip4_inst, skb, false, vif, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
+	ret = slsi_hip_transmit_frame(&sdev->hip, skb, false, vif, peer_index, slsi_frame_priority_to_ac_queue(skb->priority));
 	if (ret < 0) {
 		SLSI_NET_DBG1(dev, SLSI_TX, "%s (signal: %d)\n", ret == -ENOSPC ? "Queue is full. Flow control" : "Failed to transmit", fapi_get_sigid(skb));
-		/* scsc_wifi_transmit_frame failed, decrement BoT counters */
+		/* slsi_hip_transmit_frame failed, decrement BoT counters */
 		scsc_wifi_fcq_receive_data(dev, &ndev_vif->ap.group_data_qs,
 					   slsi_frame_priority_to_ac_queue(skb->priority),
 					   sdev,
@@ -773,11 +798,10 @@ int slsi_tx_data_lower(struct slsi_dev *sdev, struct sk_buff *skb)
  */
 int slsi_tx_control(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
-	struct slsi_skb_cb *cb;
 	int res = 0;
 	struct fapi_signal_header *hdr;
 
-	if (WARN_ON(!skb)) {
+	if (WLBT_WARN_ON(!skb)) {
 		res = -EINVAL;
 		goto exit;
 	}
@@ -793,15 +817,12 @@ int slsi_tx_control(struct slsi_dev *sdev, struct net_device *dev, struct sk_buf
 			return -EINVAL;
 		}
 
-	cb = slsi_skb_cb_init(skb);
-	cb->sig_length = fapi_get_expected_size(skb);
-	cb->data_length = skb->len;
 	/* F/w will panic if fw_reference is not zero. */
 	hdr = (struct fapi_signal_header *)skb->data;
 	hdr->fw_reference = 0;
 
 	slsi_debug_frame(sdev, dev, skb, "TX");
-	res = scsc_wifi_transmit_frame(&sdev->hip4_inst, skb, true, 0, 0, 0);
+	res = slsi_hip_transmit_frame(&sdev->hip, skb, true, 0, 0, 0);
 	if (res != NETDEV_TX_OK && res != -EINVAL) {
 		char reason[80];
 

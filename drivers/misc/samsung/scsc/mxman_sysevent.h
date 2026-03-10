@@ -10,9 +10,15 @@
  * (at your option) any later version.
  */
 
+#include <linux/version.h>
 #if IS_ENABLED(CONFIG_EXYNOS_SYSTEM_EVENT)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/sysevent.h>
+#include <soc/samsung/exynos/sysevent_notif.h>
+#else
 #include <soc/samsung/sysevent.h>
 #include <soc/samsung/sysevent_notif.h>
+#endif
 
 int wlbt_sysevent_powerup(const struct sysevent_desc *desc);
 int wlbt_sysevent_shutdown(const struct sysevent_desc *desc, bool force_stop);

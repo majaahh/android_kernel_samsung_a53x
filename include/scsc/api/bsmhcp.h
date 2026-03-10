@@ -17,8 +17,9 @@
 #define __BSMHCP_H__
 
 #define BSMHCP_VERSION_1                        (0) /* Support ACL and HCI */
-#define BSMHCP_VERSION_2                        (1) /* Support ISO */
-#define BSMHCP_VERSION                          BSMHCP_VERSION_2
+#define BSMHCP_VERSION_2                        (1) /* Support Connected Isochronous */
+#define BSMHCP_VERSION_3                        (2) /* Support Broadcast Isochronous */
+#define BSMHCP_VERSION                          BSMHCP_VERSION_3
 
 #define BSMHCP_TRANSFER_RING_CMD_SIZE           (8)
 #define BSMHCP_TRANSFER_RING_EVT_SIZE           (32)
@@ -64,6 +65,20 @@
 #define BSMHCP_EVENT_TYPE_DISCONNECTED          (0x02)
 #define BSMHCP_EVENT_TYPE_IQ_REPORT_ENABLED     (0x03)
 #define BSMHCP_EVENT_TYPE_IQ_REPORT_DISABLED    (0x04)
+#define BSMHCP_EVENT_TYPE_BIG_CONNECTED         (0x05)
+#define BSMHCP_EVENT_TYPE_BIG_DISCONNECTED      (0x06)
+
+#define BSMHCP_EVENT_TYPE_TYPE_MASK            (0x00FF)
+#define BSMHCP_EVENT_TYPE_BIG_HANDLE_MASK      (0xFF00)
+#define BSMHCP_INVALID_BIG_HANDLE              (0xFFFF)
+
+#define BSMHCP_GET_BIG_HANDLE(e) \
+		((((e & BSMHCP_EVENT_TYPE_TYPE_MASK) ==  BSMHCP_EVENT_TYPE_BIG_CONNECTED) || \
+		  ((e & BSMHCP_EVENT_TYPE_TYPE_MASK) ==  BSMHCP_EVENT_TYPE_BIG_DISCONNECTED)) ? \
+		((e & BSMHCP_EVENT_TYPE_BIG_HANDLE_MASK) >> 8) : BSMHCP_INVALID_BIG_HANDLE)
+
+#define BSMHCP_GET_EVENT_TYPE(e)                (uint8_t)(e & BSMHCP_EVENT_TYPE_TYPE_MASK)
+#define BSMHCP_SET_EVENT_TYPE_BIG(t,h)          (uint16_t) (((h & 0xFF) << 8) | t)
 
 #define BSMHCP_ACL_BC_FLAG_BCAST_NON            (0x00)
 #define BSMHCP_ACL_BC_FLAG_BCAST_ACTIVE         (0x40)
@@ -165,6 +180,7 @@ struct BSMHCP_TD_CONTROL {
 struct BSMHCP_TD_HCI_EVT {
 	uint16_t length;
 	uint16_t hci_connection_handle;
+	/* event_type: lower 8 bits defines the type, upper 8 bits depends of type */
 	uint16_t event_type;
 	uint8_t  data[BSMHCP_CMD_EVT_BUFFER_SIZE];
 };

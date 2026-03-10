@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 Samsung Electronics Co., Ltd. All rights reserved.
+ *   Copyright (c) 2021 Samsung Electronics Co., Ltd. All rights reserved.
  *
  ****************************************************************************/
 
@@ -8,6 +8,9 @@
 #include <linux/version.h>
 #include <linux/firmware.h>
 #include <linux/fs.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0))
+#include <linux/of.h>
+#endif
 #if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
 #include <linux/uaccess.h>
 #else
@@ -19,6 +22,10 @@
 #include <scsc/scsc_mx.h>
 
 #include "scsc_mx_impl.h"
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mx140_file.c"
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
@@ -40,7 +47,6 @@ MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 #define MX140_FW_BASE_DIR_SYSTEM_ETC_WIFI	"/vendor/etc/wifi"
 #define MX140_FW_BASE_DIR_VENDOR_ETC_WIFI	"/vendor/etc/wifi"
 #endif
-
 /* Paths for vendor utilities, used when CONFIG_SCSC_CORE_FW_LOCATION_AUTO=n */
 #define MX140_EXE_DIR_VENDOR		"/vendor/bin"    /* Oreo */
 #define MX140_EXE_DIR_SYSTEM		"/system/bin"	 /* Before Oreo */
@@ -54,7 +60,7 @@ MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 
 /* Table of suffixes to append to f/w name */
 struct fw_suffix {
-	char suffix[6];
+	char suffix[8];
 	u32 hw_ver;
 };
 
@@ -69,6 +75,8 @@ static const struct fw_suffix fw_suffixes[] = {
 	{ .suffix = "",      .hw_ver = 0xff, }, /* plain mx140.bin, always used if found */
 	{ .suffix = "_s612", .hw_ver = 0xb1, },
 	{ .suffix = "_s611", .hw_ver = 0xb0, },
+	{ .suffix = "_evt0.0", .hw_ver = 0x00, },
+	{ .suffix = "_evt0.1", .hw_ver = 0x00, },
 };
 
 #else /* Select by chip revision (EVT0.0, EVT0.1) */
@@ -192,16 +200,18 @@ static int __mx140_file_request_conf(struct scsc_mx *mx,
 			"%s/%s%s_%s",
 			base_dir_request_fw_local,
 			firmware_variant,
-			fw_suffixes[0].suffix,
+			fw_suffixes[fw_suffix_found].suffix,
 			filename);
 	} else {
 		/* e.g. /etc/wifi/mx140/conf/$platform_dir/wlan/wlan.hcf */
-
+#ifdef CONFIG_DUAL_FIRMWARE
+		mx140_update_suffix(mx);
+#endif
 		scnprintf(config_path, sizeof(config_path),
 			"%s/%s%s/%s/%s%s%s/%s",
 			base_dir_request_fw_local,
 			firmware_variant,
-			fw_suffixes[0].suffix,
+			fw_suffixes[fw_suffix_found].suffix,
 			MX140_FW_CONF_SUBDIR,
 			platform_dir,
 			(platform_dir[0] != '\0' ? "/" : ""), /* add "/" if platform_dir not empty */
@@ -224,7 +234,7 @@ int mx140_file_request_conf(struct scsc_mx *mx,
 			    const char *config_rel_path,
 			    const char *filename)
 {
-	int r;
+	int r = 0;
 
 	/* First, if the config subdirectory has been overriden by cfg_platform
 	 * module parameter, search only in that location.
@@ -239,14 +249,6 @@ int mx140_file_request_conf(struct scsc_mx *mx,
 
 		return r;
 	}
-	/* This is done to update the fw_suffix_found index */
-	if (fw_suffix_found == -1) {
-		r = mx140_file_download_fw(mx, NULL, 0, NULL);
-		if (r) {
-			SCSC_TAG_ERR(MXMAN, "mx140_file_download_fw() failed (%d)\n", r);
-			return r;
-		}
-	}
 
 	if (force_flat) {
 		/* Only request "flat" conf, where all hcf files are in FW root dir
@@ -259,6 +261,7 @@ int mx140_file_request_conf(struct scsc_mx *mx,
 						      true, base_dir_request_fw_legacy);
 		SCSC_TAG_INFO(MX_FILE, "forcely request flat conf = %d\n", r);
 	} else {
+#if defined CONFIG_SCSC_WLBT_CONFIG_GENERIC
 		/* Search in generic location. This is an override.
 		 * e.g. /etc/wifi/mx140/conf/wlan/wlan.hcf
 		 */
@@ -267,11 +270,15 @@ int mx140_file_request_conf(struct scsc_mx *mx,
 		if (r)
 			r = __mx140_file_request_conf(mx, conf, "", config_rel_path, filename,
 						      false, base_dir_request_fw_legacy);
+#endif
 #if defined CONFIG_SCSC_WLBT_CONFIG_PLATFORM
 		/* Then  search in platform location
 		 * e.g. /etc/wifi/mx140/conf/$platform_dir/wlan/wlan.hcf
 		 */
+
+#if defined CONFIG_SCSC_WLBT_CONFIG_GENERIC
 		if (r) {
+#endif
 			const char *plat = CONFIG_SCSC_WLBT_CONFIG_PLATFORM;
 
 			/* Don't bother if plat is empty string */
@@ -282,7 +289,10 @@ int mx140_file_request_conf(struct scsc_mx *mx,
 			if (r)
 				r = __mx140_file_request_conf(mx, conf, plat, config_rel_path, filename,
 							      false, base_dir_request_fw_legacy);
+
+#if defined CONFIG_SCSC_WLBT_CONFIG_GENERIC
 		}
+#endif
 #endif
 
 		/* Finally request "flat" conf, where all hcf files are in FW root dir
@@ -380,14 +390,12 @@ static int __mx140_file_download_fw(struct scsc_mx *mx, void *dest, size_t dest_
 	}
 	SCSC_TAG_DBG4(MX_FILE, "FW Download, size %zu\n", firm->size);
 
-	if (dest) {
-		if (firm->size > dest_size) {
-			SCSC_TAG_ERR(MX_FILE, "firmware image too big for buffer (%zu > %u)", dest_size, *fw_image_size);
-			r = -EINVAL;
-		} else {
-			memcpy(dest, firm->data, firm->size);
-			*fw_image_size = firm->size;
-		}
+	if (firm->size > dest_size) {
+		SCSC_TAG_ERR(MX_FILE, "firmware image too big for buffer (%zu > %u)", dest_size, *fw_image_size);
+		r = -EINVAL;
+	} else {
+		memcpy(dest, firm->data, firm->size);
+		*fw_image_size = firm->size;
 	}
 	mx140_release_file(mx, firm);
 	return r;
@@ -492,6 +500,9 @@ int mx140_file_get_fw(struct scsc_mx *mx, const struct firmware **firm)
 
 	/* If we know which f/w suffix to use, select it immediately */
 	if (fw_suffix_found != -1) {
+#ifdef CONFIG_DUAL_FIRMWARE
+		mx140_update_suffix(mx);
+#endif
 		r = __mx140_file_get_fw(mx, firm, fw_suffixes[fw_suffix_found].suffix);
 		goto done;
 	}
@@ -561,27 +572,9 @@ int __mx140_release_firmware(struct scsc_mx *mx, const struct firmware *firmp)
 	return 0;
 }
 
-int __mx140_release_file(struct scsc_mx *mx, const struct firmware *firmp)
-{
-	if (!firmp || !firmp->data) {
-		SCSC_TAG_ERR(MX_FILE, "firmp=%p\n", firmp);
-		return -EINVAL;
-	}
-
-	SCSC_TAG_DEBUG(MX_FILE, "release firmp=%p, data=%p\n", firmp, firmp->data);
-
-	vfree(firmp->data);
-	kfree(firmp);
-	return 0;
-}
-
 int mx140_release_file(struct scsc_mx *mx, const struct firmware *firmp)
 {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
-	return __mx140_release_file(mx, firmp);
-#else
 	return __mx140_release_firmware(mx, firmp);
-#endif
 }
 EXPORT_SYMBOL(mx140_release_file);
 
@@ -682,4 +675,61 @@ bool mx140_file_supported_hw(struct scsc_mx *mx, u32 hw_ver)
 	/* Does the select f/w match the hw_ver from chip? */
 	return (fw_suffixes[fw_suffix_found].hw_ver == hw_ver);
 }
+
+#ifdef CONFIG_DUAL_FIRMWARE
+bool mx140_exist(struct scsc_mx * mx)
+{
+	const struct firmware *firm;
+	int                   ret = 0;
+	char                  img_path_name[MX140_FW_PATH_MAX_LENGTH];
+
+	SCSC_TAG_INFO(MX_FILE, "check mx140.bin\n");
+	scnprintf(img_path_name, sizeof(img_path_name),
+		"%s/%s.bin",
+		base_dir_request_fw,
+		firmware_variant);
+
+	ret = mx140_request_file(mx, img_path_name, &firm);
+	if(ret){
+		SCSC_TAG_DEBUG(MX_FILE, "mx140.bin doesn't exist\n");
+		return false;
+	}
+	SCSC_TAG_INFO(MX_FILE, "mx140.bin exists\n");
+	mx140_release_file(mx, firm);
+	return true;
+}
+
+void mx140_update_suffix(struct scsc_mx *mx) {
+	int i;
+	u32 board_rev = 0;
+	struct device *dev;
+	char hw_rev_suffix[8] = {0};
+
+	if (fw_suffix_found == 0 && !mx140_exist(mx)) {
+		dev = scsc_mx_get_device(mx);
+
+		if (of_property_read_u32(dev->of_node, "board_rev", &board_rev)) {
+			SCSC_TAG_DEBUG(MX_FILE, "board revision reading ERROR, %d \n", board_rev);
+		} else {
+			SCSC_TAG_DEBUG(MX_FILE, "board revision %d \n", board_rev);
+		}
+
+		// hw_rev -> mx140_evt0.0 or _evt0.1 according to H/W revision
+		if (board_rev == 0) {
+			strlcpy(hw_rev_suffix, "_evt0.0", sizeof(hw_rev_suffix));
+		} else if (board_rev == 1) {
+			strlcpy(hw_rev_suffix, "_evt0.1", sizeof(hw_rev_suffix));
+		}
+
+		SCSC_TAG_DEBUG(MX_FILE, "hw_rev_suffix %s\n", hw_rev_suffix);
+		for (i = 1; i < sizeof(fw_suffixes) / sizeof(fw_suffixes[0]); i++) {
+			SCSC_TAG_DEBUG(MX_FILE, "fw_suffixes[%d]: %s\n", i, fw_suffixes[i].suffix);
+			if (!strcmp(hw_rev_suffix, fw_suffixes[i].suffix)) {
+				fw_suffix_found = i;
+				break;
+			}
+		}
+	}
+}
+#endif
 

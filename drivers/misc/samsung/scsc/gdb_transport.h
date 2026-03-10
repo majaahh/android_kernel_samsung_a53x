@@ -28,16 +28,28 @@
 #define GDB_TRANSPORT_BUF_LENGTH (2 * 1024)
 
 struct gdb_transport;
-
 enum gdb_transport_enum {
 	GDB_TRANSPORT_WLAN = 0,
 	GDB_TRANSPORT_FXM_1 = 1,
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
 	GDB_TRANSPORT_FXM_2 = 2,
 #endif
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-	GDB_TRANSPORT_WPAN = 3
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	GDB_TRANSPORT_WPAN = 3,
 #endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	GDB_TRANSPORT_PMU = 4,
+	GDB_TRANSPORT_FXM_3 = 5,
+	GDB_TRANSPORT_WLAN_2 = 6,
+	GDB_TRANSPORT_WLAN_3 = 7,
+	GDB_TRANSPORT_WLAN_4 = 8,
+#endif
+#if IS_ENABLED(CONFIG_SCSC_BB_REDWOOD)
+	GDB_TRANSPORT_WLAN_5 = 9,
+	GDB_TRANSPORT_WLAN_6 = 10,
+	GDB_TRANSPORT_WLAN_7 = 11,
+	GDB_TRANSPORT_WLAN_8 = 12,
+#endif // CONFIG_SCSC_BB_REDWOOD
 };
 /**
  * Transport channel callback handler. This will be invoked each time a message on a channel is
@@ -45,8 +57,10 @@ enum gdb_transport_enum {
  * their callback implementation, but should not block.
  *
  * Note that the message pointer passed is only valid for the duration of the function call.
+ *
+ * The function returns 0 on success, or -EINVAL to stop the source on error
  */
-typedef void (*gdb_channel_handler)(const void *message, size_t length, void *data);
+typedef int (*gdb_channel_handler)(const void *message, size_t length, void *data);
 
 /**
  * Sends a message to the AP across the given channel.
@@ -81,7 +95,7 @@ struct gdb_transport {
 	struct mutex            channel_open_mutex;
 	/* Transport processor type  */
 	enum gdb_transport_enum type;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_mif_abs_target target;
 #endif
 };

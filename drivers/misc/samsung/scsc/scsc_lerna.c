@@ -66,6 +66,10 @@ struct scsc_lerna_cmd_header {
 	uint8_t group_index;     /* Group index, or 0 for default (group not assigned). */
 };
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_scsc_lerna.c"
+#endif
+
 static int scsc_lerna_chardev_open(struct inode *inodep, struct file *filep)
 {
 	(void)inodep;
@@ -94,11 +98,17 @@ static ssize_t scsc_lerna_chardev_read(struct file *filep, char *buffer, size_t 
 
 	wait_result = wait_for_completion_timeout(&scsc_lerna_wait, msecs_to_jiffies(SCSC_LERNA_WAIT_TIMEOUT));
 	if (wait_result == 0) {
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		scsc_mx_service_release(SCSC_LERNA);
+#endif
 		SCSC_TAG_ERR(LERNA, "read timeout; firmware not responding, or read without write.\n");
 		return -ETIMEDOUT;
 	}
 
 	if (!scsc_lerna_pending) {
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		scsc_mx_service_release(SCSC_LERNA);
+#endif
 		/* Pointer is NULL, indicating that a reply hasn't been sent from firmware. */
 		SCSC_TAG_DEBUG(LERNA, "pending reply is null.\n");
 		return -ENOMSG;
@@ -120,6 +130,9 @@ static ssize_t scsc_lerna_chardev_read(struct file *filep, char *buffer, size_t 
 		return -EFAULT;
 	}
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	scsc_mx_service_release(SCSC_LERNA);
+#endif
 	SCSC_TAG_DEBUG(LERNA, "read buffer of size: %lu\n", read_count);
 	/* Value was read out, and is no longer considered valid. Need to write before another read. */
 	scsc_lerna_pending = NULL;
@@ -138,6 +151,10 @@ static ssize_t scsc_lerna_chardev_write(struct file *filep, const char *buffer, 
 				return -EFAULT;
 			}
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+			if(scsc_mx_service_claim(SCSC_LERNA))
+				return -EFAULT;
+#endif
 			mxman_if_lerna_send(NULL, scsc_lerna_request_buffer, len);
 #else
 			mxman_lerna_send(NULL, scsc_lerna_request_buffer, len);

@@ -91,6 +91,18 @@ typedef enum
  * WLBT will clear the CFG_REQ interrupt to the host */
 #define PMU_AP_MSG_WLBT_IPC_ACK                       (0x5 << PMU_AP_MSG_SUBSYS_BITS)
 
+/* Response to PCIE_OFF_REQ. And PCIE_OFF_REJECT_CANCEL */
+#define PMU_AP_MSG_WLBT_PCIE_OFF_ACCEPT                (0x7 << PMU_AP_MSG_SUBSYS_BITS)
+#define PMU_AP_MSG_WLBT_PCIE_OFF_REJECT                (0x8 << PMU_AP_MSG_SUBSYS_BITS)
+#define PMU_AP_MSG_WLBT_PCIE_OFF_REJECT_CANCEL         (0x9 << PMU_AP_MSG_SUBSYS_BITS)
+
+#ifdef CONFIG_SCSC_XO_CDAC_CON
+#define PMU_AP_MSG_DCXO_CONFIG                        (0xb << PMU_AP_MSG_SUBSYS_BITS)
+#endif
+/* Request to start and recover scan2mem scandump from RAMSD */
+#define PMU_AP_MSG_SCAN2MEM_DUMP_START                 (0xc << PMU_AP_MSG_SUBSYS_BITS)
+#define PMU_AP_MSG_SCAN2MEM_RECOVERY_START             (0xd << PMU_AP_MSG_SUBSYS_BITS)
+
 /*****************************/
 /* Messages to host from PMU */
 /*****************************/
@@ -101,11 +113,18 @@ typedef enum
                                                        PMU_AP_MSG_SUBSYS_WPAN)
 #define PMU_AP_MSG_SUBSYS_ERROR_WLAN                  (PMU_AP_MSG_SUBSYS_ERROR_IND | \
                                                        PMU_AP_MSG_SUBSYS_WLAN)
+#define PMU_AP_MSG_SUBSYS_ERROR_WLAN_WPAN             (PMU_AP_MSG_SUBSYS_ERROR_IND | \
+                                                       PMU_AP_MSG_SUBSYS_WPAN | \
+                                                       PMU_AP_MSG_SUBSYS_WLAN)
 #define PMU_AP_MSG_SUBSYS_ERROR(subsys)               (PMU_AP_MSG_SUBSYS_ERROR_IND | \
                                                        PMU_AP_MSG_SUBSYS(subsys))
 
 /* The last requested command from the host has been processed and is complete
  * from the PMUs perspective */
+#define PMU_AP_MSG_SECOND_BOOT_COMPLETE_IND           (0x0 << PMU_AP_MSG_SUBSYS_BITS)
+
 #define PMU_AP_MSG_COMMAND_COMPLETE_IND               (0x2 << PMU_AP_MSG_SUBSYS_BITS)
+
+#define PMU_AP_MSG_PCIE_OFF_REQ                       (0x3 << PMU_AP_MSG_SUBSYS_BITS)
 
 #endif /* PMU_HOST_IF_H__ */

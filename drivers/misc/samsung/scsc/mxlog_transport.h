@@ -37,7 +37,7 @@ typedef void (*mxlog_channel_handler)(u8 phase, const void *message,
  * interrupt handlers.
  */
 int mxlog_transport_init(struct mxlog_transport *mxlog_transport, struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mxlog_transport_init_wpan(struct mxlog_transport *mxlog_transport, struct scsc_mx *mx);
 #endif
 void mxlog_transport_release(struct mxlog_transport *mxlog_transport);
@@ -51,6 +51,8 @@ void mxlog_transport_register_channel_handler(struct mxlog_transport *mxlog_tran
 					      mxlog_channel_handler handler,
 					      void *data);
 void mxlog_transport_set_error(struct mxlog_transport *mxlog_transport);
+/* Wake up mxlog_thread when BT driver request BT FW log collection */
+void mxlog_thread_wake_up_for_fwsnoop(struct scsc_mx *mx);
 
 #define MXLOG_THREAD_NAME_MAX_LENGTH 32
 struct mxlog_thread {
@@ -75,7 +77,8 @@ struct mxlog_transport {
 	mxlog_channel_handler   channel_handler_fn;
 	void                    *channel_handler_data;
 	struct mutex            lock;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	unsigned int            discard_cnt;
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_mif_abs_target target;
 #endif
 };

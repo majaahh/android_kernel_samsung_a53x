@@ -21,7 +21,14 @@ enum {
 	TRAFFIC_MON_CLIENT_STATE_LOW,
 	TRAFFIC_MON_CLIENT_STATE_MID,
 	TRAFFIC_MON_CLIENT_STATE_HIGH,
-	TRAFFIC_MON_CLIENT_STATE_OVERRIDE
+	TRAFFIC_MON_CLIENT_STATE_OVERRIDE,
+	TRAFFIC_MON_CLIENT_MAX_NUM_OF_STATE
+};
+
+enum {
+	TRAFFIC_MON_DIR_DEFAULT,
+	TRAFFIC_MON_DIR_RX,
+	TRAFFIC_MON_DIR_TX
 };
 
 struct slsi_traffic_mon_clients {
@@ -33,7 +40,7 @@ struct slsi_traffic_mon_clients {
 };
 
 void slsi_traffic_mon_event_rx(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
-void slsi_traffic_mon_event_tx(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_traffic_mon_event_tx(struct slsi_dev *sdev, struct net_device *dev, u32 len);
 
 /* Client request to override traffic monitor
  *
@@ -78,11 +85,14 @@ int slsi_traffic_mon_client_register(
 	u32 mode,
 	u32 mid_tput,
 	u32 high_tput,
+	u32 dir,
 	/* WARNING: THIS IS CALLED BACK IN TIMER INTERRUPT CONTEXT! */
 	void (*traffic_mon_client_cb)(void *client_ctx, u32 state, u32 tput_tx, u32 tput_rx));
 void slsi_traffic_mon_client_unregister(struct slsi_dev *sdev, void *client_ctx);
 
 void slsi_traffic_mon_clients_init(struct slsi_dev *sdev);
 void slsi_traffic_mon_clients_deinit(struct slsi_dev *sdev);
+void slsi_traffic_mon_init(struct slsi_dev *sdev);
+void slsi_traffic_mon_deinit(struct slsi_dev *sdev);
 
 #endif

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 
@@ -273,6 +273,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_DOT11_ASSOCIATION_SA_QUERY_RETRY_TIMEOUT 0x0065
 
 /*******************************************************************************
+ * NAME          : Dot11FilsActivated
+ * PSID          : 102 (0x0066)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  FILS Implementation
+ *******************************************************************************/
+#define SLSI_PSID_DOT11_FILS_ACTIVATED 0x0066
+
+/*******************************************************************************
  * NAME          : Dot11MinPowerCapabilityOverride
  * PSID          : 113 (0x0071)
  * PER INTERFACE?: NO
@@ -399,9 +412,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Dot11RtsSuccessCount
  * PSID          : 146 (0x0092)
  * PER INTERFACE?: NO
- * TYPE          : INT64
+ * TYPE          : UINT64
  * MIN           : 0
- * MAX           : 4294967295
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
  *  This counter shall increment when a CTS is received in response to an
@@ -413,9 +426,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Dot11AckFailureCount
  * PSID          : 148 (0x0094)
  * PER INTERFACE?: NO
- * TYPE          : INT64
+ * TYPE          : UINT64
  * MIN           : 0
- * MAX           : 4294967295
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
  *  This counter shall increment when an ACK is not received when expected.
@@ -426,9 +439,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Dot11MulticastReceivedFrameCount
  * PSID          : 150 (0x0096)
  * PER INTERFACE?: NO
- * TYPE          : INT64
+ * TYPE          : UINT64
  * MIN           : 0
- * MAX           : 4294967295
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
  *  This counter shall increment when a MSDU is received with the multicast
@@ -440,9 +453,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Dot11FcsErrorCount
  * PSID          : 151 (0x0097)
  * PER INTERFACE?: NO
- * TYPE          : INT64
- * MIN           : -9223372036854775808
- * MAX           : 4294967295
+ * TYPE          : UINT64
+ * MIN           : 0
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
  *  This counter shall increment when an FCS error is detected in a received
@@ -463,19 +476,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  of the resource.
  *******************************************************************************/
 #define SLSI_PSID_DOT11_MANUFACTURER_PRODUCT_VERSION 0x00B7
-
-/*******************************************************************************
- * NAME          : UnifiMlmeConnectionTimeout
- * PSID          : 2000 (0x07D0)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MLME_CONNECTION_TIMEOUT 0x07D0
 
 /*******************************************************************************
  * NAME          : UnifiMlmeScanChannelMaxScanTime
@@ -532,19 +532,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MLME_DATA_REFERENCE_TIMEOUT 0x07D5
 
 /*******************************************************************************
- * NAME          : UnifiMlmeScanProbeInterval
- * PSID          : 2007 (0x07D7)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MLME_SCAN_PROBE_INTERVAL 0x07D7
-
-/*******************************************************************************
  * NAME          : UnifiMlmeScanHighRssiThreshold
  * PSID          : 2008 (0x07D8)
  * PER INTERFACE?: NO
@@ -561,7 +548,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMlmeScanDeltaRssiThreshold
  * PSID          : 2010 (0x07DA)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 255
  * DEFAULT       : 20
@@ -570,19 +557,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  In dB.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_MLME_SCAN_DELTA_RSSI_THRESHOLD 0x07DA
-
-/*******************************************************************************
- * NAME          : UnifiMlmeScanMaximumAge
- * PSID          : 2014 (0x07DE)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MLME_SCAN_MAXIMUM_AGE 0x07DE
 
 /*******************************************************************************
  * NAME          : UnifiMlmeScanMaximumResults
@@ -600,23 +574,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MLME_SCAN_MAXIMUM_RESULTS 0x07DF
 
 /*******************************************************************************
- * NAME          : UnifiMlmeAutonomousScanNoisy
- * PSID          : 2016 (0x07E0)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MLME_AUTONOMOUS_SCAN_NOISY 0x07E0
-
-/*******************************************************************************
  * NAME          : UnifiChannelBusyThreshold
  * PSID          : 2018 (0x07E2)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 100
  * DEFAULT       : 25
@@ -694,13 +655,18 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PSID          : 2024 (0x07E8)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 10
+ * MIN           : 8
  * MAX           : 10
- * DEFAULT       : { 0X01, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X40, 0X00, 0X40 }
+ * DEFAULT       : { 0X01, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X40, 0X00, 0X00 }
  * DESCRIPTION   :
  *  Extended capabilities for SoftAp. Bit field definition and coding follows
  *  IEEE 802.11 Extended Capability Information Element, with spare subfields
  *  for capabilities that are independent from chip/firmware implementation.
+ *  The size of the caps is limited to 8 octets as per RQMT-1878 and should
+ *  not be updated without MX request. The only exception to this rule is
+ *  except for when unifiFtmResponderActivated is true or when
+ *  unifiTWTActivated is true with TWT Responder bit set as part of
+ *  UNIFITWTCONTROLFLAGS, then size should be 10 octets.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_EXTENDED_CAPABILITIES_SOFT_AP 0x07E8
 
@@ -720,32 +686,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  system start-up will have no effect.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_MAX_NUM_ANTENNA_TO_USE 0x07E9
-
-/*******************************************************************************
- * NAME          : UnifiHtCapabilities5g
- * PSID          : 2026 (0x07EA)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_HT_CAPABILITIES5G 0x07EA
-
-/*******************************************************************************
- * NAME          : UnifiVhtCapabilities5g
- * PSID          : 2027 (0x07EB)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_VHT_CAPABILITIES5G 0x07EB
 
 /*******************************************************************************
  * NAME          : UnifiHtCapabilitiesSoftAp
@@ -796,8 +736,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 10
- * MAX           : 10
- * DEFAULT       : { 0X05, 0X00, 0X08, 0X00, 0X00, 0X00, 0X00, 0X40, 0X80, 0X20}
+ * MAX           : 12
+ * DEFAULT       : { 0X05, 0X00, 0X08, 0X00, 0X00, 0X00, 0X00, 0X40, 0X80, 0X20, 0X00, 0X00 }
  * DESCRIPTION   :
  *  Extended capabilities. Bit field definition and coding follows IEEE
  *  802.11 Extended Capability Information Element, with spare subfields for
@@ -819,19 +759,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Greenfield has been disabled due to interoperability issues wuth SGI.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_HT_CAPABILITIES 0x07F0
-
-/*******************************************************************************
- * NAME          : UnifiRsnCapabilities
- * PSID          : 2034 (0x07F2)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RSN_CAPABILITIES 0x07F2
 
 /*******************************************************************************
  * NAME          : Unifi24G40MhzChannels
@@ -862,6 +789,20 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  note that this may fix IOP issues with Aruba APs in WMMAC. Singed Decimal
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_EXTENDED_CAPABILITIES_DISABLED 0x07F4
+
+/*******************************************************************************
+ * NAME          : beaconDriftSupport
+ * PSID          : 2037 (0x07F5)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  This mib helps to schedule vif properly to listen for beacons when there
+ *  are larger drifts in the beacons received from the connected AP.
+ *******************************************************************************/
+#define SLSI_PSID_BEACON_DRIFT_SUPPORT 0x07F5
 
 /*******************************************************************************
  * NAME          : UnifiSupportedDataRates
@@ -900,7 +841,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint8
  * MIN           : 5
  * MAX           : 5
- * DEFAULT       : { 0X73, 0X00, 0X01, 0X00, 0X04 }
+ * DEFAULT       : { 0X73, 0X0A, 0X01, 0X00, 0X04 }
  * DESCRIPTION   :
  *  RM Enabled capabilities of the chip. See SC-503520-SP for further
  *  details.
@@ -934,33 +875,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_HT_ACTIVATED 0x07FE
 
 /*******************************************************************************
- * NAME          : UnifiEnableTwoSimultaneousPassiveScansSameBand
- * PSID          : 2047 (0x07FF)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
- * DESCRIPTION   :
- *  Enable two passive scans to be simultaneously scheduled on two distinct
- *  channels at the same.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_ENABLE_TWO_SIMULTANEOUS_PASSIVE_SCANS_SAME_BAND 0x07FF
-
-/*******************************************************************************
- * NAME          : UnifiPlM689WorkaroundTriggerArpCount
- * PSID          : 2048 (0x0800)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_PL_M689_WORKAROUND_TRIGGER_ARP_COUNT 0x0800
-
-/*******************************************************************************
  * NAME          : UnifiRoamingActivated
  * PSID          : 2049 (0x0801)
  * PER INTERFACE?: NO
@@ -977,7 +891,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamRssiScanTrigger
  * PSID          : 2050 (0x0802)
  * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
+ * TYPE          : SlsiInt8
  * UNITS         : dbm
  * MIN           : -128
  * MAX           : 127
@@ -991,7 +905,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamCuScanTriggerHysteresis
  * PSID          : 2051 (0x0803)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 255
  * DEFAULT       : 10
@@ -1032,23 +946,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_ROAM_NCHO_FULL_SCAN_PERIOD 0x0805
 
 /*******************************************************************************
- * NAME          : UnifiRoamSoftRoamingEnabled
- * PSID          : 2054 (0x0806)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_ROAM_SOFT_ROAMING_ENABLED 0x0806
-
-/*******************************************************************************
  * NAME          : UnifiRoamScanBand
  * PSID          : 2055 (0x0807)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 2
  * DEFAULT       : 2
@@ -1062,7 +963,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamCuRssiScanTriggerHysteresis
  * PSID          : 2056 (0x0808)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : dbm
  * MIN           : 1
  * MAX           : 255
@@ -1120,7 +1021,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamMode
  * PSID          : 2060 (0x080C)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 2
  * DEFAULT       : 1
@@ -1135,7 +1036,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamRssiScanTriggerReset
  * PSID          : 2061 (0x080D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
+ * TYPE          : SlsiInt8
  * UNITS         : dbm
  * MIN           : -128
  * MAX           : 127
@@ -1151,7 +1052,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamRssiScanTriggerStep
  * PSID          : 2062 (0x080E)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : dbm
  * MIN           : 0
  * MAX           : 10
@@ -1166,7 +1067,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamIdleVariationRssi
  * PSID          : 2063 (0x080F)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : dBm
  * MIN           : 0
  * MAX           : 100
@@ -1210,7 +1111,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamIdleInactiveTime
  * PSID          : 2066 (0x0812)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 0
  * MAX           : 100
@@ -1239,7 +1140,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamNchoDfsScanMode
  * PSID          : 2068 (0x0814)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 2
  * DEFAULT       : 1
@@ -1281,11 +1182,11 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamIdleInactiveCount
  * PSID          : 2071 (0x0817)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : number_of_packets
  * MIN           : 0
  * MAX           : 100
- * DEFAULT       : 10
+ * DEFAULT       : 5
  * DESCRIPTION   :
  *  The number of packets over which the link is considered not idle.
  *******************************************************************************/
@@ -1308,13 +1209,21 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamIdleBand
  * PSID          : 2073 (0x0819)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 3
+ * MAX           : 5
  * DEFAULT       : 1
  * DESCRIPTION   :
- *  Specifies when connected on which band to run the Idle Roaming algorithm.
- *  0 for None. 1 for 2.4GHz. 2 for 5GHz. 3 for All.
+ *  A bitmask specifying if Idle Roaming is allowed depending on the band of
+ *  the existing connection. There are also other conditions which will be
+ *  checked in order to trigger Idle Roaming. Bit 0 - if set Idle Roaming is
+ *  allowed in 2.4GHz band. Bit 1 - if set Idle Roaming is allowed in 5GHz
+ *  band. So, the following values are allowed and have following meaning , 0
+ *  - Idle Roaming is not allowed, 1 - Idle Roaming is allowed only for
+ *  2.4GHz 2 - Idle Roaming is allowed only for 5GHz, 3 - Idle Roaming is
+ *  allowed for both 2.4GHz and 5 GHz. Note, there is Idle Roaming for 6GHz,
+ *  as part of the conditions for Idle Mode to be triggered is to have cached
+ *  channels in higher band.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_ROAM_IDLE_BAND 0x0819
 
@@ -1322,10 +1231,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamIdleApSelectDeltaFactor
  * PSID          : 2074 (0x081A)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
- * DEFAULT       : 1
+ * DEFAULT       :
  * DESCRIPTION   :
  *  Delta value applied to the score of the currently connected AP to
  *  determine candidates' eligibility threshold for Idle period triggered
@@ -1337,7 +1246,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamNchoRssiDelta
  * PSID          : 2075 (0x081B)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : dBm
  * MIN           : 0
  * MAX           : 127
@@ -1437,7 +1346,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiConnectingProbeTimeout
  * PSID          : 2082 (0x0822)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 10
@@ -1466,19 +1375,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_DISCONNECT_TIMEOUT 0x0823
 
 /*******************************************************************************
- * NAME          : UnifiFrameResponseCfmTxLifetimeTimeout
- * PSID          : 2084 (0x0824)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_FRAME_RESPONSE_CFM_TX_LIFETIME_TIMEOUT 0x0824
-
-/*******************************************************************************
  * NAME          : UnifiFrameResponseCfmFailureTimeout
  * PSID          : 2085 (0x0825)
  * PER INTERFACE?: NO
@@ -1505,19 +1401,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  STA as a workaround for wonky APs such as D-link.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_FORCE_ACTIVE_DURATION 0x0826
-
-/*******************************************************************************
- * NAME          : UnifiMlmeScanMaxNumberOfProbeSets
- * PSID          : 2087 (0x0827)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MLME_SCAN_MAX_NUMBER_OF_PROBE_SETS 0x0827
 
 /*******************************************************************************
  * NAME          : UnifiMlmeScanStopIfLessThanXFrames
@@ -1577,7 +1460,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamNchoRssiTrigger
  * PSID          : 2092 (0x082C)
  * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
+ * TYPE          : SlsiInt8
  * UNITS         : dBm
  * MIN           : -128
  * MAX           : 127
@@ -1592,7 +1475,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamNchoRssiTriggerHysteresis
  * PSID          : 2093 (0x082D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : dBm
  * MIN           : 0
  * MAX           : 127
@@ -1663,7 +1546,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 3
+ * DEFAULT       : 6
  * DESCRIPTION   :
  *  Timeout, in seconds, for instigating ConnectonFailure procedures. Setting
  *  it to less than 3 seconds may result in frequent disconnection or roaming
@@ -1703,20 +1586,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  exchange. This value is read only once when an interface is added.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_MLME_STATION_INITIAL_KICK_TIMEOUT 0x0834
-
-/*******************************************************************************
- * NAME          : UnifiFrameResponseLongTimeout
- * PSID          : 2101 (0x0835)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 10000
- * DEFAULT       : 5000
- * DESCRIPTION   :
- *  Deprecated. Timeout, in TU, to wait for a frame(Auth, Assoc, ReAssoc)
- *  after TX Cfm trasnmission_status == Successful for SAE
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_FRAME_RESPONSE_LONG_TIMEOUT 0x0835
 
 /*******************************************************************************
  * NAME          : UnifiInitialConnectionFailureTimeout
@@ -1777,6 +1646,20 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MLME_INACTIVITY_NEW_ALGORITHM_ACTIVATED 0x0839
 
 /*******************************************************************************
+ * NAME          : UnifiRoamBackgroundScanActivated
+ * PSID          : 2106 (0x083A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  If false, the FW does not trigger the roaming scan by background scan
+ *  timer.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BACKGROUND_SCAN_ACTIVATED 0x083A
+
+/*******************************************************************************
  * NAME          : UnifiUartConfigure
  * PSID          : 2110 (0x083E)
  * PER INTERFACE?: NO
@@ -1811,7 +1694,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiCrystalFrequencyTrim
  * PSID          : 2141 (0x085D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 63
  * DEFAULT       : 31
@@ -1824,23 +1707,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  approximately 2 ppm.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_CRYSTAL_FREQUENCY_TRIM 0x085D
-
-/*******************************************************************************
- * NAME          : UnifiEnableDorm
- * PSID          : 2142 (0x085E)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : TRUE
- * DESCRIPTION   :
- *  Golden Certification MIB don't delete, change PSID or name: Enable Dorm
- *  (deep sleep). When disabled, WLAN will not switch the radio power domain
- *  on/off *and* it will always veto deep sleep. Setting the value to TRUE
- *  means dorm functionality will behave normally. The intention is *not* for
- *  this value to be changed at runtime.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_ENABLE_DORM 0x085E
 
 /*******************************************************************************
  * NAME          : UnifiExternalClockDetect
@@ -1945,8 +1811,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PSID          : 2156 (0x086C)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 255
+ * MIN           : 4
+ * MAX           : 4
  * DEFAULT       :
  * DESCRIPTION   :
  *  EDCA Parameters to be used if unifiOverrideEDCAParamActivated is true,
@@ -1982,7 +1848,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiExternalFastClockRequestPio
  * PSID          : 2158 (0x086E)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 15
  * DEFAULT       : 9
@@ -2087,8 +1953,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Select which of the modems will be desensed. Only valid if
  *  unifiModemDesenseEnabled is set to true. Set the corresponding bit to
  *  enable 0: CCK desense 1: 2G4 OFDM desense 2: 5G OFDM desense 3: JD
- *  settings adjust for C1 4: Suppress during connect 5: 6G OFDM desense Also
- *  see unifiDesenseSelection
+ *  settings adjust for C1 4: Suppress during connect 5: 6G OFDM desense 6:
+ *  Desense based on minimum RSSI (instead of avg RSSI) Also see
+ *  unifiDesenseSelection
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_MODEM_DESENSE_OPTION 0x087B
 
@@ -2149,9 +2016,215 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 1
  * DEFAULT       : FALSE
  * DESCRIPTION   :
- *  Enables Dynamic ITO update feature
+ *  Switches Dynamic ITO update feature. When ADPS works, this mib should be
+ *  set to false to avoid the conflict
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_DYNAMIC_ITO_ENABLE 0x087F
+
+/*******************************************************************************
+ * NAME          : UnifiPowerSaveDisabledDuration
+ * PSID          : 2177 (0x0881)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Duration of WLAN FW not in Power save mode in seconds
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_POWER_SAVE_DISABLED_DURATION 0x0881
+
+/*******************************************************************************
+ * NAME          : UnifiPowerSaveEntryCounter
+ * PSID          : 2178 (0x0882)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Count of WLAN FW going into Power save mode
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_POWER_SAVE_ENTRY_COUNTER 0x0882
+
+/*******************************************************************************
+ * NAME          : UnifiForceShortFullScanConfig
+ * PSID          : 2179 (0x0883)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X0001
+ * DESCRIPTION   :
+ *  Controls if and when full Wifi Scans are forced to become short. 3
+ *  separate modes defined, not designed to be OR'd together. 0 = Do not turn
+ *  full scans into short 1 = Force full scans into short while a USPBO is
+ *  attached to a vif, and the AP that we are connected to is classified as
+ *  Leaky (STA) 2 = Force full scans into short whenever Macrame is informed
+ *  by coex that significant BT activity is present See
+ *  coex_mac_update_bt_activity_state()
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_FORCE_SHORT_FULL_SCAN_CONFIG 0x0883
+
+/*******************************************************************************
+ * NAME          : UnifiAllowCtsChaining
+ * PSID          : 2180 (0x0884)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enable or disable the ability to support blackouts with > 32ms duration
+ *  when CTS is being used. This is implemented by sending (chaining) CTS
+ *  requests near the end of the existing reservation. false : Do now allow
+ *  chained CTS when blackouts > 32ms when CTS is requested true : Allow
+ *  chained CTS when blackouts > 32ms is requested.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ALLOW_CTS_CHAINING 0x0884
+
+/*******************************************************************************
+ * NAME          : UnifiSchedScanPassiveDuration
+ * PSID          : 2181 (0x0885)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X806A
+ * DESCRIPTION   :
+ *  Defines if passive scan schedules can be broken down. If enabled and the
+ *  passive scan schedule entry cannot fit in an available schedule slot,
+ *  then this will define the minimum schedule duration for which a passive
+ *  scan can be considered as a candidate for scheduling. Should the
+ *  available schedule be granted, the scan schedule entry duration will be
+ *  reduced to the value specified by this MIB entry. Bits 0-14: Smallest
+ *  slot duration for which partitioning a passive scan schedule can be
+ *  partitioned. Expressed in TUs. Bit 15: 1 - Scan breakdown enabled. 0 -
+ *  Scan breakdown disabled. Default setting for this MIB entry is scan
+ *  breakdown enabled and slot duration set to 106 TUs.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SCHED_SCAN_PASSIVE_DURATION 0x0885
+
+/*******************************************************************************
+ * NAME          : UnifiSchedScanActiveDuration
+ * PSID          : 2182 (0x0886)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X8019
+ * DESCRIPTION   :
+ *  Defines if active scan schedules can be broken down. If enabled and the
+ *  active scan schedule entry cannot fit in an available schedule slot, then
+ *  this will define the minimum schedule duration for which an active scan
+ *  can be considered as a candidate for scheduling. Should the available
+ *  schedule be granted, the scan schedule entry duration will be reduced to
+ *  the value specified by this MIB entry. Bits 0-14: Smallest slot duration
+ *  for which partitioning an active scan schedule can be partitioned.
+ *  Expressed in TUs. Bit 15: 1 - Scan breakdown enabled. 0 - Scan breakdown
+ *  disabled. Default setting for this MIB entry is scan breakdown enabled
+ *  and slot duration set to 25 TUs.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SCHED_SCAN_ACTIVE_DURATION 0x0886
+
+/*******************************************************************************
+ * NAME          : UnifiMaxTotalVifClearTime
+ * PSID          : 2184 (0x0888)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * UNITS         : microseconds
+ * MIN           : 5000
+ * MAX           : 2147483647
+ * DEFAULT       : 25000
+ * DESCRIPTION   :
+ *  This entry controls the maximum amount of time that a STA or an AP VIF
+ *  may dedicate to its clearing process: this includes (1) announcing its
+ *  absense (by sending a CTS or a NULL frame); (2) (for the STA case only)
+ *  Extra listen time for peer AP training or leaky purposes; and (3)
+ *  signalling delays between CP and DP to pause the VIF.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MAX_TOTAL_VIF_CLEAR_TIME 0x0888
+
+/*******************************************************************************
+ * NAME          : UnifiEnforceMaxSupportedAntenna
+ * PSID          : 2186 (0x088A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Setting this mib will enforce max supported antenna as per platform
+ *  configuration This is different from unifiSupportMaxRequiredAntenna which
+ *  enforces max antenna for cases like STBC whereas this will enable it even
+ *  for non-STBC e.g. to enable/test CDD. Enabling this mib will have power
+ *  consumption cost for SISO connection - as 2 antenna may be enabled. This
+ *  mib can not be changed at run time and currently implemented for STA type
+ *  VIF only (STA/GC)
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ENFORCE_MAX_SUPPORTED_ANTENNA 0x088A
+
+/*******************************************************************************
+ * NAME          : UnifiWlanLowPowerDebugControl
+ * PSID          : 2187 (0x088B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X0000
+ * DESCRIPTION   :
+ *  Control WLAN low power debug within firmware with bit flags. 1 defines
+ *  enabled, 0 defines disabled. bit 0: Deep sleep bit 1: mifless bit 2: Diet
+ *  mode bit 8: enable STA idle exit stats bit 9: enable Diet/legacy mifless
+ *  exit stats bit 10:enable AP idle/mifless exit stats
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_WLAN_LOW_POWER_DEBUG_CONTROL 0x088B
+
+/*******************************************************************************
+ * NAME          : UnifiWlanLowPowerDebugTimeout
+ * PSID          : 2188 (0x088C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 200
+ * DESCRIPTION   :
+ *  Duration of timeout in milliseconds if certain wlan low power opeartion
+ *  does'nt happen
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_WLAN_LOW_POWER_DEBUG_TIMEOUT 0x088C
+
+/*******************************************************************************
+ * NAME          : UnifiLpControl
+ * PSID          : 2190 (0x088E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0X00000001
+ * DESCRIPTION   :
+ *  Controls wlan low power interface with Infra. Refer to unifiLPControlBits
+ *  for the full set of bit masks. b'0: Enable Deep Sleep b'1: Enable Mifless
+ *  v2 b'2: Delay Deep Sleep (time of delay specified by unifiLPControlDelay)
+ *  b'3: Delay Mifless v2 (time of delay specified by unifiLPControlDelay)
+ *  b'29: Deep Sleep disallowed when any STA vif present b'30: Deep Sleep
+ *  disallowed when any NAN vif present
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LP_CONTROL 0x088E
+
+/*******************************************************************************
+ * NAME          : UnifiLpControlDelay
+ * PSID          : 2191 (0x088F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Specifies the delay applied in seconds before unifiLPControl controls are
+ *  applied
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LP_CONTROL_DELAY 0x088F
 
 /*******************************************************************************
  * NAME          : UnifiRssiTypeToUse
@@ -2187,6 +2260,20 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_NUM_RSSI_AVERAGE_SAMPLE 0x0892
 
 /*******************************************************************************
+ * NAME          : UnifiChannelUtilizationBeaconIntervals
+ * PSID          : 2195 (0x0893)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 50
+ * DESCRIPTION   :
+ *  The amount of samples used for calculating channel utilization. WARNING:
+ *  Changing this value after system start-up will have no effect.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_CHANNEL_UTILIZATION_BEACON_INTERVALS 0x0893
+
+/*******************************************************************************
  * NAME          : UnifiRxDataRate
  * PSID          : 2196 (0x0894)
  * PER INTERFACE?: NO
@@ -2198,6 +2285,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  The bit rate of the last received frame on this VIF.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_RX_DATA_RATE 0x0894
+
+/*******************************************************************************
+ * NAME          : UnifiRssiPerRadio
+ * PSID          : 2197 (0x0895)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt16
+ * MIN           : -32768
+ * MAX           : 32767
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Read per antenna(radio) rssi value
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RSSI_PER_RADIO 0x0895
 
 /*******************************************************************************
  * NAME          : UnifiPeerRxRetryCount
@@ -2300,6 +2400,23 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  sent, but not yet actually pumped to hardware.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_SW_TX_TIMEOUT 0x089C
+
+/*******************************************************************************
+ * NAME          : UnifiDelayedWakeUpFlushThreshold
+ * PSID          : 2205 (0x089D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 190
+ * DEFAULT       : 120
+ * DESCRIPTION   :
+ *  Count of free entries in to-host HIP queue as flush threshold for Delayed
+ *  WU(Wake-Up) feature in RQMT-1807, above which to-host HIP flush will be
+ *  performed raising to-host interrupt. The maximum threshold value is 190
+ *  considering queue length (HIP4: 256, HIP5: 256/512) receiving two
+ *  consecutive ampdus.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DELAYED_WAKE_UP_FLUSH_THRESHOLD 0x089D
 
 /*******************************************************************************
  * NAME          : UnifiRateStatsRxSuccessCount
@@ -2432,9 +2549,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiDiscardedFrameCount
  * PSID          : 2214 (0x08A6)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : UINT64
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
  *  This is a counter that indicates the number of data and management frames
@@ -2467,12 +2584,26 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MACRAME_DEBUG_STATS 0x08A7
 
 /*******************************************************************************
+ * NAME          : UnifiMacrameLpExitStats
+ * PSID          : 2216 (0x08A8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  MACRAME LP exit stats readout key. Use set to write a stats readout, then
+ *  read the same key to get the actual readout.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MACRAME_LP_EXIT_STATS 0x08A8
+
+/*******************************************************************************
  * NAME          : UnifiCurrentTsfTime
  * PSID          : 2218 (0x08AA)
  * PER INTERFACE?: NO
- * TYPE          : INT64
- * MIN           : -9223372036854775808
- * MAX           : 9223372036854775807
+ * TYPE          : UINT64
+ * MIN           : 0
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
  *  Get TSF time (last 32 bits) for the specified VIF. VIF index can't be 0
@@ -2546,7 +2677,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint16
  * MIN           : 1
- * MAX           : 4
+ * MAX           : 5
  * DEFAULT       : 3
  * DESCRIPTION   :
  *  Defines the maximum number of A-MSDU sub-frames per A-MSDU. A value of 1
@@ -2722,6 +2853,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_RADIO_ON_TIME_NAN 0x08BC
 
 /*******************************************************************************
+ * NAME          : UnifiNqamActivated
+ * PSID          : 2237 (0x08BD)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Activate 1024-QAM mode(Nitro QAM) on 2.4GHz/5GHz.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NQAM_ACTIVATED 0x08BD
+
+/*******************************************************************************
  * NAME          : UnifiPhyEventLogEnable
  * PSID          : 2238 (0x08BE)
  * PER INTERFACE?: NO
@@ -2775,6 +2919,32 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  This number will wrap to zero after the range is exceeded.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_RX_FCS_ERROR_COUNT 0x08C1
+
+/*******************************************************************************
+ * NAME          : UnifiPeerFrameRxCounters
+ * PSID          : 2242 (0x08C2)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Peer frame RX Counters used by the host.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PEER_FRAME_RX_COUNTERS 0x08C2
+
+/*******************************************************************************
+ * NAME          : UnifiPeerFrameTxCounters
+ * PSID          : 2243 (0x08C3)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Peer frame TX Counters used by the host.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PEER_FRAME_TX_COUNTERS 0x08C3
 
 /*******************************************************************************
  * NAME          : UnifiBeaconsReceivedPercentage
@@ -2833,7 +3003,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_READ_TX_PACKET_STATS_FROM_STA_VIF 0x08C8
 
 /*******************************************************************************
- * NAME          : UnifiEnableMgmtTxPacketStats
+ * NAME          : UnifiEnableMgmtPacketStats
  * PSID          : 2249 (0x08C9)
  * PER INTERFACE?: NO
  * TYPE          : SlsiBool
@@ -2841,9 +3011,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 1
  * DEFAULT       : TRUE
  * DESCRIPTION   :
- *  Consider management packets for TX stats counters
+ *  Consider management packets for Tx RX stats counters
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_ENABLE_MGMT_TX_PACKET_STATS 0x08C9
+#define SLSI_PSID_UNIFI_ENABLE_MGMT_PACKET_STATS 0x08C9
 
 /*******************************************************************************
  * NAME          : UnifiSwToHwQueueStats
@@ -2892,7 +3062,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : FALSE
+ * DEFAULT       :
  * DESCRIPTION   :
  *  Allows to request on a per access class basis that an MA_UNITDATA.confirm
  *  be generated after each packet transfer. The default value is applied for
@@ -2904,9 +3074,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiThroughputDebug
  * PSID          : 2254 (0x08CE)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint32
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 4294967295
  * DEFAULT       :
  * DESCRIPTION   :
  *  is used to access throughput related counters that can help diagnose
@@ -2975,69 +3145,21 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_OVERRIDE_DPD_LUT 0x08D2
 
 /*******************************************************************************
- * NAME          : UnifiGoogleMaxNumberOfPeriodicScans
- * PSID          : 2260 (0x08D4)
+ * NAME          : UnifiRadioLongTrimPowerCap
+ * PSID          : 2259 (0x08D3)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
+ * TYPE          : SlsiInt16
+ * UNITS         : dBm
+ * MIN           : -128
+ * MAX           : 127
  * DEFAULT       :
  * DESCRIPTION   :
- *  Deprecated
+ *  When a long running trim is active we will be in Reduced Power Mode. RICE
+ *  will automatically limit the power for frames other than 11ax triggered
+ *  frames. This MIB specifies the power cap. MACRAME/DPLANE/MLME may need to
+ *  reconfgure 11ax triggered frame operation to also not exceed this cap.
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_GOOGLE_MAX_NUMBER_OF_PERIODIC_SCANS 0x08D4
-
-/*******************************************************************************
- * NAME          : UnifiGoogleMaxRssiSampleSize
- * PSID          : 2261 (0x08D5)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_GOOGLE_MAX_RSSI_SAMPLE_SIZE 0x08D5
-
-/*******************************************************************************
- * NAME          : UnifiGoogleMaxHotlistAPs
- * PSID          : 2262 (0x08D6)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_GOOGLE_MAX_HOTLIST_APS 0x08D6
-
-/*******************************************************************************
- * NAME          : UnifiGoogleMaxSignificantWifiChangeAPs
- * PSID          : 2263 (0x08D7)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_GOOGLE_MAX_SIGNIFICANT_WIFI_CHANGE_APS 0x08D7
-
-/*******************************************************************************
- * NAME          : UnifiGoogleMaxBssidHistoryEntries
- * PSID          : 2264 (0x08D8)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_GOOGLE_MAX_BSSID_HISTORY_ENTRIES 0x08D8
+#define SLSI_PSID_UNIFI_RADIO_LONG_TRIM_POWER_CAP 0x08D3
 
 /*******************************************************************************
  * NAME          : UnifiRestrictScoTxopSize
@@ -3126,21 +3248,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MAC_BEACON_TIMEOUT 0x08DE
 
 /*******************************************************************************
- * NAME          : UnifiMifOffAllowed
- * PSID          : 2271 (0x08DF)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : TRUE
- * DESCRIPTION   :
- *  Allow MIF to be turned off. If set to TRUE, it will prevent MIF to be
- *  turned off while WLAN is running. Disabling the mib will prevent to enter
- *  idle mode lite or idle mode medium
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MIF_OFF_ALLOWED 0x08DF
-
-/*******************************************************************************
  * NAME          : UnifiBlockScanAfterNumSchedVif
  * PSID          : 2272 (0x08E0)
  * PER INTERFACE?: NO
@@ -3153,21 +3260,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  sync VIFs are schedulable. A value of 0 disables the functionality.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_BLOCK_SCAN_AFTER_NUM_SCHED_VIF 0x08E0
-
-/*******************************************************************************
- * NAME          : UnifiMiflessStaEnable
- * PSID          : 2273 (0x08E1)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
- * DESCRIPTION   :
- *  This is flag for checking if MIFLESS for station vif is enabled or not.
- *  True means enabled. And false means disabled. This would be mainly
- *  depended on RF chip.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MIFLESS_STA_ENABLE 0x08E1
 
 /*******************************************************************************
  * NAME          : UnifiStaUsesOneAntennaWhenIdle
@@ -3198,35 +3290,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_STA_USES_MULTI_ANTENNAS_DURING_CONNECT 0x08E3
 
 /*******************************************************************************
- * NAME          : UnifiApUsesOneAntennaWhenPeersIdle
- * PSID          : 2276 (0x08E4)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
- * DESCRIPTION   :
- *  Allow the platform to downgrade antenna usage for AP VIFs when all
- *  connected peers are idle. Only valid for multi-radio platforms.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_AP_USES_ONE_ANTENNA_WHEN_PEERS_IDLE 0x08E4
-
-/*******************************************************************************
- * NAME          : deprecated_unifiUpdateAntennaCapabilitiesWhenScanning
- * PSID          : 2277 (0x08E5)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
- * DESCRIPTION   :
- *  Specify whether antenna scan activities will be allowed to cause an
- *  update of VIF capability. Only valid for multi-radio platforms. WARNING:
- *  Changing this value after system start-up will have no effect.
- *******************************************************************************/
-#define SLSI_PSID_DEPRECATED_UNIFI_UPDATE_ANTENNA_CAPABILITIES_WHEN_SCANNING 0x08E5
-
-/*******************************************************************************
  * NAME          : UnifiPreferredAntennaBitmap
  * PSID          : 2278 (0x08E6)
  * PER INTERFACE?: NO
@@ -3238,8 +3301,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Golden Certification MIB don't delete, change PSID or name: Specify the
  *  preferred antenna(s) to use. A value of 0 means that the FW will decide
  *  on the antenna(s) to use. Only valid for multi-radio platforms. S630: -
- *  bit0 : RADIO_0_A (5G/6G) or RADIO_0_B(2G) - bit1 : RADIO_1_A(5G/6G) or
- *  RADIO_1_B(2G) S62x or earlier than S630: - bit0 : RADIO_0_A - bit1 :
+ *  bit0 : RADIO_0_A (2G) or RADIO_0_B (5G/6G) - bit1 : RADIO_1_A (2G) or
+ *  RADIO_1_B (5G/6G) S62x or earlier than S630: - bit0 : RADIO_0_A - bit1 :
  *  RADIO_1_A
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_PREFERRED_ANTENNA_BITMAP 0x08E6
@@ -3354,7 +3417,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Golden Certification MIB don't delete, change PSID or name. Set the
  *  maximum bandwidth for a vif Setting it to 0 uses the default bandwidth as
  *  selected by firmware. channel_bw_20_mhz = 20, channel_bw_40_mhz = 40,
- *  channel_bw_80_mhz = 80, channel_bw_160_mhz = 160
+ *  channel_bw_80_mhz = 80, channel_bw_160_mhz = 160, channel_bw_320_mhz =
+ *  176
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_TEST_SET_MAX_BANDWIDTH 0x08EF
 
@@ -3389,9 +3453,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamMpduss
  * PSID          : 2290 (0x08F2)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 255
  * DEFAULT       : 0X08
  * DESCRIPTION   :
  *  minimum MPDU start spacing of the MPDUs receiver. Limited by HW.
@@ -3402,9 +3466,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamBaWinSize
  * PSID          : 2291 (0x08F3)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 255
  * DEFAULT       : 0X20
  * DESCRIPTION   :
  *  Block Ack Configuration. Maximum number of BAs for receiving a-mpdu
@@ -3428,12 +3492,26 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_ROAM_NCHO_CACHED_SCAN_PERIOD 0x08F4
 
 /*******************************************************************************
+ * NAME          : UnifiRoamCuActivated
+ * PSID          : 2294 (0x08F6)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  If false, the FW shall ignore the channel utilisation of QBSS IE in
+ *  received Beacon frames.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_CU_ACTIVATED 0x08F6
+
+/*******************************************************************************
  * NAME          : UnifiRoamCuFactor
  * PSID          : 2295 (0x08F7)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
+ * MIN           : 3
+ * MAX           : 3
  * DEFAULT       :
  * DESCRIPTION   :
  *  Bi dimensional octet string table for allocating CUfactor to CU values.
@@ -3529,7 +3607,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamApSelectDeltaFactor
  * PSID          : 2302 (0x08FE)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 20
@@ -3544,7 +3622,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamCuWeight
  * PSID          : 2303 (0x08FF)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 35
@@ -3557,7 +3635,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamBtmApSelectDeltaFactor
  * PSID          : 2304 (0x0900)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       :
@@ -3572,7 +3650,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamRssiweight
  * PSID          : 2305 (0x0901)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 65
@@ -3586,8 +3664,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PSID          : 2306 (0x0902)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
+ * MIN           : 2
+ * MAX           : 2
  * DEFAULT       :
  * DESCRIPTION   :
  *  Table allocating RSSIfactor to RSSI values range for each band.
@@ -3627,7 +3705,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamBssLoadMonitoringFrequency
  * PSID          : 2309 (0x0905)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 1
@@ -3641,7 +3719,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamBlacklistSize
  * PSID          : 2310 (0x0906)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : entries
  * MIN           : 0
  * MAX           : 100
@@ -3695,7 +3773,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamEapolTimeout
  * PSID          : 2314 (0x090A)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 10
@@ -3727,8 +3805,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 255
  * DEFAULT       :
  * DESCRIPTION   :
- *  specifies current AKM 0 = None 1 = OKC 2 = FT (FT_1X) 3 = PSK 4 = FT_PSK
- *  5 = PMKSA Caching
+ *  specifies current AKM 0 = None 1 = OKC 2 = FT (FT_1X) 3 = CCKM 4 =
+ *  Adaptive 11r 5 = WPA3 SAE-FT
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_ROAMING_AKM 0x090C
 
@@ -3742,7 +3820,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * DEFAULT       :
  * DESCRIPTION   :
  *  Current bandwidth the STA is operating on channel_bw_20_mhz = 20,
- *  channel_bw_40_mhz = 40, channel_bw_80_mhz = 80, channel_bw_160_mhz = 160
+ *  channel_bw_40_mhz = 40, channel_bw_80_mhz = 80, channel_bw_160_mhz = 160,
+ *  channel_bw_320_mhz = 176
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_CURRENT_BSS_BANDWIDTH 0x090D
 
@@ -3793,6 +3872,20 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_LOGGER_ENABLED 0x0910
 
 /*******************************************************************************
+ * NAME          : UnifiRoamEmergencyActivated
+ * PSID          : 2321 (0x0911)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  If false, the FW does not trigger the roaming scan by emergency
+ *  disconnection(deauthentication or disassociation).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_EMERGENCY_ACTIVATED 0x0911
+
+/*******************************************************************************
  * NAME          : UnifiRoamApSelectMinDeltaFactor
  * PSID          : 2322 (0x0912)
  * PER INTERFACE?: NO
@@ -3806,6 +3899,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Please note this applies only to soft roams.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_ROAM_AP_SELECT_MIN_DELTA_FACTOR 0x0912
+
+/*******************************************************************************
+ * NAME          : UnifiRoamBtmActivated
+ * PSID          : 2323 (0x0913)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  If false, the FW does not trigger the roaming scan by BTM request.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BTM_ACTIVATED 0x0913
 
 /*******************************************************************************
  * NAME          : UnifiStaVifLinkNss
@@ -3847,6 +3953,21 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Frame TX Counters used by the host. These are required by MCD.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_FRAME_TX_COUNTERS 0x0917
+
+/*******************************************************************************
+ * NAME          : UnifiAcNoAcks
+ * PSID          : 2328 (0x0918)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It represents the number of frames without ACK for each AC priority
+ *  (indexed by unifiAccessClassIndex). This number will wrap to zero after
+ *  the range is exceeded.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_AC_NO_ACKS 0x0918
 
 /*******************************************************************************
  * NAME          : UnifiLaaNssSpeculationIntervalSlotTime
@@ -3979,6 +4100,88 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  - 0x3 : Both 1SS and 2SS modes can be used (both bit 0 and 1 are set)
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LAA_TX_NSS_ALLOWED_MODE 0x0922
+
+/*******************************************************************************
+ * NAME          : UnifiDplaneTxSinkDelayUs
+ * PSID          : 2339 (0x0923)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Configure frame burst gap in DPLANE TX Sink mode. Typical value is 90 us.
+ *  Zero value disables TX sink mode.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DPLANE_TX_SINK_DELAY_US 0x0923
+
+/*******************************************************************************
+ * NAME          : UnifiDisableCca
+ * PSID          : 2340 (0x0924)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Test only: Disable CCA detection in transmission
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DISABLE_CCA 0x0924
+
+/*******************************************************************************
+ * NAME          : UnifiCprofScopeBitmap
+ * PSID          : 2341 (0x0925)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0XFFFFFFFF
+ * DESCRIPTION   :
+ *  CPROF Scope IDs in bitmap to monitor.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_CPROF_SCOPE_BITMAP 0x0925
+
+/*******************************************************************************
+ * NAME          : UnifiAmsduAggregationDistribution
+ * PSID          : 2342 (0x0926)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Count of the number of MSDUs per AMSDU. It is a table. Index 0 : Count of
+ *  MPDUs where MSDUs can't be aggregated. Index 1 ~ 6 : Count of the MSDUs
+ *  per AMSDU.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_AMSDU_AGGREGATION_DISTRIBUTION 0x0926
+
+/*******************************************************************************
+ * NAME          : UnifiAmpdutxopDistribution
+ * PSID          : 2343 (0x0927)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Count of the number of MSDUs per AMSDU. It is a table. Index 0 - 31 :
+ *  Count of number of AMPDUs in the TXOP (0=1 ...)
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_AMPDUTXOP_DISTRIBUTION 0x0927
+
+/*******************************************************************************
+ * NAME          : UnifiDebugIgnoreHighImportance
+ * PSID          : 2345 (0x0929)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  DPLP will ignore the TRANSMISSION_CONTROL_HIGH_IMPORTANT_FRAME bit
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DEBUG_IGNORE_HIGH_IMPORTANCE 0x0929
 
 /*******************************************************************************
  * NAME          : UnifiLaaTxDiversityBeamformEnabled
@@ -4184,7 +4387,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 140
- * MAX           : 350
+ * MAX           : 550
  * DEFAULT       :
  * DESCRIPTION   :
  *  Write a DPD LUT directly to the HW for devices that support Memory DPD
@@ -4418,9 +4621,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMaxTdlsClient
  * PSID          : 2382 (0x094E)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 255
  * DEFAULT       : 4
  * DESCRIPTION   :
  *  Maximum number of clients Supported in TDLS.
@@ -4437,7 +4640,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * DEFAULT       : FALSE
  * DESCRIPTION   :
  *  Golden Certification MIB don't delete. Enable auto response for
- *  connection without radio
+ *  connection without radio. This MIB will NOT take effect unless the build
+ *  is HUTS or SWAT build
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_AUTO_CONNECTION_TEST_ACTIVATED 0x094F
 
@@ -4454,6 +4658,128 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  frames.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_ROAM_WTC_ACTIVATED 0x0950
+
+/*******************************************************************************
+ * NAME          : UnifiAutoConnectionTestBssid
+ * PSID          : 2385 (0x0951)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 6
+ * MAX           : 6
+ * DEFAULT       : { 0X24, 0X4C, 0X0F, 0X10, 0X22, 0X4D }
+ * DESCRIPTION   :
+ *  Golden Certification MIB don't delete. Select the BSSID for the AP when
+ *  auto response is enabled
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_AUTO_CONNECTION_TEST_BSSID 0x0951
+
+/*******************************************************************************
+ * NAME          : UnifiMscsActivated
+ * PSID          : 2386 (0x0952)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  This MIB activates support for MSCS Procedure
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MSCS_ACTIVATED 0x0952
+
+/*******************************************************************************
+ * NAME          : UnifiApDeauthTransmitLifetime
+ * PSID          : 2387 (0x0953)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 2500
+ * DESCRIPTION   :
+ *  Lifetime of Deauth frame sent from AP in unit of ms.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_AP_DEAUTH_TRANSMIT_LIFETIME 0x0953
+
+/*******************************************************************************
+ * NAME          : UnifiBaRxReductionCpOnly
+ * PSID          : 2388 (0x0954)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Do not update the Rx buffer reduction due to coex internally. Only
+ *  negotiate it with AP. Added for InterOp, ref: SOC-172279.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_BA_RX_REDUCTION_CP_ONLY 0x0954
+
+/*******************************************************************************
+ * NAME          : UnifiQosMapActivated
+ * PSID          : 2389 (0x0955)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  This MIB activates support for DSCP-to-UP mapping using QoS Map
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_QOS_MAP_ACTIVATED 0x0955
+
+/*******************************************************************************
+ * NAME          : UnifiRoamSkipFtEmergencyRoam
+ * PSID          : 2390 (0x0956)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Skip roaming for FT 1x and PSK security in case of emergency roaming when
+ *  we received deauthenitcation/Disassociation frames from the AP.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_SKIP_FT_EMERGENCY_ROAM 0x0956
+
+/*******************************************************************************
+ * NAME          : UnifiQsfsVersion
+ * PSID          : 2391 (0x0957)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  This MIB shall be manually incremented by 1 when and only when there is
+ *  any change to any of the MIB attributes specified in the tables in
+ *  SC-510742-ME.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_QSFS_VERSION 0x0957
+
+/*******************************************************************************
+ * NAME          : UnifiHeActivatedP2pGc
+ * PSID          : 2392 (0x0958)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables HE mode for P2P client.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_HE_ACTIVATED_P2P_GC 0x0958
+
+/*******************************************************************************
+ * NAME          : UnifiHeActivatedP2pGo
+ * PSID          : 2393 (0x0959)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables HE mode for P2P GO. This MIB is controlled by Host.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_HE_ACTIVATED_P2P_GO 0x0959
 
 /*******************************************************************************
  * NAME          : UnifiEnableCoexLowLatency
@@ -4486,6 +4812,190 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_COEX_API_LOOPBACK_TEST 0x0962
 
 /*******************************************************************************
+ * NAME          : UnifiLteEnableLaaCoex
+ * PSID          : 2403 (0x0963)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enables LAA Coex support
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LTE_ENABLE_LAA_COEX 0x0963
+
+/*******************************************************************************
+ * NAME          : UnifiReadWlbtToCpMailbox
+ * PSID          : 2404 (0x0964)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 12
+ * MAX           : 12
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Readback the WLBT->Cellular section of the Mailbox(registers 17-19) FOR
+ *  TEST PURPOSES ONLY
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_READ_WLBT_TO_CP_MAILBOX 0x0964
+
+/*******************************************************************************
+ * NAME          : UniFiLaaOverride
+ * PSID          : 2405 (0x0965)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Control CON_STATUS[5ghz_active] for test purposes
+ *******************************************************************************/
+#define SLSI_PSID_UNI_FI_LAA_OVERRIDE 0x0965
+
+/*******************************************************************************
+ * NAME          : UnifiCoexFleximacBlackoutConfigFlags
+ * PSID          : 2406 (0x0966)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X0003
+ * DESCRIPTION   :
+ *  Configuration flags for fleximac blackout support
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_FLEXIMAC_BLACKOUT_CONFIG_FLAGS 0x0966
+
+/*******************************************************************************
+ * NAME          : UnifiCoexShortPerioidicBlackoutAttachControl
+ * PSID          : 2407 (0x0967)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0X8006
+ * DESCRIPTION   :
+ *  Configures whether short-duration periodic blackouts of specified type
+ *  should be attached to VIFs
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_SHORT_PERIOIDIC_BLACKOUT_ATTACH_CONTROL 0x0967
+
+/*******************************************************************************
+ * NAME          : UnifiCoexModingControlFlags
+ * PSID          : 2408 (0x0968)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X0001
+ * DESCRIPTION   :
+ *  Configuration flags for coex moding
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_MODING_CONTROL_FLAGS 0x0968
+
+/*******************************************************************************
+ * NAME          : UnifiCoexUwbEnable
+ * PSID          : 2410 (0x096A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Force Enable UWB Coex at service start
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_UWB_ENABLE 0x096A
+
+/*******************************************************************************
+ * NAME          : UnifiCoexUwbChannelRange
+ * PSID          : 2411 (0x096B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 4
+ * MAX           : 4
+ * DEFAULT       : {0X00, 0X00, 0X00, 0X00 }
+ * DESCRIPTION   :
+ *  Specifies range of 6GHz channels and 5GHz Channels which must not be used
+ *  for Tx during UWB ranging
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_UWB_CHANNEL_RANGE 0x096B
+
+/*******************************************************************************
+ * NAME          : UnifiCoexUwbPrepareTimeMs
+ * PSID          : 2412 (0x096C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       : 10
+ * DESCRIPTION   :
+ *  The time, in ms, between the UWB_WLAN_IND going high and the start of UWB
+ *  ranging
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_UWB_PREPARE_TIME_MS 0x096C
+
+/*******************************************************************************
+ * NAME          : UnifiCoexUwbMaxGrantDurationMs
+ * PSID          : 2413 (0x096D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       : 30
+ * DESCRIPTION   :
+ *  The maximum time, in ms, that the UWB device will require the medium for,
+ *  after the UWB device gains the medium PREPARE TIME after
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_UWB_MAX_GRANT_DURATION_MS 0x096D
+
+/*******************************************************************************
+ * NAME          : UnifiCoexUwbSimulateUwbWlanInd
+ * PSID          : 2414 (0x096E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Simulate setting a value on UWB_WLAN_IND and calling GPIO interrupt to
+ *  UWB code FOR TEST PURPOSES ONLY
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_UWB_SIMULATE_UWB_WLAN_IND 0x096E
+
+/*******************************************************************************
+ * NAME          : UnifiCoexTxTrafficThresholdPc
+ * PSID          : 2415 (0x096F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 61
+ * DESCRIPTION   :
+ *  Maximum WLAN transmit duty cycle threshold below which the dedicated BLE
+ *  Scan time shall be increased.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_TX_TRAFFIC_THRESHOLD_PC 0x096F
+
+/*******************************************************************************
+ * NAME          : UnifiCoexDebugStats
+ * PSID          : 2416 (0x0970)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Read Coex Debug Stats. Use set to select a debug parameter, then read
+ *  this same key to get the actual parameter. 0 Diet mode: BT activity set
+ *  count. 1 Diet mode: BT arbitration wins. 2 Diet mode: how many BT
+ *  transaction IPCs have been received. 3 Diet mode: BT activity applied
+ *  count. 4 full mode: how many BT transactions have been reported as
+ *  processed by FM. 5 full mode: valid BT activity count. 6 Diet mode: BT
+ *  arbitration draw count. 7 Diet mode: BT arbitration not needed count. 8
+ *  Diet mode: how many times the allowed signals have changed uint32_t
+ *  full_mode_allowed_change_count;
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_COEX_DEBUG_STATS 0x0970
+
+/*******************************************************************************
  * NAME          : UnifiCoexDebugOverrideBt
  * PSID          : 2425 (0x0979)
  * PER INTERFACE?: NO
@@ -4499,15 +5009,29 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_COEX_DEBUG_OVERRIDE_BT 0x0979
 
 /*******************************************************************************
+ * NAME          : UnifiLteNrBand79InformRadioFw
+ * PSID          : 2429 (0x097D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  "Cellular Coex: When WLAN Coex is informed by Cellular that NR band 79 is
+ *  enabled or disabled, inform Radio FW to take any required action.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LTE_NR_BAND79_INFORM_RADIO_FW 0x097D
+
+/*******************************************************************************
  * NAME          : UnifiLteMailbox
  * PSID          : 2430 (0x097E)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 36
- * MAX           : 40
+ * MIN           : 68
+ * MAX           : 68
  * DEFAULT       :
  * DESCRIPTION   :
- *  Set modem status to simulate lte status updates. See SC-505775-SP for API
+ *  Set modem status to simulate lte status updates. See SC-508826-SP for API
  *  description. Defined as array of uint32 represented by the octet string
  *  FOR TEST PURPOSES ONLY
  *******************************************************************************/
@@ -4522,9 +5046,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 65535
  * DEFAULT       :
  * DESCRIPTION   :
- *  Set modem status to simulate lte status updates. See SC-505775-SP for API
- *  description. See unifiLteSignalsBitField for enum bitmap. FOR TEST
- *  PURPOSES ONLY
+ *  Set modem status to simulate lte status updates. See SC-508826-SP for API
+ *  description. See unifiLteSignalsBitField for enum bitmap. Also re-read
+ *  MIBs for channel avoidance. FOR TEST PURPOSES ONLY
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LTE_MWS_SIGNAL 0x097F
 
@@ -4628,10 +5152,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiLteBand40PowerBackoffRsrpAveragingAlpha
  * PSID          : 2439 (0x0987)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : percentage
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 255
  * DEFAULT       : 50
  * DESCRIPTION   :
  *  Weighting applied when calculaing the average RSRP when considering Power
@@ -4833,11 +5357,15 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 0X0001
+ * DEFAULT       : 0X0009
  * DESCRIPTION   :
  *  Bitmap to configure leaky AP behavior bit 0: Set dont send NULL with
- *  CTS2SELF when bad AP is detected bit 1: Force all connected STA VIFs to
- *  behave as if they are connected to a bad AP
+ *  CTS2SELF when bad AP is detected (deprecated) bit 1: Force all connected
+ *  STA VIFs to behave as if they are connected to a BAD AP bit 2: Enable
+ *  Retraining when AP is classified as GOOD bit 3: Enable Good Behavour
+ *  threshold adjustment when throughput is high bit 4: Force all connected
+ *  STA VIFs to behave as if they are connected to a GOOD AP bit 5: Force all
+ *  connected STA VIFs to behave as if they are connected to a LEAKY AP
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LEAKY_AP_CONFIG 0x0996
 
@@ -4875,20 +5403,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_USPBO_RX_AGGREGATE_BUFFER_SIZE 0x0998
 
 /*******************************************************************************
- * NAME          : UnifiMiflessApBitmap
- * PSID          : 2458 (0x099A)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  This is bitmap for checking if AP IDLE is MIFLESS of not BIT 0: Set means
- *  beacon is transmitted with MIF turned off.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MIFLESS_AP_BITMAP 0x099A
-
-/*******************************************************************************
  * NAME          : UnifiAntennaSelectionOption
  * PSID          : 2459 (0x099B)
  * PER INTERFACE?: NO
@@ -4903,7 +5417,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  is used for 2G4 and antenna1 is used for 5G or 6G. If the value is set to
  *  1, antenna1 is used for 2G4 and antenna0 is used for 5G or 6G. If the
  *  value is set to 2, the antenna with the strongest RSSI average will be
- *  preferred over the other antenna. Also see unifiAntennaSelection.
+ *  preferred over the other antenna. Also see unifiAntennaSelection. Please
+ *  refer to SC-509923-DD document for the detail.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_ANTENNA_SELECTION_OPTION 0x099B
 
@@ -4970,6 +5485,33 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MIFLESS_AP_MIN_AWAKE_INTERVAL 0x09A3
 
 /*******************************************************************************
+ * NAME          : UnifiMacUsagePolicy
+ * PSID          : 2468 (0x09A4)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  MAC usage policy table is not HW capability table but the FW selection of
+ *  MAC to use
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MAC_USAGE_POLICY 0x09A4
+
+/*******************************************************************************
+ * NAME          : UnifiMacPrefsOrder
+ * PSID          : 2469 (0x09A5)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 3
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  MAC preference order
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MAC_PREFS_ORDER 0x09A5
+
+/*******************************************************************************
  * NAME          : UnifiBlackoutSimulation
  * PSID          : 2470 (0x09A6)
  * PER INTERFACE?: NO
@@ -4978,10 +5520,18 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 65535
  * DEFAULT       :
  * DESCRIPTION   :
- *  For Test Purposes, create specific blackouts: 0 = Turn off all test
- *  blackouts. 1 = A2DP One shot blackout sent periodically 2 = ESCO Blackout
- *  Needs STA vif, and it must be connected before mib is changed. Clearing
- *  value should stop test.
+ *  For Test Purposes, create specific blackouts for single vif attachment
+ *  Uses unifiBlackoutSimConfigurationType to define BO type and VIF Type
+ *  Currently allows only single BO type to be applied at a time vifs should
+ *  be schedulable before the mib is changed. All combinations are allowed,
+ *  however some will be not sensible (etc attach NDL blackout to a STA) 0 =
+ *  Turn off all test blackouts. For BO Types 0x0001 = A2DP One shot blackout
+ *  sent periodically 0x0002 = ESCO Blackout 0x0004 = NDL availability
+ *  reduction, one periodic 32ms blackout, 50% duty cycle For VIF Types
+ *  0x0400 = STA Vif 0x0800 = AP Vif 0x1000 = NDL Vif 0x2000 = SCAN Vif For
+ *  Announcement Forcing (If neither bits are set CP will decide) 0x4000 =
+ *  Force Puncturing 0x8000 = Force Announcement Clearing the value should
+ *  stop the test.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_BLACKOUT_SIMULATION 0x09A6
 
@@ -4992,7 +5542,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       :
+ * DEFAULT       : 3
  * DESCRIPTION   :
  *  Setting individual bits will make any blackout requests of that type into
  *  TX only blackouts. Only applicable to coex blackouts. 0x00 = Do not force
@@ -5017,6 +5567,22 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_SAE_DWELL_TIME 0x09A8
 
 /*******************************************************************************
+ * NAME          : UnifiAplpControl
+ * PSID          : 2473 (0x09A9)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0X00000009
+ * DESCRIPTION   :
+ *  Control AP Low Power behaviour, controlled as a bit mask. Refer to
+ *  unifiAPLPControlBits for the full set of bit masks. b'0: Enable AP Idle
+ *  mode b'1: Use one antenna when all peers are idle b'2: Enable Mifless v1
+ *  b'3: Suppress Deep Sleep if AP vif exists
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_APLP_CONTROL 0x09A9
+
+/*******************************************************************************
  * NAME          : UnifiUseHostListenInterval
  * PSID          : 2476 (0x09AC)
  * PER INTERFACE?: NO
@@ -5036,7 +5602,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint16
  * MIN           : 0
- * MAX           : 65536
+ * MAX           : 65535
  * DEFAULT       : 0X000E
  * DESCRIPTION   :
  *  Control DynamicITO algorithm with bit flags. 1 defines enabled,with 0
@@ -5097,7 +5663,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMlmestaKeepAliveTimeoutCheck
  * PSID          : 2485 (0x09B5)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 5
@@ -5112,7 +5678,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMlmeapKeepAliveTimeoutCheck
  * PSID          : 2486 (0x09B6)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 5
@@ -5127,7 +5693,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMlmegoKeepAliveTimeoutCheck
  * PSID          : 2487 (0x09B7)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 5
@@ -5167,34 +5733,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_IGMP_OFFLOAD_ACTIVATED 0x09B9
 
 /*******************************************************************************
- * NAME          : UnifiDualStaIdleModeEnabled
- * PSID          : 2490 (0x09BA)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
- * DESCRIPTION   :
- *  Enables Dual STA Idle mode, if dual vif stations are active and both vifs
- *  are idle.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_DUAL_STA_IDLE_MODE_ENABLED 0x09BA
-
-/*******************************************************************************
- * NAME          : UnifiStaIdleModeControl
- * PSID          : 2491 (0x09BB)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       : 0X0000
- * DESCRIPTION   :
- *  Control STA idle mode behaviour within firmware with bit flags. 1 defines
- *  enabled, 0 defines disabled. bit 0: STA idle mode with LCD on
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_STA_IDLE_MODE_CONTROL 0x09BB
-
-/*******************************************************************************
  * NAME          : UnifiGoctWindowDelay
  * PSID          : 2492 (0x09BC)
  * PER INTERFACE?: NO
@@ -5210,20 +5748,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_GOCT_WINDOW_DELAY 0x09BC
 
 /*******************************************************************************
- * NAME          : UnifiStaIdleModeEnabled
- * PSID          : 2493 (0x09BD)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
- * DESCRIPTION   :
- *  Enables STA Idle mode, if single vif station is active and there has been
- *  no activity for a time.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_STA_IDLE_MODE_ENABLED 0x09BD
-
-/*******************************************************************************
  * NAME          : UnifiFastPowerSaveTimeoutAggressive
  * PSID          : 2494 (0x09BE)
  * PER INTERFACE?: NO
@@ -5231,7 +5755,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * UNITS         : microseconds
  * MIN           : 0
  * MAX           : 2147483647
- * DEFAULT       : 20000
+ * DEFAULT       :
  * DESCRIPTION   :
  *  UniFi implements a proprietary power management mode called Fast Power
  *  Save that balances network performance against power consumption. In this
@@ -5246,64 +5770,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_FAST_POWER_SAVE_TIMEOUT_AGGRESSIVE 0x09BE
 
 /*******************************************************************************
- * NAME          : UnifiIdlemodeListenIntervalSkippingDtim
- * PSID          : 2495 (0x09BF)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint32
- * UNITS         : DTIM intervals
- * MIN           : 0
- * MAX           : 4294967295
- * DEFAULT       : 0X00054645
- * DESCRIPTION   :
- *  Listen interval of beacons when in single-vif power saving mode,
- *  receiving DTIMs is enabled and idle mode enabled. No DTIMs are skipped
- *  during MVIF operation. A maximum of the listen interval beacons are
- *  skipped, which may be less than the number of DTIMs that can be skipped.
- *  The value is a lookup table for DTIM counts. Each 4bits, in LSB order,
- *  represent DTIM1, DTIM2, DTIM3, DTIM4, DTIM5, (unused). This key is only
- *  used for STA VIF, connected to an AP. For P2P group client intervals,
- *  refer to unifiIdlemodeP2PListenIntervalSkippingDTIM, PSID=2496.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_IDLEMODE_LISTEN_INTERVAL_SKIPPING_DTIM 0x09BF
-
-/*******************************************************************************
- * NAME          : UnifiIdlemodeP2PListenIntervalSkippingDtim
- * PSID          : 2496 (0x09C0)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint32
- * UNITS         : DTIM intervals
- * MIN           : 0
- * MAX           : 4294967295
- * DEFAULT       : 0X00000002
- * DESCRIPTION   :
- *  Listen interval of beacons when in single-vif, P2P client power saving
- *  mode,receiving DTIMs and idle mode enabled. No DTIMs are skipped during
- *  MVIF operation. A maximum of (listen interval - 1) beacons are skipped,
- *  which may be less than the number of DTIMs that can be skipped. The value
- *  is a lookup table for DTIM counts. Each 4bits, in LSB order, represent
- *  DTIM1, DTIM2, DTIM3, DTIM4, DTIM5, (unused). This key is only used for
- *  P2P group client. For STA connected to an AP, refer to
- *  unifiIdlemodeListenIntervalSkippingDTIM, PSID=2495.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_IDLEMODE_P2_PLISTEN_INTERVAL_SKIPPING_DTIM 0x09C0
-
-/*******************************************************************************
- * NAME          : UnifiApIdleModeEnabled
- * PSID          : 2497 (0x09C1)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       : TRUE
- * DESCRIPTION   :
- *  Enables AP Idle mode if softAP is active, and there has been no activity
- *  for a time if unifiMiflessAPBitmap bit 0 is not set SOFTAP beacons will
- *  be transmitted with MIF turned on when IDLE otherwise beacon will be
- *  transmited in MIFLESS mode
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_AP_IDLE_MODE_ENABLED 0x09C1
-
-/*******************************************************************************
  * NAME          : UnifiFastPowerSaveTimeout
  * PSID          : 2500 (0x09C4)
  * PER INTERFACE?: NO
@@ -5311,7 +5777,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * UNITS         : microseconds
  * MIN           : 0
  * MAX           : 2147483647
- * DEFAULT       : 400000
+ * DEFAULT       : 200000
  * DESCRIPTION   :
  *  Golden Certification MIB don't delete, change PSID or name: UniFi
  *  implements a proprietary power management mode called Fast Power Save
@@ -5539,7 +6005,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * UNITS         : microseconds
  * MIN           : 0
  * MAX           : 2147483647
- * DEFAULT       : 20000
+ * DEFAULT       : 15000
  * DESCRIPTION   :
  *  When UniFi enters power save mode it signals the new state by setting the
  *  power management bit in the frame control field of a NULL frame. It then
@@ -5586,7 +6052,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * UNITS         : microseconds
  * MIN           : 0
  * MAX           : 2147483647
- * DEFAULT       : 10000
+ * DEFAULT       : 5000
  * DESCRIPTION   :
  *  When UniFi enters power save mode it signals the new state by setting the
  *  power management bit in the frame control field of a NULL frame. It then
@@ -5608,9 +6074,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiStationQosInfo
  * PSID          : 2517 (0x09D5)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 255
  * DEFAULT       :
  * DESCRIPTION   :
  *  QoS capability for a non-AP Station, and is encoded as per IEEE 802.11
@@ -5773,17 +6239,30 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_ROAM_SEND_INIT_FRAME_TO_GET_NEIGHBORS 0x09DD
 
 /*******************************************************************************
- * NAME          : UnifiIdleModeLiteEnabled
- * PSID          : 2526 (0x09DE)
+ * NAME          : UnifiPowerManagementDelayTimeoutLeaky
+ * PSID          : 2528 (0x09E0)
  * PER INTERFACE?: NO
- * TYPE          : SlsiBool
+ * TYPE          : SlsiUint32
+ * UNITS         : microseconds
  * MIN           : 0
- * MAX           : 1
- * DEFAULT       : FALSE
+ * MAX           : 2147483647
+ * DEFAULT       : 5000
  * DESCRIPTION   :
- *  DEPRECATED
+ *  When UniFi enters power save mode it signals the new state by setting the
+ *  power management bit in the frame control field of a NULL frame. It then
+ *  remains active for the period since the previous unicast reception, or
+ *  since the transmission of the NULL frame, whichever is later. This entry
+ *  controls the maximum time during which UniFi will continue to listen for
+ *  data. This allows any buffered data on a remote device to be cleared.
+ *  Specifies an upper limit on the timeout. UniFi internally implements a
+ *  proprietary algorithm to adapt the timeout depending upon the
+ *  situation.This is used by firmware when current station VIF is only
+ *  station VIF which can be scheduled, but this case is specifically for a
+ *  STA when its connected AP has been detected as being a Leaky AP. In that
+ *  case this value will be used instead of the usual
+ *  unifiPowerManagementDelayTimeout
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_IDLE_MODE_LITE_ENABLED 0x09DE
+#define SLSI_PSID_UNIFI_POWER_MANAGEMENT_DELAY_TIMEOUT_LEAKY 0x09E0
 
 /*******************************************************************************
  * NAME          : UnifiDtimWaitTimeout
@@ -5877,7 +6356,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiProbeResponseMaxRetry
  * PSID          : 2534 (0x09E6)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 255
  * DEFAULT       : 5
@@ -5968,7 +6447,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint8
  * MIN           : 12
  * MAX           : 12
- * DEFAULT       : { 0XB1, 0X7A, 0X91, 0X03, 0XFA, 0XFF, 0X00, 0X00, 0XFA, 0XFF, 0X00, 0X00 }
+ * DEFAULT       : { 0XB1, 0XF2, 0X91, 0X03, 0XFA, 0XFF, 0X00, 0X00, 0XFA, 0XFF, 0X00, 0X00 }
  * DESCRIPTION   :
  *  Golden Certification MIB don't delete, change PSID or name. VHT
  *  capabilities of the chip. see SC-503520-SP.
@@ -5995,10 +6474,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiVifLongIntervalTime
  * PSID          : 2542 (0x09EE)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint32
  * UNITS         : TU
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 4294967295
  * DEFAULT       : 60
  * DESCRIPTION   :
  *  When the scheduler expects a VIF to schedule for time longer than this
@@ -6060,25 +6539,12 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * UNITS         : TU
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       :
+ * DEFAULT       : 100
  * DESCRIPTION   :
  *  For schedules with fixed duration e.g. scan, unsync VIF, the schedule
  *  will be forced after this time to avoid VIF starving
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_FORCE_FIXED_DURATION_SCHEDULE 0x09F2
-
-/*******************************************************************************
- * NAME          : UnifiRameUpdateMibs
- * PSID          : 2547 (0x09F3)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RAME_UPDATE_MIBS 0x09F3
 
 /*******************************************************************************
  * NAME          : UnifiGoScanAbsenceDuration
@@ -6114,12 +6580,14 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMaxClient
  * PSID          : 2550 (0x09F6)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 10
  * DEFAULT       : 10
  * DESCRIPTION   :
- *  Restricts the maximum number of associated STAs for SoftAP.
+ *  Restricts the maximum number of associated STAs for SoftAP. In case of
+ *  SoftAP + SoftAP it restricts combined number of peers for all SoftAPs
+ *  together.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_MAX_CLIENT 0x09F6
 
@@ -6152,6 +6620,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  absent for scanning purposes.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_SUPPRESS_SCAN_GO_NOA_ANNOUNCE 0x09F8
+
+/*******************************************************************************
+ * NAME          : UnifiMaxP2PClient
+ * PSID          : 2553 (0x09F9)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 10
+ * DEFAULT       : 8
+ * DESCRIPTION   :
+ *  Restricts the maximum number of associated STAs for P2P GO.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MAX_P2_PCLIENT 0x09F9
 
 /*******************************************************************************
  * NAME          : UnifiTdlsInP2pActivated
@@ -6210,19 +6691,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_TDLS_RSSI_THRESHOLD 0x0A00
 
 /*******************************************************************************
- * NAME          : UnifiTdlsMaximumRetry
- * PSID          : 2561 (0x0A01)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TDLS_MAXIMUM_RETRY 0x0A01
-
-/*******************************************************************************
  * NAME          : UnifiTdlsTpMonitorSecs
  * PSID          : 2562 (0x0A02)
  * PER INTERFACE?: NO
@@ -6235,32 +6703,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  over a TDLS link.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_TDLS_TP_MONITOR_SECS 0x0A02
-
-/*******************************************************************************
- * NAME          : UnifiTdlsBasicHtMcsSet
- * PSID          : 2563 (0x0A03)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TDLS_BASIC_HT_MCS_SET 0x0A03
-
-/*******************************************************************************
- * NAME          : UnifiTdlsBasicVhtMcsSet
- * PSID          : 2564 (0x0A04)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TDLS_BASIC_VHT_MCS_SET 0x0A04
 
 /*******************************************************************************
  * NAME          : Dot11TdlsDiscoveryRequestWindow
@@ -6305,19 +6747,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_DOT11_TDLS_CHANNEL_SWITCH_ACTIVATED 0x0A07
 
 /*******************************************************************************
- * NAME          : UnifiTdlsDesignForTestMode
- * PSID          : 2568 (0x0A08)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint32
- * MIN           : 0
- * MAX           : 4294967295
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TDLS_DESIGN_FOR_TEST_MODE 0x0A08
-
-/*******************************************************************************
  * NAME          : UnifiTdlsWiderBandwidthProhibited
  * PSID          : 2569 (0x0A09)
  * PER INTERFACE?: NO
@@ -6329,6 +6758,35 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Wider bandwidth prohibited flag.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_TDLS_WIDER_BANDWIDTH_PROHIBITED 0x0A09
+
+/*******************************************************************************
+ * NAME          : UnifiStaAndLinkThresholdForReten
+ * PSID          : 2570 (0x0A0A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 20
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Threshold number of stations or link data allocated from retention
+ *  memory. Setting it to zero disables allocation to these elements from
+ *  non-retention memory. The MIB is cached at init time and will not have
+ *  any run-time effects.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_STA_AND_LINK_THRESHOLD_FOR_RETEN 0x0A0A
+
+/*******************************************************************************
+ * NAME          : UnifiTdlsAvailable
+ * PSID          : 2571 (0x0A0B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Get FW status of TDLS state.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TDLS_AVAILABLE 0x0A0B
 
 /*******************************************************************************
  * NAME          : UnifiTdlsKeyLifeTimeInterval
@@ -6375,37 +6833,24 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 8
- * MAX           : 8
- * DEFAULT       : { 0XFF, 0XDF, 0XFF, 0XFF, 0X7F, 0X00, 0X00, 0X00 }
+ * MAX           : 13
+ * DEFAULT       : { 0XFF, 0XDF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF, 0X07 }
  * DESCRIPTION   :
  *  Default host allowed channels during Wifi Sharing. Defined in a uint64
  *  represented by the octet string. First byte of the octet string maps to
- *  LSB. Bits 0-13 representing 2.4G channels. Mapping defined in
- *  ChannelisationRules.
+ *  LSB. Bits 0-13 representing 2.4G channels. Bits 14-38 represent 5G
+ *  channels. Bit 39 is set to 1 if 6GHz band is supported. Bits 40-97
+ *  represent 6G channels. Include 6GHz channels as well. If 6GHz is not
+ *  supported, FW will restrict to 2.4G and 5G channels only. Mapping defined
+ *  in ChannelisationRules.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_WI_FI_SHARING_CHANNELS 0x0A15
-
-/*******************************************************************************
- * NAME          : UnifiWiFiSharing5GHzChannel
- * PSID          : 2582 (0x0A16)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 8
- * MAX           : 8
- * DEFAULT       : { 0X00, 0XC0, 0XFF, 0XFF, 0X7F, 0X00, 0X00, 0X00 }
- * DESCRIPTION   :
- *  Deprecated. Applicable 5GHz Primary Channels mask. Defined in a uint64
- *  represented by the octet string. First byte of the octet string maps to
- *  LSB. Bits 0-13 representing 2.4G channels are always set to 0. Mapping
- *  defined in ChannelisationRules; i.e. Bit 14 maps to channel 36.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_WI_FI_SHARING5_GHZ_CHANNEL 0x0A16
 
 /*******************************************************************************
  * NAME          : UnifiWifiSharingChannelSwitchCount
  * PSID          : 2583 (0x0A17)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 3
  * MAX           : 10
  * DEFAULT       : 10
@@ -6430,33 +6875,33 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_CHANNEL_ANNOUNCEMENT_COUNT 0x0A18
 
 /*******************************************************************************
- * NAME          : UnifiRaTestStoredSa
+ * NAME          : deprecated_unifiRaTestStoredSa
  * PSID          : 2585 (0x0A19)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 0X00000000
+ * DEFAULT       :
  * DESCRIPTION   :
- *  Test only: Source address of router contained in virtural router
- *  advertisement packet, specified in chapter '6.2 Forward Received RA frame
- *  to Host' in SC-506393-TE
+ *  Deprecated. Test only: Source address of router contained in virtural
+ *  router advertisement packet, specified in chapter '6.2 Forward Received
+ *  RA frame to Host' in SC-506393-TE
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_RA_TEST_STORED_SA 0x0A19
+#define SLSI_PSID_DEPRECATED_UNIFI_RA_TEST_STORED_SA 0x0A19
 
 /*******************************************************************************
- * NAME          : UnifiRaTestStoreFrame
+ * NAME          : deprecated_unifiRaTestStoreFrame
  * PSID          : 2586 (0x0A1A)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 0X00000000
+ * DEFAULT       :
  * DESCRIPTION   :
- *  Test only: Virtual router advertisement packet. Specified in chapter '6.2
- *  Forward Received RA frame to Host' in SC-506393-TE
+ *  Deprecated. Test only: Virtual router advertisement packet. Specified in
+ *  chapter '6.2 Forward Received RA frame to Host' in SC-506393-TE
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_RA_TEST_STORE_FRAME 0x0A1A
+#define SLSI_PSID_DEPRECATED_UNIFI_RA_TEST_STORE_FRAME 0x0A1A
 
 /*******************************************************************************
  * NAME          : Dot11TdlsPeerUapsdBufferStaActivated
@@ -6537,6 +6982,21 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Activate waiting for a slow AP.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_STA_CHANNEL_SWITCH_SLOW_AP_ACTIVATED 0x0A29
+
+/*******************************************************************************
+ * NAME          : UnifiMlmestaPktLifetime
+ * PSID          : 2602 (0x0A2A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 10
+ * DEFAULT       : 5
+ * DESCRIPTION   :
+ *  MLME STA packet lifetime in seconds. Maximum time in seconds for a frame
+ *  to be queued before sent out. This value is read only once when an
+ *  interface is added. Used along with MlmeSendFrameRequest.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MLMESTA_PKT_LIFETIME 0x0A2A
 
 /*******************************************************************************
  * NAME          : UnifiStaChannelSwitchSlowApMaxTime
@@ -6625,7 +7085,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : FALSE
+ * DEFAULT       : TRUE
  * DESCRIPTION   :
  *  Golden Certification MIB don't delete, change PSID or name: Do not update
  *  STS in VHT caps based on Peer's sounding dimensions.
@@ -6675,13 +7135,124 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_HE40IN5_GRALINK_OVERRIDE_ENABLE 0x0A3C
 
 /*******************************************************************************
+ * NAME          : UnifiScanMaxOnChipCacheCount
+ * PSID          : 2621 (0x0A3D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 32
+ * DEFAULT       : 8
+ * DESCRIPTION   :
+ *  Maximum count the Scan will maintain the scan result in on-chip cache.
+ *  Zero to disable the caching.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SCAN_MAX_ON_CHIP_CACHE_COUNT 0x0A3D
+
+/*******************************************************************************
+ * NAME          : UnifiSchdlpmActivated
+ * PSID          : 2622 (0x0A3E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enable scheduled PM feature
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SCHDLPM_ACTIVATED 0x0A3E
+
+/*******************************************************************************
+ * NAME          : UnifiRoamQuickDisconnectionActivated
+ * PSID          : 2630 (0x0A46)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  The FW disconnects the current connection with beacon loss when RSSI is
+ *  weak and there are no roaming candidates.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_QUICK_DISCONNECTION_ACTIVATED 0x0A46
+
+/*******************************************************************************
+ * NAME          : UnifiRoamQuickDisconnectionTargetRssi
+ * PSID          : 2631 (0x0A47)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt8
+ * UNITS         : dBm
+ * MIN           : -128
+ * MAX           : 127
+ * DEFAULT       : -83
+ * DESCRIPTION   :
+ *  RSSI threshold under which connected AP is not deemed eligible for resume
+ *  connection.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_QUICK_DISCONNECTION_TARGET_RSSI 0x0A47
+
+/*******************************************************************************
+ * NAME          : UnifiRoamingResumeActivated
+ * PSID          : 2632 (0x0A48)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enabled the roaming resume feature by default. It used to roam back to
+ *  current AP if assocition is failed with candidate AP..
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAMING_RESUME_ACTIVATED 0x0A48
+
+/*******************************************************************************
+ * NAME          : UnifiRoamSkipFullScanOnEmergencyTrigger
+ * PSID          : 2633 (0x0A49)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Skip full scan in case of Emergency Trigger type roaming when DUT
+ *  received deauthenitcation/Disassociation frames from the AP.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_SKIP_FULL_SCAN_ON_EMERGENCY_TRIGGER 0x0A49
+
+/*******************************************************************************
+ * NAME          : UnifiRoamEtpMloBoost
+ * PSID          : 2634 (0x0A4A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt16
+ * MIN           : -20
+ * MAX           : 20
+ * DEFAULT       : 10
+ * DESCRIPTION   :
+ *  Weight of MLO throughput preference in AP selection algorithm.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_ETP_MLO_BOOST 0x0A4A
+
+/*******************************************************************************
+ * NAME          : UnifiBtmEssDisassociationImminentActivated
+ * PSID          : 2635 (0x0A4B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  If false, the FW does not process the ESS disassociation bit present in
+ *  the BTM request request mode field.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_BTM_ESS_DISASSOCIATION_IMMINENT_ACTIVATED 0x0A4B
+
+/*******************************************************************************
  * NAME          : UnifiBtmDisassociationScanDelay
  * PSID          : 2639 (0x0A4F)
  * PER INTERFACE?: NO
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : TRUE
+ * DEFAULT       : FALSE
  * DESCRIPTION   :
  *  Delay roaming scan to the expiration of Dissassociation Timer when
  *  disassociation is imminent.
@@ -6692,7 +7263,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamBtmQueryTimeout
  * PSID          : 2640 (0x0A50)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : second
  * MIN           : 0
  * MAX           : 10
@@ -6706,7 +7277,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRoamBsscuTriggerFrequency
  * PSID          : 2641 (0x0A51)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 10
@@ -6717,12 +7288,26 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_ROAM_BSSCU_TRIGGER_FREQUENCY 0x0A51
 
 /*******************************************************************************
+ * NAME          : UnifiSecuritySkipAllZeroesCheck
+ * PSID          : 2642 (0x0A52)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  validate the installation of all keys zero in 4-way handshake. Disable
+ *  the MIB while performing vulnerability certification.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SECURITY_SKIP_ALL_ZEROES_CHECK 0x0A52
+
+/*******************************************************************************
  * NAME          : UnifiRoamRssiFactorFixedMultiplier
  * PSID          : 2643 (0x0A53)
  * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
- * MIN           : -32768
- * MAX           : 32767
+ * TYPE          : SlsiInt8
+ * MIN           : -128
+ * MAX           : 127
  * DEFAULT       :
  * DESCRIPTION   :
  *  Table allocating fixed multiplier used to calculate the RSSIfactorScore
@@ -6743,6 +7328,77 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  NCHO: Specifies the maximum time spent passive scanning a channel.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_ROAM_NCHO_SCAN_MAX_PASSIVE_CHANNEL_TIME 0x0A54
+
+/*******************************************************************************
+ * NAME          : UnifiRoamTargetRssiBtm
+ * PSID          : 2645 (0x0A55)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt16
+ * UNITS         : dBm
+ * MIN           : -128
+ * MAX           : 127
+ * DEFAULT       : -83
+ * DESCRIPTION   :
+ *  Threshold for evaluating BTM roaming target when
+ *  unifiRoamBtmDisregardSelectionFactor is set.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_TARGET_RSSI_BTM 0x0A55
+
+/*******************************************************************************
+ * NAME          : UnifiRoamETputBoost
+ * PSID          : 2646 (0x0A56)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt16
+ * UNITS         : percentage
+ * MIN           : 0
+ * MAX           : 100
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  The value in percentage of the ETput boost for each band
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_ETPUT_BOOST 0x0A56
+
+/*******************************************************************************
+ * NAME          : UnifiRoamBtCoexActivated
+ * PSID          : 2647 (0x0A57)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  If false, the FW shall ignore BT connected indication and do not trigger
+ *  roaming by BT coex.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BT_COEX_ACTIVATED 0x0A57
+
+/*******************************************************************************
+ * NAME          : UnifiRoamBtCoexTargetRssi
+ * PSID          : 2648 (0x0A58)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt16
+ * UNITS         : dBm
+ * MIN           : -128
+ * MAX           : 127
+ * DEFAULT       : -75
+ * DESCRIPTION   :
+ *  Threshold for evaluating BT Coex roaming candidate.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BT_COEX_TARGET_RSSI 0x0A58
+
+/*******************************************************************************
+ * NAME          : UnifiRoamBtCoexApSelectDeltaFactor
+ * PSID          : 2649 (0x0A59)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 100
+ * DEFAULT       : 10
+ * DESCRIPTION   :
+ *  Delta value applied to the score of the currently connected AP to
+ *  determine candidates' eligibility threshold for BT Coex roaming.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BT_COEX_AP_SELECT_DELTA_FACTOR 0x0A59
 
 /*******************************************************************************
  * NAME          : UnifiApfActivated
@@ -6788,10 +7444,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiApfActiveModeEnabled
  * PSID          : 2653 (0x0A5D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiBool
  * MIN           : 0
- * MAX           : 65535
- * DEFAULT       : 1
+ * MAX           : 1
+ * DEFAULT       : TRUE
  * DESCRIPTION   :
  *  Indicates if APF is supported in host active mode. Applicable to only
  *  group addressed frames.
@@ -6805,7 +7461,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 1024
+ * DEFAULT       : 3000
  * DESCRIPTION   :
  *  Timeout, in TU, to wait to retry a frame after after TX Cfm
  *  trasnmission_status == Successful.
@@ -6813,10 +7469,52 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_FRAME_RESPONSE_NDM_TIMEOUT 0x0A5E
 
 /*******************************************************************************
+ * NAME          : UnifiRoamBtCoexScoreWeight
+ * PSID          : 2655 (0x0A5F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 100
+ * DEFAULT       : 70
+ * DESCRIPTION   :
+ *  Score weight of BT Coex factor to only applied 2.4G AP if BT is
+ *  connected, in percentage points.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BT_COEX_SCORE_WEIGHT 0x0A5F
+
+/*******************************************************************************
+ * NAME          : UnifiRoamBtCoexEtputWeight
+ * PSID          : 2656 (0x0A60)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 100
+ * DEFAULT       : 70
+ * DESCRIPTION   :
+ *  ETPUT weight of BT Coex factor to only applied 2.4G AP if BT is
+ *  connected, in percentage points.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BT_COEX_ETPUT_WEIGHT 0x0A60
+
+/*******************************************************************************
+ * NAME          : UnifiRoamBtCoexThresholdTime
+ * PSID          : 2657 (0x0A61)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 60
+ * DEFAULT       : 10
+ * DESCRIPTION   :
+ *  If BT coex threshold time does not end, additional BT coex roaming
+ *  trigger condition must be ignored.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_ROAM_BT_COEX_THRESHOLD_TIME 0x0A61
+
+/*******************************************************************************
  * NAME          : UnifiSmPowerSaveMode
  * PSID          : 2670 (0x0A6E)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 3
  * DEFAULT       : 3
@@ -6845,8 +7543,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 28
- * MAX           : 28
- * DEFAULT       : { 0X03, 0X08, 0X88, 0X02, 0X00, 0X00, 0X26, 0X70, 0X42, 0X09, 0X0D, 0X01, 0XA4, 0X0A, 0X00, 0XBD, 0X00, 0XFA, 0XFF, 0XFA, 0XFF, 0X79, 0X1C, 0XC7, 0X71, 0X1C, 0XC7, 0X71 }
+ * MAX           : 32
+ * DEFAULT       : { 0X03, 0X08, 0X88, 0X02, 0X00, 0X00, 0X26, 0X70, 0X42, 0X09, 0XFD, 0X00, 0XAF, 0X0A, 0X00, 0XBD, 0X00, 0XFA, 0XFF, 0XFA, 0XFF, 0X79, 0X1C, 0XC7, 0X71, 0X1C, 0XC7, 0X71 }
  * DESCRIPTION   :
  *  HE capabilities of chip. This includes HE MAC capabilities information,
  *  HE PHY capabilities information, Supported HE-MCS and NSS set, PPE
@@ -6971,7 +7669,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiOverrideMuedcaParamAcEnable
  * PSID          : 2710 (0x0A96)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 31
  * DEFAULT       : 1
@@ -7217,6 +7915,52 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_OFDMA_SOFT_AP_TX_TRIGGER_PARAMS 0x0AA6
 
 /*******************************************************************************
+ * NAME          : UnifiPsrAndNonSrgObssPdProhibited
+ * PSID          : 2727 (0x0AA7)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  PSR_AND_NON_SRG_OBSS_PD_PROHIBITED value.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PSR_AND_NON_SRG_OBSS_PD_PROHIBITED 0x0AA7
+
+/*******************************************************************************
+ * NAME          : UnifiSpatialReuseConfig
+ * PSID          : 2728 (0x0AA8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 21
+ * MAX           : 21
+ * DEFAULT       : {0X03, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00}
+ * DESCRIPTION   :
+ *  Spatial Reuse Config to enable/disable Spatial Reuse support and also to
+ *  override Spatial Reuse parameters. octet 0 - Bit 0 - 1 to enable spatial
+ *  reuse 0 to disable spatial reuse Bit 1 - 1 to Override Spatial Reuse
+ *  Paramset octet 1 - SR Control octet 2 - Non-SRG OBSS PD Max Offset octet
+ *  3 - SRG OBSS PD Min Offset field octet 4 - SRG OBSS PD Max Offset field
+ *  octet 5 to 12 - SRG BSS Color Bitmap field octet 13 - 20 SRG Partial
+ *  BSSID Bitmap field
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SPATIAL_REUSE_CONFIG 0x0AA8
+
+/*******************************************************************************
+ * NAME          : UnifiReadSrReg
+ * PSID          : 2729 (0x0AA9)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Read value from a register for a specifi Spatial Reuse counter and return
+ *  it or reset the counters
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_READ_SR_REG 0x0AA9
+
+/*******************************************************************************
  * NAME          : UnifiTwtActivated
  * PSID          : 2731 (0x0AAB)
  * PER INTERFACE?: NO
@@ -7236,11 +7980,12 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 255
- * DEFAULT       :
+ * DEFAULT       : 36
  * DESCRIPTION   :
  *  Control flags for TWT Input: BIT0 : Broadcast TWT Support BIT1 :
- *  Responder TWT Support BIT2 : Enable TWT Service period skip if LCD OFF
- *  BIT3 : Enable aggressive TWT Service period powerdown
+ *  Responder TWT Support BIT2 : Requester TWT Support BIT3 : Flexible TWT
+ *  Support BIT4 : Enable TWT Service period skip if LCD OFF BIT5 : Enable
+ *  aggressive TWT Service period powerdown
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_TWT_CONTROL_FLAGS 0x0AAC
 
@@ -7370,7 +8115,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiTwtOperation
  * PSID          : 2741 (0x0AB5)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 2
  * DEFAULT       :
@@ -7416,12 +8161,28 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_TWT_BCAST_SESS_PARAM 0x0AB7
 
 /*******************************************************************************
+ * NAME          : UnifiTwtspStartBackoff
+ * PSID          : 2744 (0x0AB8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 4000
+ * DESCRIPTION   :
+ *  Time unit is in microseconds. Indicates the amount of time by which the
+ *  TWT blackout duration is reduced. This is to account for the radio on,
+ *  vif schedule and data path resume latencies. Default value is 4000usec.
+ *  If this MIB is set to 6000usec then TWT SP starts 2msec earlier and so on
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWTSP_START_BACKOFF 0x0AB8
+
+/*******************************************************************************
  * NAME          : UnifiHeCapabilitiesSoftAp
  * PSID          : 2745 (0x0AB9)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 28
- * MAX           : 28
+ * MAX           : 32
  * DEFAULT       : { 0X01, 0X08, 0X00, 0X02, 0X00, 0X00, 0X26, 0X70, 0X02, 0X00, 0X00, 0X00, 0X80, 0X0A, 0X00, 0X8D, 0X00, 0XFA, 0XFF, 0XFA, 0XFF, 0X79, 0X1C, 0XC7, 0X71, 0X1C, 0XC7, 0X71 }
  * DESCRIPTION   :
  *  HE capabilities of chip supported in softap mode. This includes HE MAC
@@ -7452,7 +8213,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 1
  * DEFAULT       : FALSE
  * DESCRIPTION   :
- *  Enables HE mode for P2P.
+ *  Deprecated
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_HE_ACTIVATED_P2P 0x0ABB
 
@@ -7463,7 +8224,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : TRUE
+ * DEFAULT       : FALSE
  * DESCRIPTION   :
  *  Enables Dynamic Duration Based RTS Threshold.
  *******************************************************************************/
@@ -7489,6 +8250,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_SOFT_AP_MUEDCA_PARAM_AC 0x0ABD
 
 /*******************************************************************************
+ * NAME          : UnifiHePuncturedPreambleRx
+ * PSID          : 2750 (0x0ABE)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enable/Disable HE Punctured preamble rx
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_HE_PUNCTURED_PREAMBLE_RX 0x0ABE
+
+/*******************************************************************************
  * NAME          : Unifi6GhzEnabled
  * PSID          : 2751 (0x0ABF)
  * PER INTERFACE?: NO
@@ -7505,7 +8279,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Unifi6GrnrMaxCacheCount
  * PSID          : 2752 (0x0AC0)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 15
  * DEFAULT       : 10
@@ -7518,10 +8292,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Unifi6GScanAccTimeoutDur
  * PSID          : 2753 (0x0AC1)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 40
- * DEFAULT       : 20
+ * MAX           : 80
+ * DEFAULT       : 30
  * DESCRIPTION   :
  *  Scan Accelerator Timeout duration in TUs
  *******************************************************************************/
@@ -7531,10 +8305,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : Unifi6GPrescanConcurrentMacs
  * PSID          : 2754 (0x0AC2)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 2
- * DEFAULT       : 1
+ * DEFAULT       : 2
  * DESCRIPTION   :
  *  Indicates number of concurrent macs to be used for scan accelerator
  *******************************************************************************/
@@ -7552,6 +8326,310 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Enables prescan of 6 GHz channels using scan accelerator.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI6_GENABLE_PRESCAN 0x0AC3
+
+/*******************************************************************************
+ * NAME          : UnifiHe6GHzBandCapabilities
+ * PSID          : 2756 (0x0AC4)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 2
+ * MAX           : 2
+ * DEFAULT       : { 0X7D, 0X06 }
+ * DESCRIPTION   :
+ *  HE 6 GHz band capabilities of chip.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_HE6_GHZ_BAND_CAPABILITIES 0x0AC4
+
+/*******************************************************************************
+ * NAME          : Unifi6GScanPolicy
+ * PSID          : 2757 (0x0AC5)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 3
+ * DEFAULT       : 3
+ * DESCRIPTION   :
+ *  0: Auto which scan all channels given to scan fsm regardless whether RNRs
+ *  are found 1: PSC only channels 2: NON_PSC only channels (scans all
+ *  non-psc regardless whether RNRs are found) 3: PSC + NON_PSC_RNR_ONLY
+ *  (scans all PSC and only non-PSC on which RNRs are found)
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI6_GSCAN_POLICY 0x0AC5
+
+/*******************************************************************************
+ * NAME          : Unifi6GEnableRoamingSplitScan
+ * PSID          : 2758 (0x0AC6)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enables 6GHz roaming split scan.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI6_GENABLE_ROAMING_SPLIT_SCAN 0x0AC6
+
+/*******************************************************************************
+ * NAME          : Unifi6GSafeMode
+ * PSID          : 2759 (0x0AC7)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables 6GHz Safe mode which'll have OPEN security.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI6_GSAFE_MODE 0x0AC7
+
+/*******************************************************************************
+ * NAME          : Unifi6GDisableUnsoliProbeNonIdle
+ * PSID          : 2760 (0x0AC8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  in 6G MHS, Disable Unsolicited Probe response transmission once peer
+ *  associate.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI6_GDISABLE_UNSOLI_PROBE_NON_IDLE 0x0AC8
+
+/*******************************************************************************
+ * NAME          : Unifi6GSoftApDisableFullWindowPipeline
+ * PSID          : 2761 (0x0AC9)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  in 6G MHS, Disable full window pipeline, half window pipeline giving good
+ *  throughput.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI6_GSOFT_AP_DISABLE_FULL_WINDOW_PIPELINE 0x0AC9
+
+/*******************************************************************************
+ * NAME          : Unifi6GDualClientCert
+ * PSID          : 2762 (0x0ACA)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enables 6GHz standard power.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI6_GDUAL_CLIENT_CERT 0x0ACA
+
+/*******************************************************************************
+ * NAME          : UnifiOceEnabled
+ * PSID          : 2771 (0x0AD3)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables OCE operations.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_OCE_ENABLED 0x0AD3
+
+/*******************************************************************************
+ * NAME          : Dot11FilsProbeDelayTime
+ * PSID          : 2772 (0x0AD4)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 15
+ * MAX           : 20
+ * DEFAULT       : 15
+ * DESCRIPTION   :
+ *  OCE probe deferral delay time
+ *******************************************************************************/
+#define SLSI_PSID_DOT11_FILS_PROBE_DELAY_TIME 0x0AD4
+
+/*******************************************************************************
+ * NAME          : UnifiOceFilsCertSupport
+ * PSID          : 2773 (0x0AD5)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Includes Filsdiscovery BSSID's in supression attribute in probe request.
+ *  Enabled only for certification as FD frames does not carry complete
+ *  information for connection and sending directed probe request for each FD
+ *  frame will increase scan time. Based on this flag skip exiting probe
+ *  deferal based on bss load ie in beacon or probe response
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_OCE_FILS_CERT_SUPPORT 0x0AD5
+
+/*******************************************************************************
+ * NAME          : UnifiOceUseRnrForDiscovery
+ * PSID          : 2774 (0x0AD6)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables RNR data base for OCE discovery.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_OCE_USE_RNR_FOR_DISCOVERY 0x0AD6
+
+/*******************************************************************************
+ * NAME          : UnifiOceProbeDeferralEnabled
+ * PSID          : 2775 (0x0AD7)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enables OCE probe deferral mechanism
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_OCE_PROBE_DEFERRAL_ENABLED 0x0AD7
+
+/*******************************************************************************
+ * NAME          : UnifiSpatialReusePerobssConfig
+ * PSID          : 2776 (0x0AD8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 51
+ * DEFAULT       : {0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, }
+ * DESCRIPTION   :
+ *  Spatial Reuse Config to enable/disable Spatial Reuse support for per also
+ *  to override Spatial Reuse parameters. octet 0 - 1 to enable spatial reuse
+ *  0 to disable spatial reuse octet 1 to 6 - MAC Address octet 7 - OBSS-PD
+ *  Offset
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SPATIAL_REUSE_PEROBSS_CONFIG 0x0AD8
+
+/*******************************************************************************
+ * NAME          : UnifiSpatialReuseObssStatistics
+ * PSID          : 2777 (0x0AD9)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 421
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Get or clear OBSS statistics also to override Spatial Reuse parameters.
+ *  octet 0 - Set zero to clear statistics.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SPATIAL_REUSE_OBSS_STATISTICS 0x0AD9
+
+/*******************************************************************************
+ * NAME          : UnifiTwtAvgTxPktNum
+ * PSID          : 2781 (0x0ADD)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It provides average num of tx frames for a particular session id.
+ *  (indexed by unifiTWTSessTableIndex).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWT_AVG_TX_PKT_NUM 0x0ADD
+
+/*******************************************************************************
+ * NAME          : UnifiTwtAvgRxPktNum
+ * PSID          : 2782 (0x0ADE)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It provides average num of rx frames for a particular session id.
+ *  (indexed by unifiTWTSessTableIndex).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWT_AVG_RX_PKT_NUM 0x0ADE
+
+/*******************************************************************************
+ * NAME          : UnifiTwtAvgTxPktSize
+ * PSID          : 2783 (0x0ADF)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It provides average packet size(bytes) for a particular session id.
+ *  (indexed by unifiTWTSessTableIndex).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWT_AVG_TX_PKT_SIZE 0x0ADF
+
+/*******************************************************************************
+ * NAME          : UnifiTwtAvgRxPktSize
+ * PSID          : 2784 (0x0AE0)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It provides average packet size(bytes) for a particular session id.
+ *  (indexed by unifiTWTSessTableIndex).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWT_AVG_RX_PKT_SIZE 0x0AE0
+
+/*******************************************************************************
+ * NAME          : UnifiTwtAvgEarlySpTerm
+ * PSID          : 2785 (0x0AE1)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It provides average SP early termination on particular session id.
+ *  (indexed by unifiTWTSessTableIndex).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWT_AVG_EARLY_SP_TERM 0x0AE1
+
+/*******************************************************************************
+ * NAME          : UnifiTwtClearStats
+ * PSID          : 2786 (0x0AE2)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 7
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Clear TWT stats of all or particular session id
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TWT_CLEAR_STATS 0x0AE2
+
+/*******************************************************************************
+ * NAME          : Unifi5GEnablePrescan
+ * PSID          : 2791 (0x0AE7)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables prescan of 5 GHz channels using scan accelerator.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI5_GENABLE_PRESCAN 0x0AE7
+
+/*******************************************************************************
+ * NAME          : Unifi5GScanAccTimeoutDur
+ * PSID          : 2792 (0x0AE8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 220
+ * DEFAULT       : 140
+ * DESCRIPTION   :
+ *  Scan Accelerator Timeout duration in TUs
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI5_GSCAN_ACC_TIMEOUT_DUR 0x0AE8
 
 /*******************************************************************************
  * NAME          : UnifiUserControlBaSession
@@ -7589,6 +8667,464 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  This value is read only once when an interface is added.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_MLMESTA_KEEP_ALIVE_FAILURE 0x0B1A
+
+/*******************************************************************************
+ * NAME          : UnifiMiscFeaturesActivated
+ * PSID          : 2880 (0x0B40)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 18
+ * MAX           : 18
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  This MIB is for Query Supported Feature Set support. This is a read-only
+ *  bitmap. This attribute is set from the platform/hw/code capabilities
+ *  using HCF. Refer to SC-510742-ME for further details.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MISC_FEATURES_ACTIVATED 0x0B40
+
+/*******************************************************************************
+ * NAME          : UnifiAppendixVersions
+ * PSID          : 2881 (0x0B41)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 4
+ * MAX           : 4
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  This MIB is for Query Supported Feature Set support. This is a read-only
+ *  octetmap. This attribute is set from the platform/hw/code capabilities
+ *  using HCF. Refer to SC-510742-ME for further details.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_APPENDIX_VERSIONS 0x0B41
+
+/*******************************************************************************
+ * NAME          : UnifiSoftApHostRequestedBandwidth
+ * PSID          : 2882 (0x0B42)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Golden Certification MIB don't delete, for certification Tests APs
+ *  bandwidth must not be increased to max supported BW, this mib takes care
+ *  of this during certification
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SOFT_AP_HOST_REQUESTED_BANDWIDTH 0x0B42
+
+/*******************************************************************************
+ * NAME          : UnifiContentionTime
+ * PSID          : 2883 (0x0B43)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Contention time
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_CONTENTION_TIME 0x0B43
+
+/*******************************************************************************
+ * NAME          : UnifiLocalPacketCaptureMode
+ * PSID          : 2884 (0x0B44)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Local packet capture feature state 0 - Disabled 1 - Enabled
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LOCAL_PACKET_CAPTURE_MODE 0x0B44
+
+/*******************************************************************************
+ * NAME          : UnifiMheapReportMemoryUsageThreshold
+ * PSID          : 2900 (0x0B54)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 16
+ * DESCRIPTION   :
+ *  For every change (specified by the threshold boundary) in the current
+ *  heap usage, heap memory usage will get logged into UDI log. It's unit is
+ *  KBytes. 0 value will disable the reporting.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MHEAP_REPORT_MEMORY_USAGE_THRESHOLD 0x0B54
+
+/*******************************************************************************
+ * NAME          : UnifiMheapFreeMemory
+ * PSID          : 2901 (0x0B55)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It returns the free heap memory space available.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MHEAP_FREE_MEMORY 0x0B55
+
+/*******************************************************************************
+ * NAME          : UnifiPeerRxRateStats
+ * PSID          : 2905 (0x0B59)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Peer Rx packet counter per data rate
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PEER_RX_RATE_STATS 0x0B59
+
+/*******************************************************************************
+ * NAME          : UnifiPeerTxRateStats
+ * PSID          : 2906 (0x0B5A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Peer Tx packet counter per data rate
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PEER_TX_RATE_STATS 0x0B5A
+
+/*******************************************************************************
+ * NAME          : UnifiPeerInfoUpdateInterval
+ * PSID          : 2907 (0x0B5B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 500
+ * MAX           : 10000
+ * DEFAULT       : 1000
+ * DESCRIPTION   :
+ *  A peer update interval in milliseconds
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PEER_INFO_UPDATE_INTERVAL 0x0B5B
+
+/*******************************************************************************
+ * NAME          : UnifiIgmpGuardInterval
+ * PSID          : 2908 (0x0B5C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 5
+ * MAX           : 1000
+ * DEFAULT       : 10
+ * DESCRIPTION   :
+ *  Guard interval against flooding of requests in milliseconds
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_IGMP_GUARD_INTERVAL 0x0B5C
+
+/*******************************************************************************
+ * NAME          : UnifiEhtActivated
+ * PSID          : 2921 (0x0B69)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables EHT Caps and Ops IE inclusion.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_EHT_ACTIVATED 0x0B69
+
+/*******************************************************************************
+ * NAME          : UnifiEhtCapabilities
+ * PSID          : 2922 (0x0B6A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 14
+ * MAX           : 32
+ * DEFAULT       : {0X22, 0X00, 0XC0, 0X0D, 0X00, 0X00, 0X00, 0X30, 0X00, 0X00, 0X00, 0X22, 0X00, 0X00, 0X22, 0X00, 0X00}
+ * DESCRIPTION   :
+ *  EHT capabilities of chip. This includes EHT MAC capabilities information,
+ *  EHT PHY capabilities information, Supported EHT-MCS and NSS set, PPE
+ *  thresholds(optional) fields.see SC-XXXXXX-SP.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_EHT_CAPABILITIES 0x0B6A
+
+/*******************************************************************************
+ * NAME          : UnifiMultilinkNumberOfLinks
+ * PSID          : 2923 (0x0B6B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 3
+ * DEFAULT       : 2
+ * DESCRIPTION   :
+ *  Number of Maximum amount of links, we can support for MLO operation
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MULTILINK_NUMBER_OF_LINKS 0x0B6B
+
+/*******************************************************************************
+ * NAME          : UnifiBasicMultiLinkCapabilities
+ * PSID          : 2924 (0x0B6C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 9
+ * MAX           : 32
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Basic Multilink MLO IE (TID to mapping disabled, MAC address Bcast)
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_BASIC_MULTI_LINK_CAPABILITIES 0x0B6C
+
+/*******************************************************************************
+ * NAME          : UnifiTidToLinkMapping
+ * PSID          : 2925 (0x0B6D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 3
+ * DEFAULT       : {0X00, 0X00, 0X00}
+ * DESCRIPTION   :
+ *  Each octet represent link ID and mapping for AC, Max 3 links. Bit 3 to
+ *  Bit 7 -> link_id Bit 0 to Bit 3 -> AC bitmap. Bit 0 -> BE Bit 1 -> BK Bit
+ *  2 -> Video Bit 3 -> Voice So if BK and BE are mapped to link_id1 then
+ *  "link_id1 , Bitmap for link1" will be 0x13. Video and voice are mapped to
+ *  link_id2 then "link_id2 , Bitmap for link2" will be 0x2C. BE and voice
+ *  are mapped to link_id3 then "link_id3 , Bitmap for link3" bitmap for
+ *  link3 will be 0x39. By default all ACs are mapped to all active links.
+ *  Set 2925=[00] to reset/disable tid2link mapping.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TID_TO_LINK_MAPPING 0x0B6D
+
+/*******************************************************************************
+ * NAME          : UnifiEhtActivatedSoftAp
+ * PSID          : 2926 (0x0B6E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enables EHT mode for soft AP.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_EHT_ACTIVATED_SOFT_AP 0x0B6E
+
+/*******************************************************************************
+ * NAME          : UnifiBasicMultiLinkCapabilitiesSoftAp
+ * PSID          : 2927 (0x0B6F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 10
+ * MAX           : 32
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Basic Multilink MLO IE (TID to mapping disabled, MAC address Bcast) for
+ *  softAP
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_BASIC_MULTI_LINK_CAPABILITIES_SOFT_AP 0x0B6F
+
+/*******************************************************************************
+ * NAME          : UnifiEhtCapabilitiesSoftAp
+ * PSID          : 2928 (0x0B70)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 14
+ * MAX           : 32
+ * DEFAULT       : {0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X20, 0X00, 0X00, 0X00, 0X22, 0X22, 0X00, 0X22, 0X22, 0X00}
+ * DESCRIPTION   :
+ *  EHT capabilities of Soft AP. This includes EHT MAC capabilities
+ *  information, EHT PHY capabilities information, Supported EHT-MCS and NSS
+ *  set, PPE thresholds(optional) fields.see SC-XXXXXX-SP.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_EHT_CAPABILITIES_SOFT_AP 0x0B70
+
+/*******************************************************************************
+ * NAME          : UnifiMultiLinkCapsEnabledSoftAp
+ * PSID          : 2929 (0x0B71)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 4
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  ML capabilities present like EMLSE, STR etc 0 - disable ML IE 1 - MLO
+ *  caps without EMLSR/STR 2 - EMLSR Capabilities Present 3 - STR
+ *  Capabilities Present 4 - EMLSR + STR Present
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MULTI_LINK_CAPS_ENABLED_SOFT_AP 0x0B71
+
+/*******************************************************************************
+ * NAME          : MaxNumofSimultaneousLinks
+ * PSID          : 2950 (0x0B86)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 2
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Maximum number of links to support for STR operation
+ *******************************************************************************/
+#define SLSI_PSID_MAX_NUMOF_SIMULTANEOUS_LINKS 0x0B86
+
+/*******************************************************************************
+ * NAME          : EmlCapaPresent
+ * PSID          : 2951 (0x0B87)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Whether EML CAPS to be included in ASSOCIATION.
+ *******************************************************************************/
+#define SLSI_PSID_EML_CAPA_PRESENT 0x0B87
+
+/*******************************************************************************
+ * NAME          : UnifiEmlsrOperation
+ * PSID          : 2952 (0x0B88)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 2
+ * DEFAULT       : 2
+ * DESCRIPTION   :
+ *  Set to send EML OMN frame. Set to 1/0 to Initiate/Exit EMLSR. Please also
+ *  refer to unifiEMLSROperationEnum to define this value
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_EMLSR_OPERATION 0x0B88
+
+/*******************************************************************************
+ * NAME          : UnifiOdOverride
+ * PSID          : 3001 (0x0BB9)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Overdrive (OD) override control (REDWOOD only). bit 0: Force/Automatic;
+ *  if set, the value of bit #1 will be used to enable/disable overdrive bit
+ *  1: Force overdrive or not; Valid only when bit #0 is set. 1 to force
+ *  overdrive enabled, 0 to force disabled. Possible use cases: 0: Automatic
+ *  1: Forced OFF 3: Forced ON
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_OD_OVERRIDE 0x0BB9
+
+/*******************************************************************************
+ * NAME          : UnifiDtimMultiplier
+ * PSID          : 3002 (0x0BBA)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * UNITS         : DTIM multipliers
+ * MIN           : 0
+ * MAX           : 9
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Number of DTIM multiplier for DTIM beacon skipping, which is controlled
+ *  by Android U framework onwards. DTIM multiplier effects only in suspend
+ *  mode. '0' indicates DTIM multiplier is not set so uses the maximum beacon
+ *  listen interval specified with 'unifiListenIntervalMaxTime' to calculate
+ *  number of DTIM beacon skipping. If it sets in range of 1~5 then DTIM
+ *  beacon skipping will be calculated accordingly but still it will be
+ *  limited not to be beyond maximum beacon listen interval.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DTIM_MULTIPLIER 0x0BBA
+
+/*******************************************************************************
+ * NAME          : UnifiMacrameLpEarlyBeaconLength
+ * PSID          : 3003 (0x0BBB)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Early beacon termination length in bytes.If 0xFFFF TIM offset from beacon
+ *  used else specified size is used, if set to 0 feature is disabled.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MACRAME_LP_EARLY_BEACON_LENGTH 0x0BBB
+
+/*******************************************************************************
+ * NAME          : UnifiStalpControl
+ * PSID          : 3004 (0x0BBC)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0X00000001
+ * DESCRIPTION   :
+ *  Control Station Low Power behaviour of idle,mifless and diet
+ *  modes.Controlled as a bit mask. Refer to unifiSTALPControlBits for the
+ *  full set of bit masks. b'0: enable STA Idle mode b'1: Enable DUAL STA
+ *  Idle mode b'2: Enable STA Idle mode with LCD ON b'3: Enable mifless STA
+ *  v1(legacy mifless mode) b'4: Enable mifless STA keepalive TX b'5: Enable
+ *  STA diet mode
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_STALP_CONTROL 0x0BBC
+
+/*******************************************************************************
+ * NAME          : UnifiRadioOnTimeStation
+ * PSID          : 3100 (0x0C1C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Get radio on time ms value for vif-specific
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RADIO_ON_TIME_STATION 0x0C1C
+
+/*******************************************************************************
+ * NAME          : UnifiRadioTxTimeStation
+ * PSID          : 3101 (0x0C1D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Get radio tx time ms value for vif-specific
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RADIO_TX_TIME_STATION 0x0C1D
+
+/*******************************************************************************
+ * NAME          : UnifiRadioRxTimeStation
+ * PSID          : 3102 (0x0C1E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Get radio rx time ms value for vif-specific
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RADIO_RX_TIME_STATION 0x0C1E
+
+/*******************************************************************************
+ * NAME          : UnifiCcaBusyTimeStation
+ * PSID          : 3103 (0x0C1F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Get CCA Busy Time for vif-specific
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_CCA_BUSY_TIME_STATION 0x0C1F
+
+/*******************************************************************************
+ * NAME          : UnifiAcSuccess
+ * PSID          : 3104 (0x0C20)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  It represents the number of success frames under each ac priority
+ *  (indexed by unifiAccessClassIndex). This number will wrap to zero after
+ *  the range is exceeded.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_AC_SUCCESS 0x0C20
 
 /*******************************************************************************
  * NAME          : UnifiCsrOnlyMibShield
@@ -7693,7 +9229,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 9
- * MAX           : 11
+ * MAX           : 18
  * DEFAULT       :
  * DESCRIPTION   :
  *  Override the AGC by adjusting the Rx minimum and maximum gains of each
@@ -7703,41 +9239,38 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  from the static structure in firmware. AGC enables are not altered. Fixed
  *  gain may be tested by setting the minimums and maximums to the same
  *  value. Version 1 (for rfchip jar - not supported on this firmware branch)
- *  octet 0 - Version number = 1. Gain values. Default in brackets. octet 1 -
- *  5G LNA minimum gain (0). octet 2 - 5G LNA maximum gain (4). octet 3 - 2G
- *  LNA minimum gain (0). octet 4 - 2G LNA maximum gain (5). octet 5 - Mixer
- *  minimum gain (0). octet 6 - Mixer maximum gain (2). octet 7 - ABB minimum
- *  gain (8). octet 8 - ABB maximum gain (27). octet 9 - Digital minimum gain
- *  (depends on bb chip). octet 10 - Digital maximum gain (depends on bb
- *  chip). Version 2 (for rfchip hopper, lark) octet 0 - Version number = 2.
- *  Gain values. Default in brackets. octet 1 - 5G FE minimum gain (hopper 1,
- *  lark 0). octet 2 - 5G FE maximum gain (8). octet 3 - 2G FE minimum gain
- *  (0). octet 4 - 2G FE maximum gain (8). octet 5 - ABB minimum gain (1).
- *  octet 6 - ABB maximum gain (9). octet 7 - Digital minimum gain (depends
- *  on bb chip). octet 8 - Digital maximum gain (depends on bb chip). Version
- *  3 (for rfchip leopard with 6G compatible and ax capable BBIC) octet 0 -
- *  Version number = 3. Gain values. Default in brackets. octet 1 - 6G FE
- *  minimum gain (0). octet 2 - 6G FE maximum gain (8). octet 3 - 5G FE
- *  minimum gain (0). octet 4 - 5G FE maximum gain (8). octet 5 - 2G FE
- *  minimum gain (0). octet 6 - 2G FE maximum gain (8). octet 7 - ABB minimum
- *  gain (1). octet 8 - ABB maximum gain (9). octet 9 - Digital minimum gain
- *  (depends on bb chip). octet 10 - Digital maximum gain (depends on bb
- *  chip).
+ *  Version 2 (for rfchip hopper, lark) octet 0 - Version number = 2. Gain
+ *  values. Default in brackets. octet 1 - 5G FE minimum gain (hopper 1, lark
+ *  0). octet 2 - 5G FE maximum gain (8). octet 3 - 2G FE minimum gain (0).
+ *  octet 4 - 2G FE maximum gain (8). octet 5 - ABB minimum gain (1). octet 6
+ *  - ABB maximum gain (9). octet 7 - Digital minimum gain (depends on bb
+ *  chip). octet 8 - Digital maximum gain (depends on bb chip). Version 3
+ *  (for rfchip leopard with 6G compatible and ax capable BBIC) octet 0 -
+ *  Version number = 3. octet 1 - AGC operation mode (0) octet 2 - 2G FE
+ *  minimum gain (0). octet 3 - 2G FE maximum gain (8). octet 4 - 5G FE
+ *  minimum gain (0). octet 5 - 5G FE maximum gain (8). octet 6 - 6G FE
+ *  minimum gain (0). octet 7 - 6G FE maximum gain (8). octet 8 - ABB minimum
+ *  gain (1). octet 9 - ABB maximum gain (9). octet 10 - Digital minimum gain
+ *  (depends on bb chip). octet 11 - Digital maximum gain (depends on bb
+ *  chip). octet 12 - FE maximum Nudge gain. octet 13 - free run extra gain.
+ *  octet 14-15 - Free run high limit RSSI. octet 16-17 - Free run low limit
+ *  RSSI.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_RX_AGC_CONTROL 0x0FEF
 
 /*******************************************************************************
- * NAME          : deprecated_unifiWapiQosMask
- * PSID          : 4130 (0x1022)
+ * NAME          : UnifiDebugAdditionalOffChipMemory
+ * PSID          : 4090 (0x0FFA)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiBool
  * MIN           : 0
- * MAX           : 65535
- * DEFAULT       : 15
+ * MAX           : 1
+ * DEFAULT       : FALSE
  * DESCRIPTION   :
- *  Forces the WAPI encryption hardware use the QoS mask specified.
+ *  Use some additional memory for logging debug messages CAUTION: May impact
+ *  system performance.
  *******************************************************************************/
-#define SLSI_PSID_DEPRECATED_UNIFI_WAPI_QOS_MASK 0x1022
+#define SLSI_PSID_UNIFI_DEBUG_ADDITIONAL_OFF_CHIP_MEMORY 0x0FFA
 
 /*******************************************************************************
  * NAME          : UnifiWmmStallEnable
@@ -7843,7 +9376,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * DEFAULT       :
  * DESCRIPTION   :
  *  A non 0 value defines the max number of mpdus that a ampdu can have. A 0
- *  value tells FW to manage the aggregation size.
+ *  value tells FW to use half the current BA window
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_SET_FIXED_AMPDU_AGGREGATION_SIZE 0x1038
 
@@ -8064,12 +9597,13 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 0X000E
+ * DEFAULT       : 0X003C
  * DESCRIPTION   :
  *  Configure events that trigger sending PHY Event logs to UDI This feature
  *  is enabled when DPHP_DEBUG_PHY_ENABLE is defined. Bitmap for configuring
  *  the trigger condition: 0x0000 : disabled 0x0001 : periodically 0x0002 :
- *  tx_failure 0x0004 : ba_missed 0x0008 : live_restart
+ *  tx_failure 0x0004 : beacon_missed 0x0008 : live_restart 0x0010 :
+ *  basf_failure 0x0020 : active_dump
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_PHY_EVENT_TO_UDI_CONFIG 0x1048
 
@@ -8128,6 +9662,31 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_PRE_EBRT_WINDOW 0x104B
 
 /*******************************************************************************
+ * NAME          : UnifiMonitorFrequencyConfig
+ * PSID          : 4172 (0x104C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 16
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Configure the target frequency information to capture in monitor
+ *  (sniffer) mode. This feature enables to configure the target frequency
+ *  directly to WLAN firmware w/o iw command. Usage: Octet 0 : Option type
+ *  and the number of target multi links. - 1st 4 bits - Option type 0: Add
+ *  monitor vif 1: Delete monitor vif 2: Set frequency config of monitor vifs
+ *  - 2nd 4 bitsIt - The number of target multi links. It supports maximum 3
+ *  multi links. Octet 1 ~ 5 : (Optional) The frequency information of the
+ *  1st target link. Octet 1 ~ 2 - The doubled target center frequency of
+ *  bonding channel. Octet 3 - The position of primary channel frequency (0 ~
+ *  15). Octet 4 - The target bonding bandwidth in MHz. Octet 5 - The
+ *  addtitional frequency segment information. Octet 6 ~ 10 : (Optional) The
+ *  frequency information of the 2nd target link. Octet 11 ~ 15 : (Optional)
+ *  The frequency information of the 3rd target link.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MONITOR_FREQUENCY_CONFIG 0x104C
+
+/*******************************************************************************
  * NAME          : UnifiPostEbrtWindow
  * PSID          : 4173 (0x104D)
  * PER INTERFACE?: NO
@@ -8180,6 +9739,27 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  disabled if set to 0.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LIVE_RESTART_MIN_INTERVAL 0x104F
+
+/*******************************************************************************
+ * NAME          : UnifiMonitorAid
+ * PSID          : 4176 (0x1050)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 6
+ * MAX           : 6
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  AID of the target station to be captured in monitor (sniffer) mode.
+ *  Monitor mode basically captures all received frames on a best-effort
+ *  basis. However, some OFDMA frames, namely HE TB and EHT, require to have
+ *  AID of the target station pre-configured. This mib indicates AID of the
+ *  target station to be captured for this purpose. Usage: octet 0 ~ 1 - AID
+ *  of the number of 1st monitor link at vif1 octet 2 ~ 3 - AID of the number
+ *  of 2nd monitor link at vif2 octet 4 ~ 5 - AID of the number of 3rd
+ *  monitor link at vif3 The number of monitor link is limited by radio
+ *  capability of the product within maximum 3 links
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_MONITOR_AID 0x1050
 
 /*******************************************************************************
  * NAME          : UnifiPsPollThreshold
@@ -8235,6 +9815,20 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  of the subsequent beacon.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_PRE_EBRT_WINDOW_IDLE 0x1055
+
+/*******************************************************************************
+ * NAME          : UnifiRecycleAggregratedMpdUs
+ * PSID          : 4182 (0x1056)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Dataplane debug mode where MPDU metadata is recycled and frames aren't
+ *  returned to the host
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RECYCLE_AGGREGRATED_MPD_US 0x1056
 
 /*******************************************************************************
  * NAME          : UnifiSableContainerSizeConfiguration
@@ -8336,6 +9930,20 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_DPLANE_SABLE_TX_DELAY_ACTION 0x138D
 
 /*******************************************************************************
+ * NAME          : UnifiDebugD12DiscardBulk
+ * PSID          : 5009 (0x1391)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Control whether to discard the mbulk that's associated with debug
+ *  signals.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DEBUG_D12_DISCARD_BULK 0x1391
+
+/*******************************************************************************
  * NAME          : UnifiDebugSvcModeStackHighWaterMark
  * PSID          : 5010 (0x1392)
  * PER INTERFACE?: NO
@@ -8349,38 +9957,12 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_DEBUG_SVC_MODE_STACK_HIGH_WATER_MARK 0x1392
 
 /*******************************************************************************
- * NAME          : UnifiOverrideEdcaParamBe
- * PSID          : 5023 (0x139F)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_OVERRIDE_EDCA_PARAM_BE 0x139F
-
-/*******************************************************************************
- * NAME          : UnifiOverrideEdcaParamBeEnable
- * PSID          : 5024 (0x13A0)
- * PER INTERFACE?: NO
- * TYPE          : SlsiBool
- * MIN           : 0
- * MAX           : 1
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_OVERRIDE_EDCA_PARAM_BE_ENABLE 0x13A0
-
-/*******************************************************************************
  * NAME          : UnifiPanicSubSystemControl
  * PSID          : 5026 (0x13A2)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 255
  * DEFAULT       :
  * DESCRIPTION   :
  *  PANIC levels for WLAN SubSystems. Panic level is used to filter Panic
@@ -8413,9 +9995,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFaultSubSystemControl
  * PSID          : 5028 (0x13A4)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 65535
+ * MAX           : 255
  * DEFAULT       :
  * DESCRIPTION   :
  *  Fault levels for WLAN SubSystems. Fault level is used to filter faults
@@ -8500,87 +10082,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_TX_GAIN_SETTINGS 0x13A8
 
 /*******************************************************************************
- * NAME          : UnifiTxAntennaConnectionLossFrequency
- * PSID          : 5033 (0x13A9)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 3940
- * MAX           : 12000
- * DEFAULT       :
- * DESCRIPTION   :
- *  The corresponding set of frequency values for
- *  TxAntennaConnectionLossTable
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_ANTENNA_CONNECTION_LOSS_FREQUENCY 0x13A9
-
-/*******************************************************************************
- * NAME          : UnifiTxAntennaConnectionLoss
- * PSID          : 5034 (0x13AA)
- * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
- * MIN           : -128
- * MAX           : 127
- * DEFAULT       :
- * DESCRIPTION   :
- *  The set of Antenna Connection Loss value (qdB), which is used for
- *  TPO/EIRP conversion
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_ANTENNA_CONNECTION_LOSS 0x13AA
-
-/*******************************************************************************
- * NAME          : UnifiTxAntennaMaxGainFrequency
- * PSID          : 5035 (0x13AB)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 3940
- * MAX           : 12000
- * DEFAULT       :
- * DESCRIPTION   :
- *  The corresponding set of frequency values for TxAntennaMaxGain
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_ANTENNA_MAX_GAIN_FREQUENCY 0x13AB
-
-/*******************************************************************************
- * NAME          : UnifiTxAntennaMaxGain
- * PSID          : 5036 (0x13AC)
- * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
- * MIN           : -128
- * MAX           : 127
- * DEFAULT       :
- * DESCRIPTION   :
- *  The set of Antenna Max Gain value (qdB), which is used for TPO/EIRP
- *  conversion
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_ANTENNA_MAX_GAIN 0x13AC
-
-/*******************************************************************************
- * NAME          : UnifiRxExternalGainFrequency
- * PSID          : 5037 (0x13AD)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 3940
- * MAX           : 12000
- * DEFAULT       :
- * DESCRIPTION   :
- *  The set of RSSI offset value
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_EXTERNAL_GAIN_FREQUENCY 0x13AD
-
-/*******************************************************************************
- * NAME          : UnifiRxExternalGain
- * PSID          : 5038 (0x13AE)
- * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
- * MIN           : -128
- * MAX           : 127
- * DEFAULT       :
- * DESCRIPTION   :
- *  The table giving frequency-dependent RSSI offset value
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_EXTERNAL_GAIN 0x13AE
-
-/*******************************************************************************
  * NAME          : UnifiTxSgI20Activated
  * PSID          : 5040 (0x13B0)
  * PER INTERFACE?: NO
@@ -8635,7 +10136,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : FALSE
+ * DEFAULT       : TRUE
  * DESCRIPTION   :
  *  SGI 160/80+80MHz will be used to code packets, for transmit only. If
  *  disabled, chip will not send SGI 160/80+80MHz packets even if peer
@@ -8685,6 +10186,21 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Activate Wips.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_WIPS_ACTIVATED 0x13BA
+
+/*******************************************************************************
+ * NAME          : UnifiPsidSubversions
+ * PSID          : 5051 (0x13BB)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 8
+ * MAX           : 248
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  8-byte hash followed by PSID and PSID Subversion pairs (4 bytes per pair)
+ *  for customer reference. Min of 8 allows for hash + 0 versioned mib pairs.
+ *  Max of 248 allows for hash + 60 versioned mib pairs.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PSID_SUBVERSIONS 0x13BB
 
 /*******************************************************************************
  * NAME          : UnifiRfTestModeActivated
@@ -8823,57 +10339,31 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_BATTERY_VOLTAGE 0x13C7
 
 /*******************************************************************************
- * NAME          : UnifiTxOobConstraints
- * PSID          : 5064 (0x13C8)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 255
- * DEFAULT       :
- * DESCRIPTION   :
- *  OOB constraints table. | octects | description |
- * |-_-_-_-_-+-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-| | 0 | DPD applicability bitmask: 0 = no DPD, 1 = dynamic DPD, 2 = static DPD, 3 = applies to both static and dynamic DPD | | 1-2 | Bitmask indicating which regulatory domains this rule applies to FCC=bit0, ETSI=bit1, JAPAN=bit2 | | 3-4 | Bitmask indicating which band edges this rule applies to RICE_BAND_EDGE_ISM_24G_LOWER = bit 0, RICE_BAND_EDGE_ISM_24G_UPPER = bit 1, RICE_BAND_EDGE_U_NII_1_LOWER = bit 2, RICE_BAND_EDGE_U_NII_1_UPPER = bit 3, RICE_BAND_EDGE_U_NII_2_LOWER = bit 4, RICE_BAND_EDGE_U_NII_2_UPPER = bit 5, RICE_BAND_EDGE_U_NII_2E_LOWER = bit 6, RICE_BAND_EDGE_U_NII_2E_UPPER = bit 7, RICE_BAND_EDGE_U_NII_3_LOWER = bit 8, RICE_BAND_EDGE_U_NII_3_UPPER = bit 9 | | 5 | Bitmask indicating which modulation types this rule applies to (LSB/b0=DSSS/CCK, b1= OFDM0 modulation group, b2= OFDM1 modulation group) | | 6 | Bitmask indicating which channel bandwidths this rule applies to (LSB/b0=20MHz, b1=40MHz, b2=80MHz) | | 7 | Minimum distance to nearest band edge in 500 kHz units for which this constraint becomes is applicable. | | 8 | Maximum power (EIRP) for this particular constraint - specified in units of quarter dBm. | | 9-32 | Spectral shaping configuration to be used for this particular constraint. The value is specific to the radio hardware and should only be altered under advice from the IC supplier. | | 33-56| Tx DPD Spectral shaping configuration to be used for this particular constraint. The value is specific to the radio hardware and should only be altered under advice from the IC supplier. | |
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_OOB_CONSTRAINTS 0x13C8
-
-/*******************************************************************************
- * NAME          : UnifiTxPaGainDpdTemperatureCompensation
- * PSID          : 5066 (0x13CA)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 255
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_PA_GAIN_DPD_TEMPERATURE_COMPENSATION 0x13CA
-
-/*******************************************************************************
- * NAME          : UnifiTxPaGainDpdFrequencyCompensation
- * PSID          : 5067 (0x13CB)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 255
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_TX_PA_GAIN_DPD_FREQUENCY_COMPENSATION 0x13CB
-
-/*******************************************************************************
  * NAME          : UnifiTxPowerTrimConfig
  * PSID          : 5072 (0x13D0)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 26
+ * MIN           : 7
  * MAX           : 26
  * DEFAULT       :
  * DESCRIPTION   :
  *  Hardware specific transmitter power trim settings
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_TX_POWER_TRIM_CONFIG 0x13D0
+
+/*******************************************************************************
+ * NAME          : UnifiNannyTrimDisable
+ * PSID          : 5073 (0x13D1)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Bitmap to selectively disable nanny retrim of per channel trims. For
+ *  bitmap, please refer to unifiEnabledTrims.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NANNY_TRIM_DISABLE 0x13D1
 
 /*******************************************************************************
  * NAME          : UnifiForceShortSlotTime
@@ -8911,7 +10401,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 65535
  * DEFAULT       :
  * DESCRIPTION   :
- *  Bitmap to disable the radio nanny actions. B0==radio 0, B1==radio 1
+ *  Bitmap to disable the radio nanny actions. Each bit corresponds to a
+ *  radio according to RICE_RADIO_BM_T.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_DEBUG_DISABLE_RADIO_NANNY_ACTIONS 0x13DA
 
@@ -9037,45 +10528,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_RADIO_TX_POWER_OVERRIDE 0x13E3
 
 /*******************************************************************************
- * NAME          : UnifiRxRadioCsMode
- * PSID          : 5092 (0x13E4)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  OBSOLETE. Configures RX Radio CS detection for 80MHz bandwidth.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_RADIO_CS_MODE 0x13E4
-
-/*******************************************************************************
- * NAME          : UnifiRxPriEnergyDetThreshold
- * PSID          : 5093 (0x13E5)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  OBSOLETE. Energy detection threshold for primary 20MHz channel.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_PRI_ENERGY_DET_THRESHOLD 0x13E5
-
-/*******************************************************************************
- * NAME          : UnifiRxSecEnergyDetThreshold
- * PSID          : 5094 (0x13E6)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  OBSOLETE. Energy detection threshold for secondary 20MHz channel.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_SEC_ENERGY_DET_THRESHOLD 0x13E6
-
-/*******************************************************************************
  * NAME          : UnifiAgcThresholds
  * PSID          : 5095 (0x13E7)
  * PER INTERFACE?: NO
@@ -9102,19 +10554,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_RADIO_RX_SETTINGS_READ 0x13E8
 
 /*******************************************************************************
- * NAME          : UnifiStaticDpdGain
- * PSID          : 5097 (0x13E9)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 11
- * MAX           : 27
- * DEFAULT       :
- * DESCRIPTION   :
- *  Specify modulation specifc gains for static dpd optimisation.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_STATIC_DPD_GAIN 0x13E9
-
-/*******************************************************************************
  * NAME          : UnifiIqBufferSize
  * PSID          : 5098 (0x13EA)
  * PER INTERFACE?: NO
@@ -9126,20 +10565,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Buffer Size for IQ capture to allow CATs to read it.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_IQ_BUFFER_SIZE 0x13EA
-
-/*******************************************************************************
- * NAME          : UnifiNarrowbandCcaThresholds
- * PSID          : 5099 (0x13EB)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 255
- * DEFAULT       :
- * DESCRIPTION   :
- *  The narrowband CCA ED thresholds so that the CCA-ED triggers at the
- *  regulatory value of -62 dBm.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_NARROWBAND_CCA_THRESHOLDS 0x13EB
 
 /*******************************************************************************
  * NAME          : UnifiRadioCcaDebug
@@ -9207,19 +10632,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_MAC_CCA_BUSY_TIME 0x13F0
 
 /*******************************************************************************
- * NAME          : UnifiMacSecChanClearTime
- * PSID          : 5105 (0x13F1)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Configures PIFS
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_MAC_SEC_CHAN_CLEAR_TIME 0x13F1
-
-/*******************************************************************************
  * NAME          : UnifiDpdDebug
  * PSID          : 5106 (0x13F2)
  * PER INTERFACE?: NO
@@ -9246,6 +10658,28 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_NARROWBAND_CCA_DEBUG 0x13F3
 
 /*******************************************************************************
+ * NAME          : UnifiDpdEmphFiltCoeffs
+ * PSID          : 5108 (0x13F4)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  This mib holds the FIR filter coefficients used on the post-emphasis
+ *  block of memory dpd. Each coefficient is an int16 but it will be stored
+ *  in the mib as a string of octets, where each row contains the coeffs for
+ *  a given radio. Here is a description of the syntax: row 1: 17
+ *  pre-emphasis coeffs for RADIO_0_A | 17 post-emphasis coeffs for RADIO_0_A
+ *  row 2: 17 pre-emphasis coeffs for RADIO_1_A | 17 post-emphasis coeffs for
+ *  RADIO_1_A row 3: 17 pre-emphasis coeffs for RADIO_0_B | 17 post-emphasis
+ *  coeffs for RADIO_0_B row 4: 17 pre-emphasis coeffs for RADIO_1_B | 17
+ *  post-emphasis coeffs for RADIO_1_B The conversion from string of octets
+ *  to int16 will be done by FW.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DPD_EMPH_FILT_COEFFS 0x13F4
+
+/*******************************************************************************
  * NAME          : UnifiNannyTemperatureReportDelta
  * PSID          : 5109 (0x13F5)
  * PER INTERFACE?: NO
@@ -9266,7 +10700,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 200
+ * DEFAULT       : 250
  * DESCRIPTION   :
  *  A report interval in milliseconds where temperature is checked
  *******************************************************************************/
@@ -9413,28 +10847,14 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PSID          : 5120 (0x1400)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 26
- * MAX           : 26
+ * MIN           : 30
+ * MAX           : 30
  * DEFAULT       :
  * DESCRIPTION   :
  *  Narrowband RSSI gain values for some combination of radio, band and
  *  bandwidth.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_RX_RSSI_NB_HW_GAIN 0x1400
-
-/*******************************************************************************
- * NAME          : UnifiRxRssiNbFmOffset
- * PSID          : 5121 (0x1401)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 26
- * MAX           : 26
- * DEFAULT       :
- * DESCRIPTION   :
- *  Narrowband RSSI gain offset values for some combination of radio, band
- *  and bandwidth.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_RSSI_NB_FM_OFFSET 0x1401
 
 /*******************************************************************************
  * NAME          : UnifiRadioTxSettingsReadV2
@@ -9463,20 +10883,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_RX_CCK_MODEM_DESENSE 0x1403
 
 /*******************************************************************************
- * NAME          : UnifiRxCckModemDesenseOffset
- * PSID          : 5124 (0x1404)
- * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
- * MIN           : -32768
- * MAX           : 32767
- * DEFAULT       :
- * DESCRIPTION   :
- *  Set 11b calibration offset fine adjust for unifiRxCckModemDesense,
- *  wlanlite only.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_CCK_MODEM_DESENSE_OFFSET 0x1404
-
-/*******************************************************************************
  * NAME          : UnifiRxOfdmModemDesense
  * PSID          : 5125 (0x1405)
  * PER INTERFACE?: NO
@@ -9488,20 +10894,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Specify values of OFDM modem desense level, wlanlite only.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_RX_OFDM_MODEM_DESENSE 0x1405
-
-/*******************************************************************************
- * NAME          : UnifiRxOfdmModemDesenseOffset
- * PSID          : 5126 (0x1406)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 4
- * MAX           : 4
- * DEFAULT       :
- * DESCRIPTION   :
- *  Set ofdm calibration offset fine adjusts for unifiRxOfdmModemDesense,
- *  wlanlite only.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_RX_OFDM_MODEM_DESENSE_OFFSET 0x1406
 
 /*******************************************************************************
  * NAME          : UnifiRadioFecConfig
@@ -9667,18 +11059,200 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_CHIP_TEMPERATURE_DIRECT 0x1412
 
 /*******************************************************************************
- * NAME          : UnifiEnableFlexiMacWatchdog
- * PSID          : 5200 (0x1450)
+ * NAME          : UnifiRxRssiFrequencyCompensation
+ * PSID          : 5139 (0x1413)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Hardware specific receiver RSSI frequency compensation settings. 2G
+ *  settings before 5G. Increasing order within band.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RX_RSSI_FREQUENCY_COMPENSATION 0x1413
+
+/*******************************************************************************
+ * NAME          : UnifiDebugDisableRadioNannyDuringWlanliteRx
+ * PSID          : 5140 (0x1414)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Flag to disable the radio nanny actions during Wlanlite RX to prevent
+ *  triggering calibrations during bathtubs. This is an additional gate to
+ *  unifiDebugDisableRadioNannyActions.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DEBUG_DISABLE_RADIO_NANNY_DURING_WLANLITE_RX 0x1414
+
+/*******************************************************************************
+ * NAME          : UnifiLoadMemDpdPolyCoeffs
+ * PSID          : 5141 (0x1415)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 1
+ * MAX           : 350
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Write DPD coeffients into the FW, read DPD LUT from FW for devices that
+ *  support Memory DPD
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LOAD_MEM_DPD_POLY_COEFFS 0x1415
+
+/*******************************************************************************
+ * NAME          : UnifiRadioLongTrimIterations
+ * PSID          : 5142 (0x1416)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * UNITS         : iteration
+ * MIN           : 1
+ * MAX           : 100
+ * DEFAULT       : 4
+ * DESCRIPTION   :
+ *  How many MP-DPD host iterations are required.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RADIO_LONG_TRIM_ITERATIONS 0x1416
+
+/*******************************************************************************
+ * NAME          : UnifiForceRpllMode
+ * PSID          : 5143 (0x1417)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 3
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Force RPLL mode (PAEAN only). 0: Do not force. Clock configuration
+ *  depends on circumstance. 1: WPLL only. 2: RPLL mode, normal. 3: RPLL
+ *  mode, overdrive (turbo).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_FORCE_RPLL_MODE 0x1417
+
+/*******************************************************************************
+ * NAME          : UnifiDpdSwed
+ * PSID          : 5144 (0x1418)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 4096
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  This MIB sets the threshold on the DPD SWED block, which is applied after
+ *  the DPD LUT is applied to the signal. This feature is for MP-DPD only.
+ *  The threshold is a value relative to the max dynamic range of the DAC.
+ *  For instance a threshold of 0.5 dB means that it's applied for signals
+ *  closer than 0.5 dB of the max dynamic range. The MIB value is 1024 *
+ *  power(10, threshold / 20), where threshold is the number of dB below the
+ *  max dynamic range. Default is 850 (-1.6 dB) which is the reset value. A
+ *  value of 0 will disable the DPD SWED.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DPD_SWED 0x1418
+
+/*******************************************************************************
+ * NAME          : UnifiBbbTxDiversityConfig1
+ * PSID          : 5145 (0x1419)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0X4000
+ * DESCRIPTION   :
+ *  Configures BBB_TX_DIVERSITY_CONFIG1
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_BBB_TX_DIVERSITY_CONFIG1 0x1419
+
+/*******************************************************************************
+ * NAME          : UnifiOverrideTxiq
+ * PSID          : 5146 (0x141A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Write TX IQ compensation values to HW
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_OVERRIDE_TXIQ 0x141A
+
+/*******************************************************************************
+ * NAME          : UnifiRxAgcPhaseCompensation
+ * PSID          : 5147 (0x141B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  AGC phase compensation settings. This MIB defines the gain thresholds and
+ *  the phase rotation to apply for each threshold. The phase rotation
+ *  resolution is 11.25 degrees (360/32) and two corrections can be applied.
+ *  Correction can be applied for each band and AGC mode, and enabled
+ *  independently. Version 1 (for RF chips Bow, Lark2, Leopard, Shiba): octet
+ *  0 - Version number = 1. octet 1 - Band bitmap. octet 2 - AGC mode. octet
+ *  3 - Enable bit. octet 4 - Gain threshold 1. octet 5 - Gain threshold 2.
+ *  octet 6 - Phase threshold 1. octet 7 - Phase threshold 2.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RX_AGC_PHASE_COMPENSATION 0x141B
+
+/*******************************************************************************
+ * NAME          : UnifiDsmEnable
+ * PSID          : 5148 (0x141C)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint16
  * MIN           : 0
  * MAX           : 65535
- * DEFAULT       : 0X0000
+ * DEFAULT       :
  * DESCRIPTION   :
- *  OBSOLETE. Bitmap controlling watchdog configuration for fleximac. Setting
- *  bit to 1 will enable watchdog for MAC represented by bit position
+ *  Dynamic SISO MIMO switching Enable, power saving feature for MIMO
+ *  operational modes. Each bit can be used to change the configuration for
+ *  DSM. A '1' defines Enabled, '0' defines Disabled. Bit 0: Enable / Disable
+ *  DSM
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_ENABLE_FLEXI_MAC_WATCHDOG 0x1450
+#define SLSI_PSID_UNIFI_DSM_ENABLE 0x141C
+
+/*******************************************************************************
+ * NAME          : UnifiTxOobSettings
+ * PSID          : 5149 (0x141D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  OOB settings table. | octects | description |
+ * |-_-_-_-_-+-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-| | 0 | DPD applicability bitmask: 0 = no DPD, 1 = dynamic DPD, 2 = static DPD, 3 = applies to both static and dynamic DPD | | 1-2 | Bitmask indicating which regulatory domains this rule applies to FCC=bit0, ETSI=bit1, JAPAN=bit2 | | 3-6 | Bitmask indicating which band edges this rule applies to RICE_BAND_EDGE_ISM_24G_LOWER = bit 0, RICE_BAND_EDGE_ISM_24G_UPPER = bit 1, RICE_BAND_EDGE_U_NII_1_LOWER = bit 2, RICE_BAND_EDGE_U_NII_1_UPPER = bit 3, RICE_BAND_EDGE_U_NII_2_LOWER = bit 4, RICE_BAND_EDGE_U_NII_2_UPPER = bit 5, RICE_BAND_EDGE_U_NII_2E_LOWER = bit 6, RICE_BAND_EDGE_U_NII_2E_UPPER = bit 7, RICE_BAND_EDGE_U_NII_3_LOWER = bit 8, RICE_BAND_EDGE_U_NII_3_UPPER = bit 9 | | 7 | Bitmask indicating which modulation types this rule applies to (LSB/b0=DSSS/CCK, b1= OFDM0 modulation group, b2= OFDM1 modulation group) | | 8 | Bitmask indicating which channel bandwidths this rule applies to (LSB/b0=20MHz, b1=40MHz, b2=80MHz) | | 9-10 | Minimum distance to nearest band edge in 500 kHz units for which this constraint becomes is applicable. | | 11 | Maximum power (EIRP) for this particular constraint - specified in units of quarter dBm. | | 12 | Spectral shaping configuration index to be used for this particular constraint. The value is specific to the radio hardware and should only be altered under advice from the IC supplier. | |
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TX_OOB_SETTINGS 0x141D
+
+/*******************************************************************************
+ * NAME          : UnifiTxSsfConfig
+ * PSID          : 5150 (0x141E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  SSF config table
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TX_SSF_CONFIG 0x141E
+
+/*******************************************************************************
+ * NAME          : UnifiDpdWpalDelayReturn
+ * PSID          : 5151 (0x141F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  This MIB sets the number of seconds to hold wpal before returning from
+ *  mpdpd_algo_run_algorithm. In reduced performance, this will not wait for
+ *  DPD to complete before turning radio on.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DPD_WPAL_DELAY_RETURN 0x141F
 
 /*******************************************************************************
  * NAME          : UnifiRttCapabilities
@@ -9687,7 +11261,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint8
  * MIN           : 8
  * MAX           : 8
- * DEFAULT       : { 0X01, 0X01, 0X01, 0X01, 0X00, 0X07, 0X1C, 0X32 }
+ * DEFAULT       : { 0X00, 0X01, 0X01, 0X01, 0X00, 0X07, 0X1C, 0X32 }
  * DESCRIPTION   :
  *  RTT capabilities of the chip. see SC-506960-SW.
  *******************************************************************************/
@@ -9697,7 +11271,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmMinDeltaFrames
  * PSID          : 5301 (0x14B5)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 255
  * DEFAULT       : 20
@@ -9710,7 +11284,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmPerBurst
  * PSID          : 5302 (0x14B6)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 31
  * DEFAULT       : 10
@@ -9723,7 +11297,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmBurstDuration
  * PSID          : 5303 (0x14B7)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 2
  * MAX           : 11
  * DEFAULT       : 10
@@ -9738,7 +11312,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmNumOfBurstsExponent
  * PSID          : 5304 (0x14B8)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 14
  * DEFAULT       :
@@ -9778,7 +11352,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmDefaultSessionEstablishmentTimeout
  * PSID          : 5307 (0x14BB)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 10
  * MAX           : 100
  * DEFAULT       : 50
@@ -9788,23 +11362,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_FTM_DEFAULT_SESSION_ESTABLISHMENT_TIMEOUT 0x14BB
 
 /*******************************************************************************
- * NAME          : UnifiFtmDefaultGapBeforeFirstBurstPerResponder
- * PSID          : 5308 (0x14BC)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_FTM_DEFAULT_GAP_BEFORE_FIRST_BURST_PER_RESPONDER 0x14BC
-
-/*******************************************************************************
  * NAME          : UnifiFtmDefaultGapBetweenBursts
  * PSID          : 5309 (0x14BD)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 5
  * MAX           : 50
  * DEFAULT       : 10
@@ -9817,7 +11378,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmDefaultTriggerDelay
  * PSID          : 5310 (0x14BE)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 1
@@ -9831,7 +11392,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmDefaultEndBurstDelay
  * PSID          : 5311 (0x14BF)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 100
  * DEFAULT       : 10
@@ -9884,7 +11445,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiFtmInitialResponseTimeout
  * PSID          : 5315 (0x14C3)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 10
  * MAX           : 100
  * DEFAULT       : 50
@@ -9905,6 +11466,24 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Enable mac address randomisation for FTM initiator
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_FTM_MAC_ADDRESS_RANDOMISATION 0x14C4
+
+/*******************************************************************************
+ * NAME          : UnifiFtmForceHeBandwidth
+ * PSID          : 5317 (0x14C5)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Test only: Force HE FTM packet bandwidth value in units of MHz. This can
+ *  be used to send IFTMR frame as a HE PPDU and at a specific bandwidth
+ *  regardless of the range request value sent by the host. Setting it to 0
+ *  uses the default phy type and bandwidth as selected by firmware.
+ *  Acceptable values are 80 (i.e. channel_bw_80_mhz) and 160 (i.e.
+ *  channel_bw_160_mhz) for now
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_FTM_FORCE_HE_BANDWIDTH 0x14C5
 
 /*******************************************************************************
  * NAME          : UnifiFtmUseRequestParameters
@@ -10069,7 +11648,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiScanMaxCacheCount
  * PSID          : 5395 (0x1513)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 200
  * DEFAULT       : 150
@@ -10083,7 +11662,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiScanMaxCacheTime
  * PSID          : 5396 (0x1514)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 1
  * MAX           : 120
@@ -10097,7 +11676,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRmMaxMeasurementDuration
  * PSID          : 5400 (0x1518)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 100
  * MAX           : 200
  * DEFAULT       : 150
@@ -10111,7 +11690,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRmMaxScanCacheTime
  * PSID          : 5401 (0x1519)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 120
  * DEFAULT       : 60
@@ -10126,7 +11705,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiRmMaxScanCacheCount
  * PSID          : 5402 (0x151A)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 10
  * MAX           : 150
  * DEFAULT       : 70
@@ -10137,10 +11716,24 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_RM_MAX_SCAN_CACHE_COUNT 0x151A
 
 /*******************************************************************************
+ * NAME          : UnifiRmIgnoreIdleStaMode
+ * PSID          : 5403 (0x151B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  When set to true, ignore idle sta mode acting as a Golden Certification
+ *  MIB for WFA VE Certification.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_RM_IGNORE_IDLE_STA_MODE 0x151B
+
+/*******************************************************************************
  * NAME          : UnifiObssScanStartWait
  * PSID          : 5405 (0x151D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 200
  * DEFAULT       : 150
@@ -10153,7 +11746,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMlmeScanDefaultShortFullScanTime
  * PSID          : 5406 (0x151E)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : TU
  * MIN           : 20
  * MAX           : 30
@@ -10167,7 +11760,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiMlmeScanShortFullScanNumOfProbes
  * PSID          : 5407 (0x151F)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 3
  * DEFAULT       : 2
@@ -10244,6 +11837,32 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_SCAN_REGISTERED_VIF_INFRASTRUCTURE_STA 0x1526
 
 /*******************************************************************************
+ * NAME          : UnifiLowLatencyScanSplitActive
+ * PSID          : 5415 (0x1527)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Split low latency active scan into smaller chuncks.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LOW_LATENCY_SCAN_SPLIT_ACTIVE 0x1527
+
+/*******************************************************************************
+ * NAME          : UnifiLowLatencyScanReducePassive
+ * PSID          : 5416 (0x1528)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 10
+ * DESCRIPTION   :
+ *  Cut the passive scan time for low latency scan. In TUs
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_LOW_LATENCY_SCAN_REDUCE_PASSIVE 0x1528
+
+/*******************************************************************************
  * NAME          : UnifiLnaControlEvaluationInterval
  * PSID          : 6008 (0x1778)
  * PER INTERFACE?: NO
@@ -10267,8 +11886,22 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * MAX           : 2
  * DEFAULT       :
  * DESCRIPTION   :
- *  RSSI threshold table for dynamic switching of the LNA.Default values set
- *  to{-30,-40}
+ *  RSSI threshold table for LNA dynamic control. The thresholds are
+ *  band(index 1, 2.4GHz is 1, 5GHz is 2, 6GHz is 3) and association type and
+ *  bandwidth(index 2) specific. Association and bandwidth specific values
+ *  are used only for STA VIFs, for other VIFs only default per-band values
+ *  are used. Some combinations can make little sense as 11AX_160MHZ 2G, but
+ *  for the simplicity the table organised as it is. For Function LNA control
+ *  API(used before Paean), these thresholds are thresholds to turn LNA
+ *  OFF/ON. For Mode LNA control API, these thresholds are thresholds to
+ *  select between smart mode(eLNA is off between frames and if necessary
+ *  automatically turned on by HW during preamble reception) and maximum
+ *  sensitivity mode(eLNA is always ON). Because of the difference between 2
+ *  APIs the thresholds are very different for these 2 APIs. The default
+ *  values defined here (-30,-40) are values defined for Function LNA control
+ *  API, so must be changed in HTF files for Mode LNA control API. The
+ *  thresholds define the desired state of eLNA per VIF but the actual state
+ *  of eLNA is defined by all scheduled VIFs(including Scan VIFs).
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LNA_CONTROL_RSSI_THRESHOLDS 0x1779
 
@@ -10321,12 +11954,21 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiLnaControlEnabled
  * PSID          : 6013 (0x177D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiBool
+ * TYPE          : SlsiUint16
  * MIN           : 0
- * MAX           : 1
- * DEFAULT       : TRUE
+ * MAX           : 3
+ * DEFAULT       : 1
  * DESCRIPTION   :
- *  Enable dynamic switching of the LNA based on RSSI for synchronised VIFs.
+ *  Original pre-Paean description: Enable dynamic switching of the LNA based
+ *  on RSSI for synchronised VIFs. This MIB has been extended to support Host
+ *  selected LNA mode(look at C-510619-SP - MCD Appendix 49: eLNA control for
+ *  details). Values 0(LNA_CONTROL_DISABLED, look at unifiLnaModeSelection
+ *  enum) and 1(LNA_AUTOMATIC_CONTROL_ENABLED) still work in the same way for
+ *  functional API, but 2(LNA_FORCE_ENABLED) and 3(LNA_FORCE_DISABLED) are
+ *  supported only for platforms that support new eLNA mode API. For
+ *  platforms which support new eLNA mode API LNA_AUTOMATIC_CONTROL_DISABLED
+ *  (value 0) means that there are no LNAs that can be controlled and
+ *  ELNA_MODE_T_off will be provided as lna_mode parameter to rice.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LNA_CONTROL_ENABLED 0x177D
 
@@ -10465,9 +12107,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiSarBackoff
  * PSID          : 6026 (0x178A)
  * PER INTERFACE?: NO
- * TYPE          : SlsiInt16
- * MIN           : -32768
- * MAX           : 32767
+ * TYPE          : SlsiInt8
+ * MIN           : -128
+ * MAX           : 127
  * DEFAULT       :
  * DESCRIPTION   :
  *  Max power values per band per index(quarter dBm).
@@ -10571,7 +12213,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiLteCoexPowerReduction
  * PSID          : 6035 (0x1793)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 127
  * DEFAULT       : 24
@@ -10651,6 +12293,19 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_DEBUG_ENABLE 0x17B7
 
 /*******************************************************************************
+ * NAME          : UnifiDebugConnectionEnable
+ * PSID          : 6072 (0x17B8)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enable or disable debug logging of connection related info.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_DEBUG_CONNECTION_ENABLE 0x17B8
+
+/*******************************************************************************
  * NAME          : UnifiDPlaneDebug
  * PSID          : 6073 (0x17B9)
  * PER INTERFACE?: NO
@@ -10714,10 +12369,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxQueuedFollowups
  * PSID          : 6077 (0x17BD)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 8
- * DEFAULT       : 4
+ * DEFAULT       : 8
  * DESCRIPTION   :
  *  Maximum number of NAN Followup instances which can be queued in FW.
  *******************************************************************************/
@@ -10730,7 +12385,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint16
  * MIN           : 1
  * MAX           : 65535
- * DEFAULT       : 3
+ * DEFAULT       : 8
  * DESCRIPTION   :
  *  Maximum number of reties to send SDA to a peer.
  *******************************************************************************/
@@ -10742,10 +12397,11 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint16
  * MIN           : 0
- * MAX           : 3
- * DEFAULT       : 1
+ * MAX           : 65535
+ * DEFAULT       : 0X41
  * DESCRIPTION   :
- *  Set of supported cipher suites. NanCipherSuiteType bit field format.
+ *  Set of supported cipher suites. NanCipherSuiteType bit field format. 0x1
+ *  - NCS_SK_CCM_128 0x40 - NCS_PK_PASN_128
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_NAN_SUPPORTED_CIPHER_SUITES 0x17BF
 
@@ -10780,7 +12436,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxConcurrentClusters
  * PSID          : 6082 (0x17C2)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 1
  * MAX           : 1
  * DEFAULT       : 1
@@ -10793,9 +12449,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxConcurrentPublishes
  * PSID          : 6083 (0x17C3)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 8
+ * MAX           : 64
  * DEFAULT       : 8
  * DESCRIPTION   :
  *  Maximum number of concurrent NAN Publish instances supported.
@@ -10806,10 +12462,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxConcurrentSubscribes
  * PSID          : 6084 (0x17C4)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 8
- * DEFAULT       : 8
+ * MAX           : 64
+ * DEFAULT       : 64
  * DESCRIPTION   :
  *  Maximum number of concurrent NAN Subscribe instances supported.
  *******************************************************************************/
@@ -10819,9 +12475,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxServiceNameLength
  * PSID          : 6085 (0x17C5)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 2048
+ * MAX           : 255
  * DEFAULT       : 255
  * DESCRIPTION   :
  *  Not used by FW. Maximum Service Name Length.
@@ -10832,7 +12488,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxMatchFilterLength
  * PSID          : 6086 (0x17C6)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 255
  * DEFAULT       : 255
@@ -10847,8 +12503,8 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint16
  * MIN           : 0
- * MAX           : 2048
- * DEFAULT       : 512
+ * MAX           : 256
+ * DEFAULT       : 256
  * DESCRIPTION   :
  *  Not used by FW. Maximum Total Match Filter Length.
  *******************************************************************************/
@@ -10858,7 +12514,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxServiceSpecificInfoLength
  * PSID          : 6088 (0x17C8)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 255
  * DEFAULT       : 255
@@ -10871,10 +12527,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxExtendedServiceSpecificInfoLen
  * PSID          : 6089 (0x17C9)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
- * MAX           : 2048
- * DEFAULT       : 2048
+ * MAX           : 255
+ * DEFAULT       : 255
  * DESCRIPTION   :
  *  Not used by FW. Maximum Extended Service Specific Info Length.
  *******************************************************************************/
@@ -10898,10 +12554,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxNdiInterfaces
  * PSID          : 6091 (0x17CB)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 8
- * DEFAULT       : 4
+ * DEFAULT       : 1
  * DESCRIPTION   :
  *  Not used by FW. Maximum NDI Interfaces. Note: This does not affect number
  *  of NDL Vifs supported by FW as they are hard coded.
@@ -10912,10 +12568,10 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxNdpSessions
  * PSID          : 6092 (0x17CC)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 16
- * DEFAULT       : 4
+ * DEFAULT       : 5
  * DESCRIPTION   :
  *  Not used by FW. Maximum NDP Sessions. Note: This does not affect number
  *  of NDP sessions supported by FW as they are hard coded.
@@ -10957,11 +12613,11 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint8
  * MIN           : 8
  * MAX           : 8
- * DEFAULT       : { 0XFF, 0XFF, 0XFF, 0XFF, 0X7F, 0X00, 0X00, 0X00 }
+ * DEFAULT       :
  * DESCRIPTION   :
  *  Applicable Primary Channels mask. Defined in a uint64 represented by the
- *  octet string. Mapping defined in ChannelisationRules; i.e. Bit 14 maps to
- *  channel 36.
+ *  octet string. Mapping defined in ChannelisationRules; i.e. Bit 14 in the
+ *  first list maps to channel 36.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_NAN_PERMITTED_CHANNELS 0x17CF
 
@@ -11057,7 +12713,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint8
  * MIN           : 9
  * MAX           : 9
- * DEFAULT       : { 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00 }
+ * DEFAULT       : { 0X00, 0X01, 0X00, 0X00, 0X00, 0XFF, 0X00, 0X00, 0X00 }
  * DESCRIPTION   :
  *  Reserved for HUTS tests - Data element read/write entry of octet string
  *  type.
@@ -11167,13 +12823,13 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : hutsReadWriteInternalApiInt64
  * PSID          : 6111 (0x17DF)
  * PER INTERFACE?: NO
- * TYPE          : INT64
- * MIN           : -9223372036854775808
- * MAX           : 9223372036854775807
+ * TYPE          : UINT64
+ * MIN           : 0
+ * MAX           : 18446744073709551615
  * DEFAULT       :
  * DESCRIPTION   :
- *  Reserved for HUTS tests - Data element read/write entry of int64 type via
- *  internal API.
+ *  Reserved for HUTS tests - Data element read/write entry of uint64 type
+ *  via internal API.
  *******************************************************************************/
 #define SLSI_PSID_HUTS_READ_WRITE_INTERNAL_API_INT64 0x17DF
 
@@ -11237,9 +12893,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : hutsReadWriteInternalApiFixSizeTableKey1Row
  * PSID          : 6116 (0x17E4)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
+ * TYPE          : SlsiInt16
+ * MIN           : -32768
+ * MAX           : 32767
  * DEFAULT       :
  * DESCRIPTION   :
  *  Reserved for HUTS tests - Fixed size table rows of int16 type via
@@ -11251,9 +12907,9 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : hutsReadWriteInternalApiFixSizeTableKey2Row
  * PSID          : 6117 (0x17E5)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
+ * TYPE          : SlsiInt16
+ * MIN           : -32768
+ * MAX           : 32767
  * DEFAULT       :
  * DESCRIPTION   :
  *  Reserved for HUTS tests - Fixed size table rows of int16 type via
@@ -11291,7 +12947,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : hutsReadWriteInternalApiFixSizeTableKeyRow
  * PSID          : 6120 (0x17E8)
  * PER INTERFACE?: NO
- * TYPE          : INT64
+ * TYPE          : SlsiUint32
  * MIN           : 0
  * MAX           : 4294967295
  * DEFAULT       :
@@ -11387,7 +13043,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanKeepAliveTimeoutCheck
  * PSID          : 6141 (0x17FD)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 1
  * MAX           : 100
@@ -11418,7 +13074,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanDataPathSetupTimeout
  * PSID          : 6143 (0x17FF)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 0
  * MAX           : 20
@@ -11479,7 +13135,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : FALSE
+ * DEFAULT       : TRUE
  * DESCRIPTION   :
  *  Golden Certification MIB don't delete, change PSID or name. When
  *  permitted, NDLs can use multi-band schedules.
@@ -11499,19 +13155,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Period in ms for sending NAN traffic updates to the host.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_LOGGER_NAN_TRAFFIC_REPORT_PERIOD 0x1805
-
-/*******************************************************************************
- * NAME          : UnifiNanUlwTest
- * PSID          : 6150 (0x1806)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Deprecated.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_NAN_ULW_TEST 0x1806
 
 /*******************************************************************************
  * NAME          : UnifiNanDiscoveryBeaconConfig
@@ -11589,7 +13232,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxConcurrentRangingAsInitiator
  * PSID          : 6156 (0x180C)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 8
  * DEFAULT       : 4
@@ -11602,7 +13245,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxConcurrentRangingAsResponder
  * PSID          : 6157 (0x180D)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 8
  * DEFAULT       : 4
@@ -11615,7 +13258,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanRangingSetupTimeout
  * PSID          : 6158 (0x180E)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 0
  * MAX           : 20
@@ -11675,7 +13318,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanDeviceLinkSetupTimeout
  * PSID          : 6162 (0x1812)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 0
  * MAX           : 20
@@ -11689,11 +13332,11 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanDeviceLinkScheduleUpdateRetryInterval
  * PSID          : 6163 (0x1813)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * UNITS         : seconds
  * MIN           : 0
  * MAX           : 127
- * DEFAULT       : 10
+ * DEFAULT       :
  * DESCRIPTION   :
  *  Retry interval of NDL renegotiation to fill empty slots. Set to zero for
  *  diabling retry.
@@ -11707,7 +13350,7 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiBool
  * MIN           : 0
  * MAX           : 1
- * DEFAULT       : FALSE
+ * DEFAULT       : TRUE
  * DESCRIPTION   :
  *  In multi vif scenarios, e.g. NAN + STA, NAN use RSDB, when possible,
  *  instead of time sharing with other VIFs.
@@ -11718,21 +13361,66 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * NAME          : UnifiNanMaxNafTxRetryCount
  * PSID          : 6165 (0x1815)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 254
- * DEFAULT       : 2
+ * DEFAULT       : 10
  * DESCRIPTION   :
- *  Maximum number of retries to send NAF(NDP Terminate at the moment.) to a
- *  peer.
+ *  Maximum number of retries to send NAF(For NDP Responder and NDP Terminate
+ *  at the moment.) to a peer. Currently set to 10 to account for peer being
+ *  away due to calibration as seen in FIRM-100116
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_NAN_MAX_NAF_TX_RETRY_COUNT 0x1815
+
+/*******************************************************************************
+ * NAME          : UnifiNanFastConnectSlots
+ * PSID          : 6166 (0x1816)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 9
+ * MAX           : 9
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Define the slots that will additionally be added to the NAN NMI VIF for
+ *  the Fast Connect feature. Octet 0 : Bit Duration in TUs. Octet 1 ~ 2 :
+ *  Period in TUs. Octet 3 ~ 4 : Start Offset in TUs. Octet 5 ~ 8 :
+ *  TimeBitMap[4].
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_FAST_CONNECT_SLOTS 0x1816
+
+/*******************************************************************************
+ * NAME          : UnifiNanFastConnectEnabled
+ * PSID          : 6167 (0x1817)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enable or disable the NAN Fast Connect feature.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_FAST_CONNECT_ENABLED 0x1817
+
+/*******************************************************************************
+ * NAME          : UnifiNanAcceleratedDiscoveryTimeout
+ * PSID          : 6168 (0x1818)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * UNITS         : milliseconds
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 1000
+ * DESCRIPTION   :
+ *  The timeout duration for NAN Instant Comm. channel and Fast Connect
+ *  feature
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_ACCELERATED_DISCOVERY_TIMEOUT 0x1818
 
 /*******************************************************************************
  * NAME          : UnifiNanTestMasterPreference
  * PSID          : 6170 (0x181A)
  * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
+ * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 255
  * DEFAULT       :
@@ -11744,17 +13432,345 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_NAN_TEST_MASTER_PREFERENCE 0x181A
 
 /*******************************************************************************
- * NAME          : UnifiRegulatoryParameters
- * PSID          : 8011 (0x1F4B)
+ * NAME          : UnifiNanMaxNdlCount
+ * PSID          : 6171 (0x181B)
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
- * MIN           : 3
- * MAX           : 73
+ * MIN           : 0
+ * MAX           : 8
+ * DEFAULT       : 5
+ * DESCRIPTION   :
+ *  Maximum number of NAN NDL.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_MAX_NDL_COUNT 0x181B
+
+/*******************************************************************************
+ * NAME          : UnifiNanDelayDpResumeAfterSyncTx
+ * PSID          : 6172 (0x181C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
  * DEFAULT       :
  * DESCRIPTION   :
- *  Deprecated.
+ *  The delay in time (expressed in ms) between Sync beacon transmission and
+ *  other frame transmission attempted on behalf of the NMI VIF.
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_REGULATORY_PARAMETERS 0x1F4B
+#define SLSI_PSID_UNIFI_NAN_DELAY_DP_RESUME_AFTER_SYNC_TX 0x181C
+
+/*******************************************************************************
+ * NAME          : UnifiNanMaxConcurrentSubscribeAndPublish
+ * PSID          : 6173 (0x181D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 72
+ * DEFAULT       : 72
+ * DESCRIPTION   :
+ *  Maximum number of concurrent NAN Publish + Subscribe instances supported.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_MAX_CONCURRENT_SUBSCRIBE_AND_PUBLISH 0x181D
+
+/*******************************************************************************
+ * NAME          : UnifiNanInstantCommSlots
+ * PSID          : 6174 (0x181E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 9
+ * MAX           : 9
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Define the slots that will additionally be added to the NAN NMI VIF for
+ *  the Instant Communication Channel feature. Octet 0 : Bit Duration in TUs.
+ *  Octet 1 ~ 2 : Period in TUs. Octet 3 ~ 4 : Start Offset in TUs. Octet 5 ~
+ *  8 : TimeBitMap[4].
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_INSTANT_COMM_SLOTS 0x181E
+
+/*******************************************************************************
+ * NAME          : UnifiNanInstantCommSupported
+ * PSID          : 6176 (0x1820)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Enable or disable the NAN Fast Connect feature.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_INSTANT_COMM_SUPPORTED 0x1820
+
+/*******************************************************************************
+ * NAME          : UnifiNanRetrySdfTxTimeout
+ * PSID          : 6177 (0x1821)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * UNITS         : milliseconds
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 200
+ * DESCRIPTION   :
+ *  The timeout duration for retrying sending SDFs when Instant Comm or Fast
+ *  connect is active
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_RETRY_SDF_TX_TIMEOUT 0x1821
+
+/*******************************************************************************
+ * NAME          : UnifiNanUsdTimeout
+ * PSID          : 6178 (0x1822)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 60
+ * DESCRIPTION   :
+ *  This is a FW internal MIB for FW to use a timer to end USD. This timer
+ *  shall be always greater than 2 seconds (pause state timeout is 60 seconds
+ + time to remain in SCM/MCM).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_USD_TIMEOUT 0x1822
+
+/*******************************************************************************
+ * NAME          : UnifiNanGroupSecurityActivated
+ * PSID          : 6179 (0x1823)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X00
+ * DESCRIPTION   :
+ *  Activates the usage of group security associations in the NAN engine Bit
+ *  0: If set then IGTK is activated, else IGTK inactive by default (may be
+ *  activated based on local and peer support for GTK). Bit 1: If set then
+ *  BIGTK is activated, else BIGTK inactive.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_GROUP_SECURITY_ACTIVATED 0x1823
+
+/*******************************************************************************
+ * NAME          : UnifiNanAcceleratedDiscoveryConfig
+ * PSID          : 6180 (0x1824)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X0003
+ * DESCRIPTION   :
+ *  Bitmap to configure NAN Fast connect behavior Bit 0: Set to 1, Retain the
+ *  Fast connect slots even after service discovery. Bit 1: Set to 1,
+ *  Advertise the Fast connect slots in the availability. Currently Bit 0 and
+ *  Bit 1 are either both 1 or both 0, this can be changed in the future
+ *  based on use case scenarios.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_ACCELERATED_DISCOVERY_CONFIG 0x1824
+
+/*******************************************************************************
+ * NAME          : UnifiNanUsdMcmModeActivated
+ * PSID          : 6181 (0x1825)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Host can control activation of USD multi channel mode through this MIB.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_USD_MCM_MODE_ACTIVATED 0x1825
+
+/*******************************************************************************
+ * NAME          : UnifiNanUsdActivated
+ * PSID          : 6182 (0x1826)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Enable or disable the NAN USD feature.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_USD_ACTIVATED 0x1826
+
+/*******************************************************************************
+ * NAME          : UnifiNanlpControl
+ * PSID          : 6183 (0x1827)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint32
+ * MIN           : 0
+ * MAX           : 4294967295
+ * DEFAULT       : 0X00000000
+ * DESCRIPTION   :
+ *  Control NAN Low Power behaviour. Refer to unifiNANLPControlBits for the
+ *  full set of bit masks. b'0: Supress Deep Sleep if NAN vif exists
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NANLP_CONTROL 0x1827
+
+/*******************************************************************************
+ * NAME          : UnifiNanPairingActivated
+ * PSID          : 6185 (0x1829)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : TRUE
+ * DESCRIPTION   :
+ *  Activates the usage of NAN Pairing to setup NMTKSA with a peer before NDP
+ *  setup.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_PAIRING_ACTIVATED 0x1829
+
+/*******************************************************************************
+ * NAME          : UnifiNanSetupConfigFlags
+ * PSID          : 6186 (0x182A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 0X0000
+ * DESCRIPTION   :
+ *  Bitmap containing flags to control various aspects of NAN Configuration
+ *  See unifiNANSetupConfigFlagsType for bit definitions bit 0: Set to 1 to
+ *  disallow NAN 2G4 Operation while BT is enabled.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_NAN_SETUP_CONFIG_FLAGS 0x182A
+
+/*******************************************************************************
+ * NAME          : UnifiSarAsfCoeffs
+ * PSID          : 6215 (0x1847)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt8
+ * MIN           : -128
+ * MAX           : 127
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  ASF coefficients to convert power in dBm to SAR in dBm/kg. Units are
+ *  0.0625 dB. These coefficients are per-band (index1: 1 for 2.4GHz, 2 for
+ *  5GHz, 3 for 6GHz) per-antenna(index2) per-position(index3, look at
+ *  unifiSarPositionTableIndexEnum). Default values are not provided as they
+ *  are mobile phone specific as depend on antenna location, etc.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SAR_ASF_COEFFS 0x1847
+
+/*******************************************************************************
+ * NAME          : UnifiSarNegligibleThreshold
+ * PSID          : 6216 (0x1848)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       : 5
+ * DESCRIPTION   :
+ *  Negligible SAR threshold in mW/kg. The value is used to check whether
+ *  MLME-SAR.indication needs to be sent.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SAR_NEGLIGIBLE_THRESHOLD 0x1848
+
+/*******************************************************************************
+ * NAME          : UnifiSarAlgorithm
+ * PSID          : 6217 (0x1849)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Defines what SAR algorithm will be used. Options are defined in
+ *  unifiSarAlgorithmEnum.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SAR_ALGORITHM 0x1849
+
+/*******************************************************************************
+ * NAME          : UnifiStaticWlanSar
+ * PSID          : 6218 (0x184A)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint8
+ * MIN           : 0
+ * MAX           : 255
+ * DEFAULT       : 5
+ * DESCRIPTION   :
+ *  Static allocation of SAR for WLAN in mW/kg. This value is used in 2 ways:
+ *  - it is added to SARlimit provided by HOST, - first SAR indication within
+ *  short window is sent only if SAR exceeded unifiStaticWlanSar +
+ *  unifiSarNegligibleThreshold, and unifiStaticWlanSar will be excluded from
+ *  this indication. Rare further indications within the same window are sent
+ *  when SAR accumulated exceeds unifiSarNegligibleThreshold.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_STATIC_WLAN_SAR 0x184A
+
+/*******************************************************************************
+ * NAME          : UnifiSarLimitUpperPerBand
+ * PSID          : 6219 (0x184B)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  SAR corresponding to P_max(maximum power limit that can be used for
+ *  WLAN). The unit is mW/kg. Let's say P_max for 2.4GHz band is 20dBm, and
+ *  worst(greatest) ASF coefficient is 10dB/kg. That gives us
+ *  SARlimit,upper,2G4 to be 30dBm/kg or 1000mW/kg. Index1: 1 for 2.4GHz, 2
+ *  for 5GHz, 3 for 6GHz.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SAR_LIMIT_UPPER_PER_BAND 0x184B
+
+/*******************************************************************************
+ * NAME          : UnifiSarMaxSarSplit
+ * PSID          : 6220 (0x184C)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiBool
+ * MIN           : 0
+ * MAX           : 1
+ * DEFAULT       : FALSE
+ * DESCRIPTION   :
+ *  Select how SAR budget is split between two bands
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SAR_MAX_SAR_SPLIT 0x184C
+
+/*******************************************************************************
+ * NAME          : UnifiPmax
+ * PSID          : 6221 (0x184D)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt8
+ * MIN           : -128
+ * MAX           : 127
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Pmax (Maximum TX power) as a function of band(index 1) and
+ *  antenna(index2) in quarter dBm. Default values are not provided as they
+ *  are mobile phone specific.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_PMAX 0x184D
+
+/*******************************************************************************
+ * NAME          : UnifiSarAllowance
+ * PSID          : 6222 (0x184E)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiUint16
+ * MIN           : 0
+ * MAX           : 65535
+ * DEFAULT       : 700
+ * DESCRIPTION   :
+ *  SAR assigned to WLBT(WLAN + BT).
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_SAR_ALLOWANCE 0x184E
+
+/*******************************************************************************
+ * NAME          : UnifiTasPlimit
+ * PSID          : 6223 (0x184F)
+ * PER INTERFACE?: NO
+ * TYPE          : SlsiInt8
+ * MIN           : -128
+ * MAX           : 127
+ * DEFAULT       :
+ * DESCRIPTION   :
+ *  Plimits (power limits) are TX power which if being used(as
+ *  nominal/average power) will lead to SAR equal to SAR allowance
+ *  (unifiSarAllowance) being produced. These Plimits are per-band (index1: 1
+ *  for 2.4GHz, 2 for 5GHz, 3 for 6GHz) per-antenna(index2) per DSI_ID(look
+ *  at unifiDsiIdStandaloneTasTableIndexEnum). The units are quarter dBm.
+ *  Default values are not provided as they are mobile phone specific as
+ *  depend on antenna location, etc.
+ *******************************************************************************/
+#define SLSI_PSID_UNIFI_TAS_PLIMIT 0x184F
 
 /*******************************************************************************
  * NAME          : UnifiSupportedChannels
@@ -11763,42 +13779,14 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * TYPE          : SlsiUint8
  * MIN           : 0
  * MAX           : 20
- * DEFAULT       :  {0X01,0X0D,0X24,0X04,0X34,0X04,0X64,0X0C,0X95,0X05}
- * DESCRIPTION   :
- *  For Test Only. Supported 20MHz channel primary frequency grouped in
- *  sub-bands. For each sub-band: starting channel number, followed by number
- *  of channels.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_SUPPORTED_CHANNELS 0x1F4C
-
-/*******************************************************************************
- * NAME          : UnifiDefaultCountry
- * PSID          : 8013 (0x1F4D)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 3
- * MAX           : 3
  * DEFAULT       :
  * DESCRIPTION   :
- *  Deprecated. Host set Default Code.
+ *  Supported 20MHz channel primary frequency grouped in sub-bands. For each
+ *  sub-band: starting channel number, followed by number of channels. If
+ *  range max is changed, please update MLME_IE_SUPPORTED_CHANNELS_MAX_TUPLES
+ *  as well.
  *******************************************************************************/
-#define SLSI_PSID_UNIFI_DEFAULT_COUNTRY 0x1F4D
-
-/*******************************************************************************
- * NAME          : UnifiCountryList
- * PSID          : 8014 (0x1F4E)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 2
- * MAX           : 270
- * DEFAULT       : (Too Large to display)
- * DESCRIPTION   :
- *  Deprecated. Defines the ordered list of countries present in
- *  unifiRegulatoryTable. Each country is coded as 2 ASCII characters. If
- *  unifiRegulatoryTable is modified, such as a country is either added,
- *  deleted or its relative location is modified, has to be updated as well.
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_COUNTRY_LIST 0x1F4E
+#define SLSI_PSID_UNIFI_SUPPORTED_CHANNELS 0x1F4C
 
 /*******************************************************************************
  * NAME          : UnifiOperatingClassParamters
@@ -11806,25 +13794,13 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  * PER INTERFACE?: NO
  * TYPE          : SlsiUint8
  * MIN           : 1
- * MAX           : 73
+ * MAX           : 89
  * DEFAULT       :
  * DESCRIPTION   :
- *  Supported Operating Class parameters.
+ *  Supported Operating Class parameters. If range max is changed, please
+ *  update MLME_IE_SUPPORTED_OPERATING_CLASSES_MAX_DATA as well.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_OPERATING_CLASS_PARAMTERS 0x1F4F
-
-/*******************************************************************************
- * NAME          : UnifiVifCountry
- * PSID          : 8016 (0x1F50)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint8
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Per VIf: Each VIF updates its Country Code for the Host to read
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_VIF_COUNTRY 0x1F50
 
 /*******************************************************************************
  * NAME          : UnifiNoCellMaxPower
@@ -11855,20 +13831,6 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
 #define SLSI_PSID_UNIFI_NO_CELL_INCLUDED_CHANNELS 0x1F52
 
 /*******************************************************************************
- * NAME          : UnifiRegDomVersion
- * PSID          : 8019 (0x1F53)
- * PER INTERFACE?: NO
- * TYPE          : SlsiUint16
- * MIN           : 0
- * MAX           : 65535
- * DEFAULT       :
- * DESCRIPTION   :
- *  Regulatory domain version encoded into 2 bytes, major version as MSB and
- *  minor version as LSB
- *******************************************************************************/
-#define SLSI_PSID_UNIFI_REG_DOM_VERSION 0x1F53
-
-/*******************************************************************************
  * NAME          : UnifiDefaultCountryWithoutCH12CH13
  * PSID          : 8020 (0x1F54)
  * PER INTERFACE?: NO
@@ -11893,11 +13855,15 @@ void slsi_mib_buf_append(struct slsi_mib_data *dst, size_t bufferLength, u8 *buf
  *  Read value from a register and return it.
  *******************************************************************************/
 #define SLSI_PSID_UNIFI_READ_REG 0x1F73
+#define SLSI_PSID_UNIFI_EHT_ACTIVATED_FW 0x0B69
 
-/* TODO: Autogen for new MIBs*/
-#define SLSI_PSID_UNIFI_MISC_FEATURES_ACTIVATED 2880
-#define SLSI_PSID_UNIFI_QSFS_VERION             2391
-#define SLSI_PSID_UNIFI_APPENDIX_VERSIONS       2881
+/* TODO: Deprecated mibs to be removed */
+#define SLSI_PSID_UNIFI_WI_FI_SHARING5_GHZ_CHANNEL 2582
+#define SLSI_PSID_UNIFI_GOOGLE_MAX_NUMBER_OF_PERIODIC_SCANS 2260
+#define SLSI_PSID_UNIFI_GOOGLE_MAX_RSSI_SAMPLE_SIZE 2261
+#define SLSI_PSID_UNIFI_GOOGLE_MAX_HOTLIST_APS 2262
+#define SLSI_PSID_UNIFI_GOOGLE_MAX_SIGNIFICANT_WIFI_CHANGE_APS 2263
+#define SLSI_PSID_UNIFI_GOOGLE_MAX_BSSID_HISTORY_ENTRIES 2264
 
 #ifdef __cplusplus
 }

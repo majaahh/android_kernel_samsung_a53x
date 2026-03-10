@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2018 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2022 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 
@@ -82,9 +82,13 @@ void hip4_sampler_update_record(u32 minor, u8 param1, u8 param2, u8 param3, u8 p
 void hip4_sampler_tcp_decode(struct slsi_dev *sdev, struct net_device *dev, u8 *frame, bool from_ba);
 
 #ifdef CONFIG_SCSC_WLAN_HIP4_PROFILING
+#ifdef CONFIG_SCSC_WLAN_HIP5
+#define SCSC_HIP4_SAMPLER_Q(minor, q, idx_rw, value, rw) \
+	hip4_sampler_update_record(minor, q, idx_rw, 0, rw, value)
+#else
 #define SCSC_HIP4_SAMPLER_Q(minor, q, idx_rw, value, rw) \
 	hip4_sampler_update_record(minor, q, idx_rw, value, rw, 0)
-
+#endif
 #define SCSC_HIP4_SAMPLER_QREF(minor, ref, q) \
 	hip4_sampler_update_record(minor, HIP4_SAMPLER_QREF, (ref & 0xff0000) >> 16, (ref & 0xff00) >> 8, (ref & 0xf0) | q, 0)
 
@@ -112,8 +116,8 @@ void hip4_sampler_tcp_decode(struct slsi_dev *sdev, struct net_device *dev, u8 *
 #define SCSC_HIP4_SAMPLER_START_Q(minor, vif_id) \
 	hip4_sampler_update_record(minor, HIP4_SAMPLER_START_Q, 0, 0, vif_id, 0)
 
-#define SCSC_HIP4_SAMPLER_MBULK(minor, bytes16_h, bytes16_l, clas) \
-	hip4_sampler_update_record(minor, HIP4_SAMPLER_MBULK, clas, bytes16_h, bytes16_l, 0)
+#define SCSC_HIP4_SAMPLER_MBULK(minor, bytes16_h, bytes16_l, clas, tot_num) \
+	hip4_sampler_update_record(minor, HIP4_SAMPLER_MBULK, clas, bytes16_h, bytes16_l, tot_num)
 
 #define SCSC_HIP4_SAMPLER_QFULL(minor, q) \
 	hip4_sampler_update_record(minor, HIP4_SAMPLER_QFULL, 0, 0, q, 0)
@@ -220,7 +224,7 @@ void hip4_sampler_tcp_decode(struct slsi_dev *sdev, struct net_device *dev, u8 *
 #define SCSC_HIP4_SAMPLER_THROUG(minor, bytes16_h, bytes16_l)
 #define SCSC_HIP4_SAMPLER_THROUG_K(minor, bytes16_h, bytes16_l)
 #define SCSC_HIP4_SAMPLER_THROUG_M(minor, bytes16_h, bytes16_l)
-#define SCSC_HIP4_SAMPLER_MBULK(minor, bytes16_h, bytes16_l, clas)
+#define SCSC_HIP4_SAMPLER_MBULK(minor, bytes16_h, bytes16_l, clas, tot_num)
 #define SCSC_HIP4_SAMPLER_QFULL(minor, q)
 #define SCSC_HIP4_SAMPLER_MFULL(minor)
 #define SCSC_HIP4_SAMPLER_INT(minor, id)
@@ -257,13 +261,22 @@ void hip4_sampler_tcp_decode(struct slsi_dev *sdev, struct net_device *dev, u8 *
 #endif /* CONFIG_SCSC_WLAN_HIP4_PROFILING */
 
 /* HIP4 sample headers */
+#ifdef CONFIG_SCSC_WLAN_HIP5
+#define SCSC_HIP4_SAMPLER_HEADER_VERSION_MAJOR	0x00
+#define SCSC_HIP4_SAMPLER_HEADER_VERSION_MINOR	0x02
+#else
 #define SCSC_HIP4_SAMPLER_HEADER_VERSION_MAJOR	0x01
-#define SCSC_HIP4_SAMPLER_HEADER_VERSION_MINOR	0x01
+#define SCSC_HIP4_SAMPLER_HEADER_VERSION_MINOR	0x02
+#endif
 
 #define SCSC_HIP4_SAMPLER_RESERVED		(1)
 #define SCSC_HIP4_SAMPLER_RESERVED_2		(10)
 
+#ifdef CONFIG_SCSC_WLAN_HIP5
+#define SCSC_HIP4_SAMPLER_MAGIC			"HIP5"
+#else
 #define SCSC_HIP4_SAMPLER_MAGIC			"HIP4"
+#endif
 
 enum scsc_hip4_sampler_type {
 	SCSC_HIP4_SAMPLER_TYPE_PRE_TCP = 0,
@@ -275,7 +288,12 @@ enum scsc_hip4_sampler_platform {
 	SCSC_HIP4_SAMPLER_EXYNOS9610 = 1,
 	SCSC_HIP4_SAMPLER_EXYNOS9630,
 	SCSC_HIP4_SAMPLER_EXYNOS7885,
+	SCSC_HIP4_SAMPLER_EXYNOS9815,
 	SCSC_HIP4_SAMPLER_EXYNOS8825,
+	SCSC_HIP4_SAMPLER_EXYNOS9925,
+	SCSC_HIP4_SAMPLER_EXYNOS8535,
+	SCSC_HIP4_SAMPLER_EXYNOS8835,
+	SCSC_HIP4_SAMPLER_EXYNOS8845,
 	/* Add others */
 	SCSC_HIP4_SAMPLER_UNDEF = 0xffff
 };

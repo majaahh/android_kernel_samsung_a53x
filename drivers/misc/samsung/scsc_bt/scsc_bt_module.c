@@ -33,7 +33,11 @@
 #include <linux/ctype.h>
 
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/exynos-soc.h>
+#else
 #include <linux/soc/samsung/exynos-soc.h>
+#endif
 #endif
 
 #include <scsc/scsc_logring.h>
@@ -86,8 +90,14 @@ static DEFINE_MUTEX(ant_start_mutex);
 
 static int recovery_timeout = SLSI_BT_SERVICE_STOP_RECOVERY_TIMEOUT;
 
-struct scsc_common_service common_service;
-struct scsc_bt_service bt_service;
+static struct scsc_common_service common_service;
+static struct scsc_bt_service bt_service;
+static struct scsc_bt_service *bt_svc = &bt_service;
+struct scsc_bt_service *get_bt_service(void)
+{
+	return &bt_service;
+}
+
 #ifdef CONFIG_SCSC_ANT
 struct scsc_ant_service ant_service;
 #endif
@@ -110,6 +120,26 @@ static u32 firmware_btlog_enables0_high;
 static u32 firmware_btlog_enables1_low;
 static u32 firmware_btlog_enables1_high;
 static bool disable_service;
+
+/* MUST larger than 1017 (BSMHCP_MAX_PACKET_SIZE - L2CAP_HEADER_SIZE) and multiply of 2
+ * MUST less than or equal to MXLOG_TRANSPORT_BUF_LENGTH (current: 16 * 1024 bytes)
+ * Default value is MXLOG_TRANSPORT_BUF_LENGTH (current: 16 * 1024 bytes)
+ */
+static int fw_log_circ_buf_size = 16 * 1024;
+/* MUST less than or equal to BSMHCP_MAX_PACKET_SIZE - L2CAP_HEADER_SIZE (current: 1017 bytes)
+ * Default value is BSMHCP_MAX_PACKET_SIZE - L2CAP_HEADER_SIZE (current: 1017 bytes)
+ */
+static int fw_log_circ_buf_threshold = BSMHCP_MAX_PACKET_SIZE - L2CAP_HEADER_SIZE;
+static u8 kern2fw_level_map[] = {
+	0, /* 0 KERN_EMERG --> 0 MX_ERROR.. it's panic.*/
+	0,
+	0,
+	0,
+	1, /* 4 KERN_WARNING --> 1 MX_WARN */
+	2, /* 5 KERN_NOTICE --> 2 MX_MAJOR */
+	3, /* 6 KERN_INFO --> 3 MX_MINOR */
+	4, /* 7 KERN_DEBUG --> 4 MX_DETAIL */
+};
 
 /* Audio */
 #ifndef CONFIG_SOC_EXYNOS7885
@@ -165,14 +195,31 @@ static u8 bt_failure_notification(struct scsc_service_client *client, struct mx_
 
 static bool bt_stop_on_failure(struct scsc_service_client *client, struct mx_syserr_decode *err)
 {
+	unsigned char *p = NULL;
 	UNUSED(client);
 
 	SCSC_TAG_ERR(BT_COMMON, "Error level %d\n", err->level);
 
-	reinit_completion(&bt_service.recovery_probe_complete);
-	bt_service.recovery_level = err->level;
+	reinit_completion(&bt_svc->recovery_probe_complete);
+	bt_svc->recovery_level = err->level;
 
-	atomic_inc(&bt_service.error_count);
+	/* Allocate system_error_info and build hci_vse_system_error_info */
+	p = kmalloc(HCI_VSE_SYSTEM_ERROR_INFO_LEN, GFP_KERNEL);
+	if (bt_svc->system_error_info != NULL)
+		kfree(bt_svc->system_error_info);
+	bt_svc->system_error_info = p;
+
+	if (p != NULL) {
+		*p++ = HCI_EVENT_PKT;
+		*p++ = HCI_EVENT_VENDOR_SPECIFIC_EVENT;
+		*p++ = HCI_EVENT_VSE_SUB_CODE_LEN + sizeof(struct mx_syserr_decode);
+		*p++ = HCI_VSE_SYSTEM_ERROR_INFO_SUB_CODE;
+		memcpy(p, err, sizeof(struct mx_syserr_decode));
+	} else
+		SCSC_TAG_ERR(BT_COMMON, "Failed to alloc system_error_info memory\n");
+
+	bt_svc->recovery_waiting = true;
+	atomic_inc(&bt_svc->error_count);
 
 	/* Zero the shared memory on error. The A-Box does not stop using this
 	 * memory immediately as designed. To prevent noise during recovery we zero the
@@ -180,7 +227,7 @@ static bool bt_stop_on_failure(struct scsc_service_client *client, struct mx_sys
 	 */
 	mutex_lock(&bt_audio_mutex);
 
-	if (bt_service.abox_ref != 0 && bt_audio.abox_virtual) {
+	if (bt_svc->abox_ref != 0 && bt_audio.abox_virtual) {
 		memset(bt_audio.abox_virtual->abox_to_bt_streaming_if_data, 0, SCSC_BT_AUDIO_ABOX_DATA_SIZE);
 		memset(bt_audio.abox_virtual->bt_to_abox_streaming_if_data, 0, SCSC_BT_AUDIO_ABOX_DATA_SIZE);
 	}
@@ -198,13 +245,14 @@ static void bt_failure_reset(struct scsc_service_client *client, u8 level, u16 s
 
 	SCSC_TAG_ERR(BT_COMMON, "\n");
 
-	wake_up(&bt_service.read_wait);
+	bt_svc->recovery_waiting = false;
+	wake_up(&bt_svc->read_wait);
 }
 
 static int bt_ap_resumed(struct scsc_service_client *client)
 {
 	UNUSED(client);
-	if (bt_service.interrupt_count != bt_service.last_suspend_interrupt_count)
+	if (bt_svc->interrupt_count != bt_svc->last_suspend_interrupt_count)
 		SCSC_TAG_INFO(BT_COMMON, "Possible Bluetooth firmware wake up detected\n");
 	return 0;
 }
@@ -212,8 +260,41 @@ static int bt_ap_resumed(struct scsc_service_client *client)
 static int bt_ap_suspended(struct scsc_service_client *client)
 {
 	UNUSED(client);
-	bt_service.last_suspend_interrupt_count = bt_service.interrupt_count;
+	bt_svc->last_suspend_interrupt_count = bt_svc->interrupt_count;
 	return 0;
+}
+
+/*
+ * FW log callbacks called from mxlog
+ */
+static void bt_fw_log(struct scsc_service_client *client, size_t length, u32 level, const void *message)
+{
+	size_t ret = 0;
+
+	UNUSED(client);
+
+	/* Ensure fw_acl_read_state is cleared before reading the fw logs */
+	mb();
+
+	if (bt_svc->fw_log.observers_registered == true &&
+	    (bt_svc->fw_log.circ_buf.buf != NULL && bt_svc->fw_log.fw_acl_read != NULL) &&
+	    level < ARRAY_SIZE(kern2fw_level_map)) {
+		/* Push the message of FW log to circ_buf (FW_LOG_HEADER_SIZE + length) */
+		ret = scsc_bt_fw_log_circ_buf_write(kern2fw_level_map[level], (uint8_t *)message,
+						    FW_LOG_HEADER_SIZE + length);
+
+		if (ret == 0 || ret != length + FW_LOG_HEADER_SIZE)
+			SCSC_TAG_ERR(BT_COMMON, "Failed to write the message of FW log to circ_buf\n");
+
+		/* If remain space is less than circ_buf_threshold, trigger reading data */
+		if (bt_svc->fw_log.fw_acl_read_state == FW_READ_ENABLE &&
+		    !(bt_svc->fw_log.fw_acl_read_state & FW_READ_VSC) &&
+		    CIRC_CNT(bt_svc->fw_log.circ_buf.head, bt_svc->fw_log.circ_buf.tail,
+			     bt_svc->fw_log.circ_buf_size) >= bt_svc->fw_log.circ_buf_threshold) {
+			bt_svc->fw_log.fw_acl_read_state |= FW_READ_THRESHOLD;
+			scsc_bt_fw_log_state_handler();
+		}
+	}
 }
 
 #ifdef CONFIG_SCSC_ANT
@@ -257,11 +338,11 @@ static void ant_failure_reset(struct scsc_service_client *client, u8 level, u16 
 static void scsc_bt_shm_irq_handler(int irqbit, void *data)
 {
 	/* Clear interrupt */
-	scsc_service_mifintrbit_bit_clear(bt_service.service, irqbit);
+	scsc_service_mifintrbit_bit_clear(bt_svc->service, irqbit);
 
 	bt_info_interrupt++;
 
-	wake_up(&bt_service.info_wait);
+	wake_up(&bt_svc->info_wait);
 }
 
 static struct scsc_service_client mx_bt_client = {
@@ -270,6 +351,7 @@ static struct scsc_service_client mx_bt_client = {
 	.failure_reset_v2 =        bt_failure_reset,
 	.suspend =                 bt_ap_suspended,
 	.resume =                  bt_ap_resumed,
+	.fw_log =                  bt_fw_log,
 };
 
 #ifdef CONFIG_SCSC_ANT
@@ -288,11 +370,11 @@ static void slsi_sm_bt_service_cleanup_interrupts(void)
 		       "unregister firmware information interrupts\n");
 
 	if (bt_module_irq_mask & 1 << irq_num++)
-		scsc_service_mifintrbit_unregister_tohost(bt_service.service,
-            bt_service.bsmhcp_protocol->header.info_bg_to_ap_int_src, SCSC_MIFINTR_TARGET_WPAN);
+		scsc_service_mifintrbit_unregister_tohost(bt_svc->service,
+            bt_svc->bsmhcp_protocol->header.info_bg_to_ap_int_src, SCSC_MIFINTR_TARGET_WPAN);
 	if (bt_module_irq_mask & 1 << irq_num++)
-		scsc_service_mifintrbit_free_fromhost(bt_service.service,
-		    bt_service.bsmhcp_protocol->header.info_ap_to_bg_int_src,
+		scsc_service_mifintrbit_free_fromhost(bt_svc->service,
+		    bt_svc->bsmhcp_protocol->header.info_ap_to_bg_int_src,
 		    SCSC_MIFINTR_TARGET_WPAN);
 }
 
@@ -300,20 +382,20 @@ static int slsi_sm_bt_service_init_interrupts(void) {
 	int irq_ret;
 	u16 irq_num = 0;
 
-	irq_ret = scsc_service_mifintrbit_register_tohost(bt_service.service,
-	    scsc_bt_shm_irq_handler, NULL, SCSC_MIFINTR_TARGET_WPAN);
+	irq_ret = scsc_service_mifintrbit_register_tohost(bt_svc->service,
+	    scsc_bt_shm_irq_handler, NULL, SCSC_MIFINTR_TARGET_WPAN, SCSC_BT_SHM_IRQ_TYPE);
 	if (irq_ret < 0)
 		return irq_ret;
 
-	bt_service.bsmhcp_protocol->header.info_bg_to_ap_int_src = irq_ret;
+	bt_svc->bsmhcp_protocol->header.info_bg_to_ap_int_src = irq_ret;
 	bt_module_irq_mask |= 1 << irq_num++;
 
-	irq_ret = scsc_service_mifintrbit_alloc_fromhost(bt_service.service,
+	irq_ret = scsc_service_mifintrbit_alloc_fromhost(bt_svc->service,
 	    SCSC_MIFINTR_TARGET_WPAN);
 	if (irq_ret < 0)
 		return irq_ret;
 
-	bt_service.bsmhcp_protocol->header.info_ap_to_bg_int_src = irq_ret;
+	bt_svc->bsmhcp_protocol->header.info_ap_to_bg_int_src = irq_ret;
 	bt_module_irq_mask |= 1 << irq_num++;
 
 	return 0;
@@ -325,15 +407,15 @@ static int slsi_sm_bt_service_cleanup_stop_service(void)
 
 	/* Stop service first, then it's safe to release shared memory
 	   resources */
-	ret = scsc_mx_service_stop(bt_service.service);
+	ret = scsc_mx_service_stop(bt_svc->service);
 
 	if (ret < 0 && ret != -EPERM) {
 		SCSC_TAG_ERR(BT_COMMON,
 			     "scsc_mx_service_stop failed err: %d\n", ret);
 
 		/* Only trigger recovery if the service_stop did not fail because recovery is already in progress */
-		if (atomic_read(&bt_service.error_count) == 0 && ret != -EILSEQ) {
-			scsc_mx_service_service_failed(bt_service.service, "BT service stop failed");
+		if (atomic_read(&bt_svc->error_count) == 0 && ret != -EILSEQ) {
+			scsc_mx_service_service_failed(bt_svc->service, "BT service stop failed");
 			SCSC_TAG_DEBUG(BT_COMMON,
 				       "force service fail complete\n");
 
@@ -402,14 +484,59 @@ struct scsc_log_collector_client bt_collect_hcf_client = {
 	.collect_end = NULL,
 	.prv = NULL,
 };
+
+static void bt_hcf_collect_store(void *hcf, size_t size)
+{
+	void *p = NULL;
+
+	if (hcf && size > 0) {
+#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+		p = kmalloc(size, GFP_KERNEL);
+		memcpy(p, hcf, size);
+#else
+		p = hcf;
+#endif
+	}
+
+	/* Save the binary BT config ref and register for
+	 * log collector to collect the hcf file
+	 */
+	if (p) {
+#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+		if (bt_svc->hcf_collection.hcf)
+			kfree(bt_svc->hcf_collection.hcf);
+#endif
+		bt_svc->hcf_collection.hcf = p;
+		bt_svc->hcf_collection.hcf_size = (unsigned int)size;
+		bt_collect_hcf_client.prv = &bt_svc->hcf_collection;
+		scsc_log_collector_register_client(&bt_collect_hcf_client);
+	}
+}
+
+static void bt_hcf_collect_free(void)
+{
+	/* Deinit HCF log collection */
+	if (bt_collect_hcf_client.prv) {
+		scsc_log_collector_unregister_client(&bt_collect_hcf_client);
+		bt_collect_hcf_client.prv = NULL;
+	}
+#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	if (bt_svc->hcf_collection.hcf)
+		kfree(bt_svc->hcf_collection.hcf);
+#else
+	/* Reset HCF pointer - memory will be freed later */
+#endif
+	bt_svc->hcf_collection.hcf = NULL;
+	bt_svc->hcf_collection.hcf_size = 0;
+}
 #endif
 
 static bool scsc_recovery_in_progress(void)
 {
 #ifdef CONFIG_SCSC_ANT
-	return bt_service.recovery_level != 0 || ant_service.recovery_level != 0;
+	return bt_svc->recovery_level != 0 || ant_service.recovery_level != 0;
 #else
-	return bt_service.recovery_level != 0;
+	return bt_svc->recovery_level != 0;
 #endif
 }
 
@@ -419,14 +546,17 @@ static int slsi_sm_bt_service_cleanup(void)
 
 	SCSC_TAG_DEBUG(BT_COMMON, "enter\n");
 
-	if (NULL != bt_service.service) {
-		SCSC_TAG_DEBUG(BT_COMMON, "stopping debugging thread (service=%p)\n", bt_service.service);
+	if (NULL != bt_svc->service) {
+		SCSC_TAG_DEBUG(BT_COMMON, "stopping debugging thread (service=%p)\n", bt_svc->service);
+
+		/* Release the fw_acl_read for btsnoop */
+		scsc_bt_fw_log_release();
 
 		/* If slsi_sm_bt_service_cleanup_stop_service fails, then let
 		   recovery do the rest of the deinit later. */
-		if (bt_service.service_started) {
+		if (bt_svc->service_started) {
 			ret = slsi_sm_bt_service_cleanup_stop_service();
-			bt_service.service_started = false;
+			bt_svc->service_started = false;
 
 			if (ret < 0) {
 				SCSC_TAG_DEBUG(BT_COMMON, "service stop failed. Recovery has been triggered\n");
@@ -436,17 +566,16 @@ static int slsi_sm_bt_service_cleanup(void)
 
 		/* Service is stopped - ensure polling function is existed */
 		SCSC_TAG_DEBUG(BT_COMMON, "wake reader/poller thread\n");
-		wake_up_interruptible(&bt_service.read_wait);
+		wake_up_interruptible(&bt_svc->read_wait);
 
 		/* Unregister firmware information interrupts */
-		if (bt_service.bsmhcp_protocol) {
+		if (bt_svc->bsmhcp_protocol) {
 			slsi_sm_bt_service_cleanup_interrupts();
 			bt_module_irq_mask = 0;
 		}
 
 		/* Shut down the shared memory interface */
-		SCSC_TAG_DEBUG(BT_COMMON,
-			"cleanup protocol structure and main interrupts\n");
+		SCSC_TAG_DEBUG(BT_COMMON, "cleanup main interrupts\n");
 		scsc_bt_shm_exit();
 
 		/* Cleanup AVDTP detections */
@@ -480,51 +609,41 @@ static int slsi_sm_bt_service_cleanup(void)
 		mutex_unlock(&bt_audio_mutex);
 
 #ifdef CONFIG_SCSC_LOG_COLLECTION
-		/* Deinit HCF log collection */
-		if (bt_collect_hcf_client.prv) {
-			scsc_log_collector_unregister_client(&bt_collect_hcf_client);
-			bt_collect_hcf_client.prv = NULL;
-		}
-
-		if (bt_service.hcf_collection.hcf) {
-			/* Reset HCF pointer - memory will be freed later */
-			bt_service.hcf_collection.hcf_size = 0;
-			bt_service.hcf_collection.hcf = NULL;
-		}
+		bt_hcf_collect_free();
 #endif
 
 		/* Release the shared memory */
 		SCSC_TAG_DEBUG(BT_COMMON,
 			"free memory allocated in the shared DRAM pool\n");
-		if (bt_service.bsmhcp_ref != 0) {
-			scsc_mx_service_mifram_free(bt_service.service,
-					bt_service.bsmhcp_ref);
-			bt_service.bsmhcp_ref = 0;
+		if (bt_svc->bsmhcp_ref != 0) {
+			scsc_mx_service_mifram_free(bt_svc->service,
+					bt_svc->bsmhcp_ref);
+			bt_svc->bsmhcp_ref = 0;
 		}
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 
-		if (bt_service.bhcd_start_ref != 0) {
+		if (bt_svc->bhcd_start_ref != 0) {
 			scsc_mx_service_mifram_free(
-				bt_service.service,
-				bt_service.bhcd_start_ref);
-			bt_service.bhcd_start_ref = 0;
+				bt_svc->service,
+				bt_svc->bhcd_start_ref);
+			bt_svc->bhcd_start_ref = 0;
 		}
 #else
-		if (bt_service.config_ref != 0) {
-			scsc_mx_service_mifram_free(bt_service.service,
-					bt_service.config_ref);
-			bt_service.config_ref = 0;
+		if (bt_svc->config_ref != 0) {
+			scsc_mx_service_mifram_free(bt_svc->service,
+					bt_svc->config_ref);
+			bt_svc->config_ref = 0;
 		}
-		if (bt_service.bhcs_ref != 0) {
-			scsc_mx_service_mifram_free(bt_service.service,
-					bt_service.bhcs_ref);
-			bt_service.bhcs_ref = 0;
+		if (bt_svc->bhcs_ref != 0) {
+			scsc_mx_service_mifram_free(bt_svc->service,
+					bt_svc->bhcs_ref);
+			bt_svc->bhcs_ref = 0;
 		}
 #endif /* CONFIG_SCSC_INDEPENDENT_SUBSYSTEM */
 
 		SCSC_TAG_DEBUG(BT_COMMON, "closing service...\n");
 
-		ret = scsc_mx_service_close(bt_service.service);
+		ret = scsc_mx_service_close(bt_svc->service);
 
 		if (ret < 0 && ret != -EPERM) {
 			int retry_counter;
@@ -541,7 +660,7 @@ static int slsi_sm_bt_service_cleanup(void)
 			for (retry_counter = 0; retry_counter < SLSI_BT_SERVICE_CLOSE_RETRY; retry_counter++) {
 				msleep(500);
 
-				ret = scsc_mx_service_close(bt_service.service);
+				ret = scsc_mx_service_close(bt_svc->service);
 
 				if (ret == 0) {
 					SCSC_TAG_DEBUG(BT_COMMON,
@@ -555,7 +674,10 @@ static int slsi_sm_bt_service_cleanup(void)
 					SCSC_TAG_ERR(BT_COMMON, "scsc_mx_service_close failed %d times\n",
 						 SLSI_BT_SERVICE_CLOSE_RETRY);
 		}
-		bt_service.service = NULL;
+		bt_svc->service = NULL;
+
+		SCSC_TAG_DEBUG(BT_COMMON, "cleanup protocol structure\n");
+		scsc_bt_shm_cleanup();
 
 		SCSC_TAG_DEBUG(BT_COMMON,
 			"notify the KIC subsystem of the shutdown\n");
@@ -565,13 +687,17 @@ static int slsi_sm_bt_service_cleanup(void)
 			0);
 	}
 
-	atomic_set(&bt_service.error_count, 0);
+	atomic_set(&bt_svc->error_count, 0);
 
 	/* Release write wake lock if held */
-	if (wake_lock_active(&bt_service.write_wake_lock)) {
-		bt_service.write_wake_unlock_count++;
-		wake_unlock(&bt_service.write_wake_lock);
+	if (wake_lock_active(&bt_svc->write_wake_lock)) {
+		bt_svc->write_wake_unlock_count++;
+		wake_unlock(&bt_svc->write_wake_lock);
 	}
+
+	/* Release read wake lock if held */
+	if (wake_lock_active(&bt_svc->read_wake_lock))
+		wake_unlock(&bt_svc->read_wake_lock);
 
 	SCSC_TAG_DEBUG(BT_COMMON, "complete\n");
 	return 0;
@@ -604,7 +730,7 @@ static int slsi_sm_ant_service_cleanup_stop_service(void)
 #endif
 
 #ifdef CONFIG_SCSC_ANT
-static int slsi_sm_ant_service_cleanup(void)
+static int slsi_sm_ant_service_cleanup()
 {
 	int ret = 0;
 
@@ -792,7 +918,6 @@ static void get_bt_conf_filename(char *buf, int size)
 {
 #if defined SCSC_SEP_VERSION
 	int ret = 0, value;
-
 	ret = scsc_mx_phandle_property_read_u32(common_service.maxwell_core,
 			"samsung,wlbt_hcf", "hcf_rev", &value, 1);
 	if (ret == 0) {
@@ -995,13 +1120,13 @@ int slsi_sm_bt_service_start(void)
 	}
 
 	/* Is this the first service to enter */
-	if (atomic_inc_return(&bt_service.service_users) > 1) {
+	if (atomic_inc_return(&bt_svc->service_users) > 1) {
 		SCSC_TAG_WARNING(BT_COMMON, "service already opened\n");
 
-		if (!bt_service.service_started) {
+		if (!bt_svc->service_started) {
 			SCSC_TAG_DEBUG(BT_COMMON, "service not started, returning error\n");
 			err = -EFAULT;
-			atomic_dec(&bt_service.service_users);
+			atomic_dec(&bt_svc->service_users);
 		}
 
 		mutex_unlock(&bt_start_mutex);
@@ -1014,7 +1139,7 @@ int slsi_sm_bt_service_start(void)
 	SCSC_TAG_DEBUG(BT_COMMON,
 		       "open Bluetooth service id %d opened %d times\n",
 		       SCSC_SERVICE_ID_BT, service_start_count);
-	wake_lock(&bt_service.service_wake_lock);
+	wake_lock(&bt_svc->service_wake_lock);
 
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	err = scsc_bt_get_boot_data(&boot_data);
@@ -1022,25 +1147,28 @@ int slsi_sm_bt_service_start(void)
 		goto exit;
 
 	SCSC_TAG_DEBUG(BT_COMMON, "service open boot data %p, %d\n", boot_data, boot_data->total_length);
-	bt_service.service = scsc_mx_service_open_boot_data(
+	bt_svc->service = scsc_mx_service_open_boot_data(
 		common_service.maxwell_core,
 		SCSC_SERVICE_ID_BT,
 		&mx_bt_client,
 		&err,
 		boot_data,
 		boot_data->total_length);
+#ifdef CONFIG_SCSC_LOG_COLLECTION
+	bt_hcf_collect_store(boot_data->config, boot_data->config_tl.length);
+#endif
 	kfree(boot_data);
 #else
-	bt_service.service = scsc_mx_service_open(
+	bt_svc->service = scsc_mx_service_open(
 		common_service.maxwell_core,
 		SCSC_SERVICE_ID_BT,
 		&mx_bt_client,
 		&err);
 #endif /* CONFIG_SCSC_INDEPENDENT_SUBSYSTEM */
-	if (!bt_service.service) {
+	if (!bt_svc->service) {
 		SCSC_TAG_WARNING(BT_COMMON, "service open failed %d\n", err);
-		atomic_dec(&bt_service.service_users);
-		wake_unlock(&bt_service.service_wake_lock);
+		atomic_dec(&bt_svc->service_users);
+		wake_unlock(&bt_svc->service_wake_lock);
 		mutex_unlock(&bt_start_mutex);
 		return -EINVAL;
 	}
@@ -1056,17 +1184,17 @@ int slsi_sm_bt_service_start(void)
 	SCSC_TAG_DEBUG(BT_COMMON, "allocate mifram regions\n");
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	err = scsc_mx_service_mifram_alloc(
-		bt_service.service,
+		bt_svc->service,
 		sizeof(*start_data),
-		&bt_service.bhcd_start_ref,
+		&bt_svc->bhcd_start_ref,
 		BSMHCP_ALIGNMENT);
 #else
 	/* Get shared memory region for the configuration structure from
 	 * the MIF
 	 */
-	err = scsc_mx_service_mifram_alloc(bt_service.service,
+	err = scsc_mx_service_mifram_alloc(bt_svc->service,
 					   sizeof(struct BHCS),
-					   &bt_service.bhcs_ref,
+					   &bt_svc->bhcs_ref,
 					   BSMHCP_ALIGNMENT);
 #endif /* CONFIG_SCSC_INDEPENDENT_SUBSYSTEM */
 	if (err) {
@@ -1076,9 +1204,9 @@ int slsi_sm_bt_service_start(void)
 	}
 
 	/* Get shared memory region for the protocol structure from the MIF */
-	err = scsc_mx_service_mifram_alloc(bt_service.service,
+	err = scsc_mx_service_mifram_alloc(bt_svc->service,
 					   sizeof(struct BSMHCP_PROTOCOL),
-					   &bt_service.bsmhcp_ref,
+					   &bt_svc->bsmhcp_ref,
 					   BSMHCP_ALIGNMENT);
 	if (err) {
 		SCSC_TAG_WARNING(BT_COMMON, "mifram alloc failed\n");
@@ -1089,13 +1217,13 @@ int slsi_sm_bt_service_start(void)
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Map the configuration pointer */
 	start_data = (struct bhcd_start *) scsc_mx_service_mif_addr_to_ptr(
-		bt_service.service,
-		bt_service.bhcd_start_ref);
+		bt_svc->service,
+		bt_svc->bhcd_start_ref);
 	if (start_data == NULL) {
 		SCSC_TAG_ERR(
 			BT_COMMON,
 			"couldn't map kmem to bhcd_start_ref 0x%08x\n",
-			(u32)bt_service.bhcd_start_ref);
+			(u32)bt_svc->bhcd_start_ref);
 		err = -ENOMEM;
 		goto exit;
 	}
@@ -1110,8 +1238,10 @@ int slsi_sm_bt_service_start(void)
 	/* Engage insanity mode, will break if scsc_mifram_ref stops being
 	 * implemented as valid addresses on the target memory.
 	 */
-	start_data->protocol.offset = bt_service.bsmhcp_ref;
+	start_data->protocol.offset = bt_svc->bsmhcp_ref;
 	start_data->protocol.length = sizeof(struct BSMHCP_PROTOCOL);
+
+	dma_wmb();
 
 #endif /* CONFIG_SCSC_INDEPENDENT_SUBSYSTEM */
 
@@ -1133,9 +1263,9 @@ int slsi_sm_bt_service_start(void)
 		 * It may still be used by A-Box.
 		 */
 
-		err = scsc_mx_service_mif_ptr_to_addr(bt_service.service,
-				scsc_mx_service_get_bt_audio_abox(bt_service.service),
-				&bt_service.abox_ref);
+		err = scsc_mx_service_mif_ptr_to_addr(bt_svc->service,
+				scsc_mx_service_get_bt_audio_abox(bt_svc->service),
+				&bt_svc->abox_ref);
 		if (err) {
 			SCSC_TAG_WARNING(BT_COMMON, "scsc_mx_service_mif_ptr_to_addr failed\n");
 			err = -EINVAL;
@@ -1145,8 +1275,8 @@ int slsi_sm_bt_service_start(void)
 
 		bt_audio.abox_virtual = (struct scsc_bt_audio_abox *)
 						scsc_mx_service_mif_addr_to_ptr(
-							bt_service.service,
-							bt_service.abox_ref);
+							bt_svc->service,
+							bt_svc->abox_ref);
 
 		memset(bt_audio.abox_virtual, 0, sizeof(struct scsc_bt_audio_abox));
 
@@ -1162,59 +1292,52 @@ int slsi_sm_bt_service_start(void)
 
 		/* Resolve the physical address of the structure */
 		bt_audio.abox_physical = (struct scsc_bt_audio_abox *)scsc_mx_service_mif_addr_to_phys(
-									bt_service.service,
-									bt_service.abox_ref);
+									bt_svc->service,
+									bt_svc->abox_ref);
 
 
-		bt_audio.dev = bt_service.dev;
+		bt_audio.dev = bt_svc->dev;
 	}
 
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	SCSC_TAG_INFO(
 		BT_COMMON,
 		"regions (bsmhcp_ref=0x%08x, abox_ref=0x%08x)\n",
-		bt_service.bsmhcp_ref,
-		bt_service.abox_ref);
-#else
+		bt_svc->bsmhcp_ref,
+		bt_svc->abox_ref);
+#else /* CONFIG_SCSC_INDEPENDENT_SUBSYSTEM */
 /* Map the configuration pointer */
 	bhcs = (struct BHCS *) scsc_mx_service_mif_addr_to_ptr(
-					bt_service.service,
-					bt_service.bhcs_ref);
+					bt_svc->service,
+					bt_svc->bhcs_ref);
 	if (bhcs == NULL) {
 		SCSC_TAG_ERR(BT_COMMON,
 			     "couldn't map kmem to bhcs_ref 0x%08x\n",
-			     (u32)bt_service.bhcs_ref);
+			     (u32)bt_svc->bhcs_ref);
 		err = -ENOMEM;
 		goto exit;
 	}
 
 	SCSC_TAG_INFO(BT_COMMON,
 	    "regions (bhcs_ref=0x%08x, bsmhcp_ref=0x%08x, config_ref=0x%08x, abox_ref=0x%08x)\n",
-				 bt_service.bhcs_ref,
-				 bt_service.bsmhcp_ref,
-				 bt_service.config_ref,
-				 bt_service.abox_ref);
+				 bt_svc->bhcs_ref,
+				 bt_svc->bsmhcp_ref,
+				 bt_svc->config_ref,
+				 bt_svc->abox_ref);
 	SCSC_TAG_INFO(BT_COMMON, "version=%u\n", BHCS_VERSION);
 
-	err = setup_bhcs(bt_service.service,
+	err = setup_bhcs(bt_svc->service,
 			 bhcs,
-			 bt_service.bsmhcp_ref,
+			 bt_svc->bsmhcp_ref,
 			 sizeof(struct BSMHCP_PROTOCOL),
-			 &bt_service.config_ref,
-			 &bt_service.bhcs_ref);
+			 &bt_svc->config_ref,
+			 &bt_svc->bhcs_ref);
 
 #ifdef CONFIG_SCSC_LOG_COLLECTION
-	/* Save the binary BT config ref and register for
-	 * log collector to collect the hcf file
-	 */
-	if (bhcs->configuration_length > 0) {
-		bt_service.hcf_collection.hcf =
-				scsc_mx_service_mif_addr_to_ptr(bt_service.service,
-								bt_service.config_ref);
-		bt_service.hcf_collection.hcf_size = bhcs->configuration_length;
-		bt_collect_hcf_client.prv = &bt_service.hcf_collection;
-		scsc_log_collector_register_client(&bt_collect_hcf_client);
-	}
+	bt_hcf_collect_store(
+		scsc_mx_service_mif_addr_to_ptr(bt_svc->service,
+						bt_svc->config_ref),
+		bhcs->configuration_length);
 #endif
 
 	if (err == -EINVAL)
@@ -1233,13 +1356,13 @@ int slsi_sm_bt_service_start(void)
 	if (err < 0)
 		goto exit;
 
-	bt_service.bsmhcp_protocol->header.btlog_enables0_low = firmware_btlog_enables0_low;
-	bt_service.bsmhcp_protocol->header.btlog_enables0_high = firmware_btlog_enables0_high;
-	bt_service.bsmhcp_protocol->header.btlog_enables1_low = firmware_btlog_enables1_low;
-	bt_service.bsmhcp_protocol->header.btlog_enables1_high = firmware_btlog_enables1_high;
-	bt_service.bsmhcp_protocol->header.firmware_control = firmware_control;
-	bt_service.bsmhcp_protocol->header.abox_offset = bt_service.abox_ref;
-	bt_service.bsmhcp_protocol->header.abox_length = sizeof(struct scsc_bt_audio_abox);
+	bt_svc->bsmhcp_protocol->header.btlog_enables0_low = firmware_btlog_enables0_low;
+	bt_svc->bsmhcp_protocol->header.btlog_enables0_high = firmware_btlog_enables0_high;
+	bt_svc->bsmhcp_protocol->header.btlog_enables1_low = firmware_btlog_enables1_low;
+	bt_svc->bsmhcp_protocol->header.btlog_enables1_high = firmware_btlog_enables1_high;
+	bt_svc->bsmhcp_protocol->header.firmware_control = firmware_control;
+	bt_svc->bsmhcp_protocol->header.abox_offset = bt_svc->abox_ref;
+	bt_svc->bsmhcp_protocol->header.abox_length = sizeof(struct scsc_bt_audio_abox);
 
 	SCSC_TAG_DEBUG(BT_COMMON,
 		       "firmware_control=0x%08x, firmware_control_reset=%u\n",
@@ -1251,19 +1374,26 @@ int slsi_sm_bt_service_start(void)
 	/* Start service last - after setting up shared memory resources */
 	SCSC_TAG_DEBUG(BT_COMMON, "starting Bluetooth service\n");
 #if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-	err = scsc_mx_service_start(bt_service.service, bt_service.bhcd_start_ref);
+	err = scsc_mx_service_start(bt_svc->service, bt_svc->bhcd_start_ref);
 #else
-	err = scsc_mx_service_start(bt_service.service, bt_service.bhcs_ref);
+	err = scsc_mx_service_start(bt_svc->service, bt_svc->bhcs_ref);
 #endif
 	if (err < 0) {
 		SCSC_TAG_ERR(BT_COMMON, "scsc_mx_service_start err %d\n", err);
 		err = -EINVAL;
 	} else {
 		SCSC_TAG_DEBUG(BT_COMMON, "Bluetooth service running\n");
-		bt_service.service_started = true;
+		bt_svc->service_started = true;
 #ifdef CONFIG_SCSC_QOS
 		scsc_bt_qos_service_start();
 #endif
+
+		/* Initialize the fw_acl_read for btsnoop */
+		scsc_bt_fw_log_init(fw_log_circ_buf_size, fw_log_circ_buf_threshold);
+		bt_svc->fw_log.btlog_enables0_low = firmware_btlog_enables0_low;
+		bt_svc->fw_log.btlog_enables0_high = firmware_btlog_enables0_high;
+		bt_svc->fw_log.btlog_enables1_low = firmware_btlog_enables1_low;
+		bt_svc->fw_log.btlog_enables1_high = firmware_btlog_enables1_high;
 
 		slsi_kic_system_event(
 			slsi_kic_system_event_category_initialisation,
@@ -1289,10 +1419,10 @@ int slsi_sm_bt_service_start(void)
 exit:
 	if (err < 0) {
 		if (slsi_sm_bt_service_cleanup() == 0)
-			atomic_dec(&bt_service.service_users);
+			atomic_dec(&bt_svc->service_users);
 	}
 
-	wake_unlock(&bt_service.service_wake_lock);
+	wake_unlock(&bt_svc->service_wake_lock);
 	mutex_unlock(&bt_start_mutex);
 	return err;
 }
@@ -1331,7 +1461,7 @@ int slsi_sm_ant_service_start(void)
 		if (!ant_service.service_started) {
 			SCSC_TAG_DEBUG(BT_COMMON, "service not started, returning error\n");
 			err = -EFAULT;
-			atomic_dec(&bt_service.service_users);
+			atomic_dec(&bt_svc->service_users);
 		}
 
 		mutex_unlock(&ant_start_mutex);
@@ -1473,13 +1603,13 @@ exit:
 /* Stop the BT service */
 static int slsi_sm_bt_service_stop(void)
 {
-	SCSC_TAG_INFO(BT_COMMON, "bt service users %u\n", atomic_read(&bt_service.service_users));
+	SCSC_TAG_INFO(BT_COMMON, "bt service users %u\n", atomic_read(&bt_svc->service_users));
 
-	if (1 < atomic_read(&bt_service.service_users)) {
-		atomic_dec(&bt_service.service_users);
-	} else if (1 == atomic_read(&bt_service.service_users)) {
+	if (1 < atomic_read(&bt_svc->service_users)) {
+		atomic_dec(&bt_svc->service_users);
+	} else if (1 == atomic_read(&bt_svc->service_users)) {
 		if (slsi_sm_bt_service_cleanup() == 0)
-			atomic_dec(&bt_service.service_users);
+			atomic_dec(&bt_svc->service_users);
 		else
 			return -EIO;
 	}
@@ -1489,7 +1619,7 @@ static int slsi_sm_bt_service_stop(void)
 
 #ifdef CONFIG_SCSC_ANT
 /* Stop the ANT service */
-static int slsi_sm_ant_service_stop(void)
+static int slsi_sm_ant_service_stop()
 {
 	SCSC_TAG_INFO(BT_COMMON, "ant service users %u\n", atomic_read(&ant_service.service_users));
 
@@ -1510,12 +1640,12 @@ static int scsc_bt_h4_open(struct inode *inode, struct file *file)
 {
 	int ret = 0;
 
-	SCSC_TAG_INFO(BT_COMMON, "(h4_users=%u)\n", bt_service.h4_users ? 1 : 0);
+	SCSC_TAG_INFO(BT_COMMON, "(h4_users=%u)\n", bt_svc->h4_users ? 1 : 0);
 
-	if (!bt_service.h4_users) {
+	if (!bt_svc->h4_users) {
 		ret = slsi_sm_bt_service_start();
 		if (0 == ret)
-			bt_service.h4_users = true;
+			bt_svc->h4_users = true;
 	} else {
 		ret = -EBUSY;
 	}
@@ -1528,19 +1658,19 @@ static int scsc_bt_h4_release(struct inode *inode, struct file *file)
 	SCSC_TAG_INFO(BT_COMMON, "\n");
 
 	mutex_lock(&bt_start_mutex);
-	wake_lock(&bt_service.service_wake_lock);
+	wake_lock(&bt_svc->service_wake_lock);
 	/* service_started will only be false in case we timed out during
 	 * recovery waiting for the release from the user.
 	 */
-	if (bt_service.recovery_level < MX_SYSERR_LEVEL_7 && bt_service.service_started) {
+	if (bt_svc->recovery_level < MX_SYSERR_LEVEL_7 && bt_svc->service_started) {
 		if (slsi_sm_bt_service_stop() == -EIO)
 			goto recovery;
 
 		/* Clear all control structures */
-		bt_service.read_offset = 0;
-		bt_service.read_operation = 0;
-		bt_service.read_index = 0;
-		bt_service.h4_write_offset = 0;
+		bt_svc->read_offset = 0;
+		bt_svc->read_operation = 0;
+		bt_svc->read_index = 0;
+		bt_svc->h4_write_offset = 0;
 
 		/* The recovery flag can be set in case of crossing release and
 		 * recovery signaling. It's safe to check the flag here since
@@ -1548,10 +1678,10 @@ static int scsc_bt_h4_release(struct inode *inode, struct file *file)
 		 * will be called after the mutex is released. Jump to the
 		 * normal recovery path.
 		 */
-		if (bt_service.recovery_level >= MX_SYSERR_LEVEL_7)
+		if (bt_svc->recovery_level >= MX_SYSERR_LEVEL_7)
 			goto recovery;
 #ifdef CONFIG_SCSC_ANT
-		else if (bt_service.recovery_level >= MX_SYSERR_LEVEL_5) {
+		else if (bt_svc->recovery_level >= MX_SYSERR_LEVEL_5) {
 			/* Try to lock ant_start mutex and synchronize release with ANT.
 			 * If this does not succeed, it means that ANT is either opening
 			 * or closing and in any case not waiting for BT to synchronize shutdown.
@@ -1584,7 +1714,7 @@ static int scsc_bt_h4_release(struct inode *inode, struct file *file)
 					 */
 					reinit_completion(&ant_service.release_complete);
 
-					bt_service.recovery_level = 0;
+					bt_svc->recovery_level = 0;
 					wake_up_interruptible(&ant_recovery_complete_queue);
 				} else {
 					mutex_unlock(&ant_start_mutex);
@@ -1593,10 +1723,16 @@ static int scsc_bt_h4_release(struct inode *inode, struct file *file)
 		}
 #endif
 
-		bt_service.recovery_level = 0;
+		bt_svc->recovery_level = 0;
+		bt_svc->recovery_waiting = false;
 
-		wake_unlock(&bt_service.service_wake_lock);
-		bt_service.h4_users = false;
+		if (bt_svc->system_error_info != NULL) {
+			kfree(bt_svc->system_error_info);
+			bt_svc->system_error_info = NULL;
+		}
+
+		wake_unlock(&bt_svc->service_wake_lock);
+		bt_svc->h4_users = false;
 		mutex_unlock(&bt_start_mutex);
 	} else {
 		int ret;
@@ -1605,17 +1741,17 @@ recovery:
 		 * the BT service was closed before the release call, so don't complete
 		 * it in that case.
 		 */
-		if (bt_service.service_started)
-			complete_all(&bt_service.recovery_release_complete);
-		wake_unlock(&bt_service.service_wake_lock);
+		if (bt_svc->service_started)
+			complete_all(&bt_svc->recovery_release_complete);
+		wake_unlock(&bt_svc->service_wake_lock);
 		mutex_unlock(&bt_start_mutex);
 
-		ret = wait_for_completion_timeout(&bt_service.recovery_probe_complete,
+		ret = wait_for_completion_timeout(&bt_svc->recovery_probe_complete,
 		       msecs_to_jiffies(recovery_timeout));
 		if (ret == 0)
 			SCSC_TAG_INFO(BT_COMMON, "recovery_probe_complete timeout\n");
 
-		bt_service.h4_users = false;
+		bt_svc->h4_users = false;
 	}
 
 	return 0;
@@ -1656,9 +1792,9 @@ static int scsc_ant_release(struct inode *inode, struct file *file)
 			 * or closing and in any case not waiting for ANT to synchronize shutdown.
 			 */
 			if (mutex_trylock(&bt_start_mutex)) {
-				if (bt_service.h4_users &&
-				    bt_service.recovery_level >= MX_SYSERR_LEVEL_5 &&
-				    bt_service.recovery_level < MX_SYSERR_LEVEL_7) {
+				if (bt_svc->h4_users &&
+				    bt_svc->recovery_level >= MX_SYSERR_LEVEL_5 &&
+				    bt_svc->recovery_level < MX_SYSERR_LEVEL_7) {
 					complete_all(&ant_service.release_complete);
 					/* BT will handle resetting in case we need to sync */
 					reset_recovery_level = false;
@@ -1762,21 +1898,21 @@ static int scsc_bt_trigger_recovery(void *priv,
 
 	mutex_lock(&bt_start_mutex);
 
-	if (0 < atomic_read(&bt_service.service_users) &&
-	    bt_service.bsmhcp_protocol) {
+	if (0 < atomic_read(&bt_svc->service_users) &&
+	    bt_svc->bsmhcp_protocol) {
 		SCSC_TAG_INFO(BT_COMMON, "trashing magic value\n");
 
 		if (slsi_kic_test_recovery_type_service_stop_panic == type)
-			bt_service.bsmhcp_protocol->header.firmware_control =
+			bt_svc->bsmhcp_protocol->header.firmware_control =
 				BSMHCP_CONTROL_STOP_PANIC;
 		else if (slsi_kic_test_recovery_type_service_start_panic ==
 			 type)
 			firmware_control = BSMHCP_CONTROL_START_PANIC;
 		else
-			bt_service.bsmhcp_protocol->header.magic_value = 0;
+			bt_svc->bsmhcp_protocol->header.magic_value = 0;
 
-		scsc_service_mifintrbit_bit_set(bt_service.service,
-			bt_service.bsmhcp_protocol->header.ap_to_bg_int_src,
+		scsc_service_mifintrbit_bit_set(bt_svc->service,
+			bt_svc->bsmhcp_protocol->header.ap_to_bg_int_src,
 			SCSC_MIFINTR_TARGET_WPAN);
 	} else {
 		if (slsi_kic_test_recovery_type_service_stop_panic == type)
@@ -1876,28 +2012,52 @@ void slsi_bt_service_probe(struct scsc_mx_module_client *module_client,
 		      "BT service probe (%s %p)\n", module_client->name, mx);
 
 	mutex_lock(&bt_start_mutex);
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
-	    bt_service.recovery_level == 0) {
+#ifdef CONFIG_SCSC_INDEPENDENT_SUBSYSTEM
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN. BT service probe recovery ignored.\n");
+		goto done;
+	}
+
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+	    bt_svc->recovery_level == 0) {
 		SCSC_TAG_INFO(BT_COMMON,
 			      "BT service probe recovery, but no recovery in progress\n");
 		goto done;
 	}
+#else
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
+	    bt_svc->recovery_level == 0) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "BT service probe recovery, but no recovery in progress\n");
+		goto done;
+	}
+#endif
 
-	bt_service.dev = scsc_mx_get_device(mx);
+	bt_svc->dev = scsc_mx_get_device(mx);
 	common_service.maxwell_core = mx;
 
-	get_device(bt_service.dev);
+	get_device(bt_svc->dev);
 
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
-	    bt_service.recovery_level != 0) {
-		complete_all(&bt_service.recovery_probe_complete);
-		bt_service.recovery_level = 0;
+#ifdef CONFIG_SCSC_INDEPENDENT_SUBSYSTEM
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+	    bt_svc->recovery_level != 0) {
+		complete_all(&bt_svc->recovery_probe_complete);
+		bt_svc->recovery_level = 0;
 	}
+#else
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
+	    bt_svc->recovery_level != 0) {
+		complete_all(&bt_svc->recovery_probe_complete);
+		bt_svc->recovery_level = 0;
+	}
+#endif
+	bt_svc->recovery_waiting = false;
 
-	slsi_bt_notify_probe(bt_service.dev,
+	slsi_bt_notify_probe(bt_svc->dev,
 			     &scsc_bt_shm_fops,
-			     &bt_service.error_count,
-			     &bt_service.read_wait);
+			     &bt_svc->error_count,
+			     &bt_svc->read_wait);
 
 done:
 	mutex_unlock(&bt_start_mutex);
@@ -1912,23 +2072,31 @@ static void slsi_bt_service_remove(struct scsc_mx_module_client *module_client,
 		      "BT service remove (%s %p)\n", module_client->name, mx);
 
 	mutex_lock(&bt_start_mutex);
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
-	    bt_service.recovery_level == 0) {
+
+#ifdef CONFIG_SCSC_INDEPENDENT_SUBSYSTEM
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN. BT service probe recovery ignored.\n");
+		goto done;
+	}
+
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+	    bt_svc->recovery_level == 0) {
 		SCSC_TAG_INFO(BT_COMMON,
 			      "BT service remove recovery, but no recovery in progress\n");
 		goto done;
 	}
 
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
-	    bt_service.recovery_level != 0) {
-		bool service_active = bt_service.service_started;
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+	    bt_svc->recovery_level != 0) {
+		bool service_active = bt_svc->service_started;
 
 		mutex_unlock(&bt_start_mutex);
 
 		SCSC_TAG_INFO(BT_COMMON, "wait for recovery_release_complete\n");
 		/* Don't wait for the recovery_release_complete if service is not active */
 		if (service_active) {
-			int ret = wait_for_completion_timeout(&bt_service.recovery_release_complete,
+			int ret = wait_for_completion_timeout(&bt_svc->recovery_release_complete,
 			       msecs_to_jiffies(SLSI_BT_SERVICE_STOP_RECOVERY_TIMEOUT));
 			if (ret == 0)
 				SCSC_TAG_INFO(BT_COMMON, "recovery_release_complete timeout\n");
@@ -1937,20 +2105,58 @@ static void slsi_bt_service_remove(struct scsc_mx_module_client *module_client,
 		mutex_lock(&bt_start_mutex);
 
 		if (service_active)
-			reinit_completion(&bt_service.recovery_release_complete);
+			reinit_completion(&bt_svc->recovery_release_complete);
 
 		if (slsi_sm_bt_service_stop() == -EIO)
 			SCSC_TAG_INFO(BT_COMMON, "Service stop or close failed during recovery.\n");
 
 		/* Clear all control structures */
-		bt_service.read_offset = 0;
-		bt_service.read_operation = 0;
-		bt_service.read_index = 0;
-		bt_service.h4_write_offset = 0;
+		bt_svc->read_offset = 0;
+		bt_svc->read_operation = 0;
+		bt_svc->read_index = 0;
+		bt_svc->h4_write_offset = 0;
+	}
+#else
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
+	    bt_svc->recovery_level == 0) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "BT service remove recovery, but no recovery in progress\n");
+		goto done;
 	}
 
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY &&
+	    bt_svc->recovery_level != 0) {
+		bool service_active = bt_svc->service_started;
+
+		mutex_unlock(&bt_start_mutex);
+
+		SCSC_TAG_INFO(BT_COMMON, "wait for recovery_release_complete\n");
+		/* Don't wait for the recovery_release_complete if service is not active */
+		if (service_active) {
+			int ret = wait_for_completion_timeout(&bt_svc->recovery_release_complete,
+			       msecs_to_jiffies(SLSI_BT_SERVICE_STOP_RECOVERY_TIMEOUT));
+			if (ret == 0)
+				SCSC_TAG_INFO(BT_COMMON, "recovery_release_complete timeout\n");
+		}
+
+		mutex_lock(&bt_start_mutex);
+
+		if (service_active)
+			reinit_completion(&bt_svc->recovery_release_complete);
+
+		if (slsi_sm_bt_service_stop() == -EIO)
+			SCSC_TAG_INFO(BT_COMMON, "Service stop or close failed during recovery.\n");
+
+		/* Clear all control structures */
+		bt_svc->read_offset = 0;
+		bt_svc->read_operation = 0;
+		bt_svc->read_index = 0;
+		bt_svc->h4_write_offset = 0;
+	}
+#endif
+
 	slsi_bt_notify_remove();
-	put_device(bt_service.dev);
+	put_device(bt_svc->dev);
 	common_service.maxwell_core = NULL;
 
 done:
@@ -1978,18 +2184,34 @@ void slsi_ant_service_probe(struct scsc_mx_module_client *module_client,
 		      "ANT service probe (%s %p)\n", module_client->name, mx);
 
 	mutex_lock(&ant_start_mutex);
+#ifdef CONFIG_SCSC_INDEPENDENT_SUBSYSTEM
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN. ANT service probe recovery ignored.\n");
+		goto done;
+	}
+
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+		ant_service.recovery_level == 0) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "ANT service probe recovery, but no recovery in progress\n");
+		goto done;
+	}
+#else
 	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY && ant_service.recovery_level == 0) {
 		SCSC_TAG_INFO(BT_COMMON,
 			      "ANT service probe recovery, but no recovery in progress\n");
 		goto done;
 	}
+#endif
 
 	ant_service.dev = scsc_mx_get_device(mx);
 	common_service.maxwell_core = mx;
 
 	get_device(ant_service.dev);
 
-	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY && ant_service.recovery_level != 0) {
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+		ant_service.recovery_level != 0) {
 		complete_all(&ant_service.recovery_probe_complete);
 		ant_service.recovery_level = 0;
 	}
@@ -2010,6 +2232,52 @@ static void slsi_ant_service_remove(struct scsc_mx_module_client *module_client,
 		      "ANT service remove (%s %p)\n", module_client->name, mx);
 
 	mutex_lock(&ant_start_mutex);
+#ifdef CONFIG_SCSC_INDEPENDENT_SUBSYSTEM
+	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "SCSC_MODULE_CLIENT_REASON_RECOVERY_WLAN. ANT service probe recovery ignored.\n");
+		goto done;
+	}
+
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+	   ant_service.recovery_level == 0) {
+		SCSC_TAG_INFO(BT_COMMON,
+			      "ANT service remove recovery, but no recovery in progress\n");
+		goto done;
+	}
+
+	if ((reason == SCSC_MODULE_CLIENT_REASON_RECOVERY || reason == SCSC_MODULE_CLIENT_REASON_RECOVERY_WPAN) &&
+	   ant_service.recovery_level != 0) {
+		int ret;
+		bool service_active = ant_service.service_started;
+
+		mutex_unlock(&ant_start_mutex);
+
+		/* Don't wait for recovery_release_complete if service is not active */
+		if (service_active) {
+			ret = wait_for_completion_timeout(&ant_service.recovery_release_complete,
+			       msecs_to_jiffies(SLSI_BT_SERVICE_STOP_RECOVERY_TIMEOUT));
+			if (ret == 0)
+				SCSC_TAG_INFO(BT_COMMON, "recovery_release_complete timeout\n");
+		}
+
+		mutex_lock(&ant_start_mutex);
+
+		if (service_active)
+			reinit_completion(&ant_service.recovery_release_complete);
+
+		if (slsi_sm_ant_service_stop() == -EIO)
+			SCSC_TAG_INFO(BT_COMMON, "Service stop or close failed during recovery.\n");
+
+		ant_service.ant_users = false;
+
+		/* Clear all control structures */
+		ant_service.read_offset = 0;
+		ant_service.read_operation = 0;
+		ant_service.read_index = 0;
+		ant_service.ant_write_offset = 0;
+	}
+#else
 	if (reason == SCSC_MODULE_CLIENT_REASON_RECOVERY && ant_service.recovery_level == 0) {
 		SCSC_TAG_INFO(BT_COMMON,
 			      "ANT service remove recovery, but no recovery in progress\n");
@@ -2046,6 +2314,7 @@ static void slsi_ant_service_remove(struct scsc_mx_module_client *module_client,
 		ant_service.read_index = 0;
 		ant_service.ant_write_offset = 0;
 	}
+#endif
 
 	put_device(ant_service.dev);
 	common_service.maxwell_core = NULL;
@@ -2070,18 +2339,18 @@ static struct scsc_mx_module_client ant_driver = {
 static void slsi_bt_service_proc_show_firmware(struct seq_file *m)
 {
 	struct BSMHCP_FW_INFO *info =
-		&bt_service.bsmhcp_protocol->information;
+		&bt_svc->bsmhcp_protocol->information;
 	int res;
 	u32 index;
 	u32 user_defined_count = info->user_defined_count;
 
 	bt_info_trigger++;
 
-	scsc_service_mifintrbit_bit_set(bt_service.service,
-		bt_service.bsmhcp_protocol->header.info_ap_to_bg_int_src,
+	scsc_service_mifintrbit_bit_set(bt_svc->service,
+		bt_svc->bsmhcp_protocol->header.info_ap_to_bg_int_src,
 		SCSC_MIFINTR_TARGET_WPAN);
 
-	res = wait_event_interruptible_timeout(bt_service.info_wait,
+	res = wait_event_interruptible_timeout(bt_svc->info_wait,
 			bt_info_trigger == bt_info_interrupt,
 			2*HZ);
 
@@ -2125,77 +2394,77 @@ static int slsi_bt_service_proc_show(struct seq_file *m, void *v)
 	char    processed_text[BSMHCP_TRANSFER_RING_EVT_SIZE + 1];
 	char    iso_allocated_text[BSMHCP_DATA_BUFFER_TX_ISO_SIZE + 1];
 	size_t  index;
-	struct scsc_bt_avdtp_detect_hci_connection *cur = bt_service.avdtp_detect.connections;
+	struct scsc_bt_avdtp_detect_hci_connection *cur = bt_svc->avdtp_detect.connections;
 
 	seq_puts(m, "Driver statistics:\n");
 	seq_printf(m, "  write_wake_lock_count         = %zu\n",
-		bt_service.write_wake_lock_count);
+		bt_svc->write_wake_lock_count);
 	seq_printf(m, "  write_wake_unlock_count       = %zu\n\n",
-		bt_service.write_wake_unlock_count);
+		bt_svc->write_wake_unlock_count);
 
 	seq_printf(m, "  mailbox_hci_evt_read          = %u\n",
-		bt_service.mailbox_hci_evt_read);
+		bt_svc->mailbox_hci_evt_read);
 	seq_printf(m, "  mailbox_hci_evt_write         = %u\n",
-		bt_service.mailbox_hci_evt_write);
+		bt_svc->mailbox_hci_evt_write);
 	seq_printf(m, "  mailbox_acl_rx_read           = %u\n",
-		bt_service.mailbox_acl_rx_read);
+		bt_svc->mailbox_acl_rx_read);
 	seq_printf(m, "  mailbox_acl_rx_write          = %u\n",
-		bt_service.mailbox_acl_rx_write);
+		bt_svc->mailbox_acl_rx_write);
 	seq_printf(m, "  mailbox_acl_free_read         = %u\n",
-		bt_service.mailbox_acl_free_read);
+		bt_svc->mailbox_acl_free_read);
 	seq_printf(m, "  mailbox_acl_free_read_scan    = %u\n",
-		bt_service.mailbox_acl_free_read_scan);
+		bt_svc->mailbox_acl_free_read_scan);
 	seq_printf(m, "  mailbox_acl_free_write        = %u\n",
-		bt_service.mailbox_acl_free_write);
+		bt_svc->mailbox_acl_free_write);
 
 	seq_printf(m, "  mailbox_iso_rx_read           = %u\n",
-		bt_service.mailbox_iso_rx_read);
+		bt_svc->mailbox_iso_rx_read);
 	seq_printf(m, "  mailbox_iso_rx_write          = %u\n",
-		bt_service.mailbox_iso_rx_write);
+		bt_svc->mailbox_iso_rx_write);
 	seq_printf(m, "  mailbox_iso_free_read         = %u\n",
-		bt_service.mailbox_iso_free_read);
+		bt_svc->mailbox_iso_free_read);
 	seq_printf(m, "  mailbox_iso_free_read_scan    = %u\n",
-		bt_service.mailbox_iso_free_read_scan);
+		bt_svc->mailbox_iso_free_read_scan);
 	seq_printf(m, "  mailbox_iso_free_write        = %u\n",
-		bt_service.mailbox_iso_free_write);
+		bt_svc->mailbox_iso_free_write);
 
 	seq_printf(m, "  hci_event_paused              = %u\n",
-		bt_service.hci_event_paused);
+		bt_svc->hci_event_paused);
 	seq_printf(m, "  data_paused                = %u\n\n",
-		bt_service.data_paused);
+		bt_svc->data_paused);
 
 	seq_printf(m, "  interrupt_count               = %zu\n",
-		bt_service.interrupt_count);
+		bt_svc->interrupt_count);
 	seq_printf(m, "  interrupt_read_count          = %zu\n",
-		bt_service.interrupt_read_count);
+		bt_svc->interrupt_read_count);
 	seq_printf(m, "  interrupt_write_count         = %zu\n",
-		bt_service.interrupt_write_count);
+		bt_svc->interrupt_write_count);
 
 	for (index = 0; index < BSMHCP_DATA_BUFFER_TX_ACL_SIZE; index++)
-		allocated_text[index] = bt_service.allocated[index] ? '1' : '0';
+		allocated_text[index] = bt_svc->allocated[index] ? '1' : '0';
 	allocated_text[BSMHCP_DATA_BUFFER_TX_ACL_SIZE] = 0;
 
 	for (index = 0; index < BSMHCP_DATA_BUFFER_TX_ISO_SIZE; index++)
-		iso_allocated_text[index] = bt_service.iso_allocated[index] ? '1' : '0';
+		iso_allocated_text[index] = bt_svc->iso_allocated[index] ? '1' : '0';
 	iso_allocated_text[BSMHCP_DATA_BUFFER_TX_ISO_SIZE] = 0;
 
 
 	for (index = 0; index < BSMHCP_TRANSFER_RING_EVT_SIZE; index++)
-		processed_text[index] = bt_service.processed[index] ? '1' : '0';
+		processed_text[index] = bt_svc->processed[index] ? '1' : '0';
 	processed_text[BSMHCP_DATA_BUFFER_TX_ACL_SIZE] = 0;
 
 	seq_printf(m, "  allocated_count               = %u\n",
-		bt_service.allocated_count);
+		bt_svc->allocated_count);
 	seq_printf(m, "  freed_count                   = %u\n",
-		bt_service.freed_count);
+		bt_svc->freed_count);
 	seq_printf(m, "  allocated                     = %s\n",
 		allocated_text);
 	seq_printf(m, "  processed                     = %s\n\n",
 		processed_text);
 	seq_printf(m, "  iso_allocated_count           = %u\n",
-		bt_service.iso_allocated_count);
+		bt_svc->iso_allocated_count);
 	seq_printf(m, "  iso_freed_count               = %u\n",
-		bt_service.iso_freed_count);
+		bt_svc->iso_freed_count);
 	seq_printf(m, "  iso_allocated                 = %s\n",
 		iso_allocated_text);
 
@@ -2216,8 +2485,8 @@ static int slsi_bt_service_proc_show(struct seq_file *m, void *v)
 
 	mutex_lock(&bt_start_mutex);
 
-	if (NULL != bt_service.service) {
-		if (bt_service.bsmhcp_protocol->header.firmware_features &
+	if (NULL != bt_svc->service) {
+		if (bt_svc->bsmhcp_protocol->header.firmware_features &
 		    BSMHCP_FEATURE_FW_INFORMATION) {
 			slsi_bt_service_proc_show_firmware(m);
 		} else
@@ -2258,15 +2527,20 @@ static const struct file_operations scsc_bt_procfs_fops = {
 static void scsc_update_btlog_params(void)
 {
 	mutex_lock(&bt_start_mutex);
-	if (bt_service.service) {
-		bt_service.bsmhcp_protocol->header.btlog_enables0_low = firmware_btlog_enables0_low;
-		bt_service.bsmhcp_protocol->header.btlog_enables0_high = firmware_btlog_enables0_high;
-		bt_service.bsmhcp_protocol->header.btlog_enables1_low = firmware_btlog_enables1_low;
-		bt_service.bsmhcp_protocol->header.btlog_enables1_high = firmware_btlog_enables1_high;
+	if (bt_svc->service) {
+		bt_svc->bsmhcp_protocol->header.btlog_enables0_low = firmware_btlog_enables0_low;
+		bt_svc->bsmhcp_protocol->header.btlog_enables0_high = firmware_btlog_enables0_high;
+		bt_svc->bsmhcp_protocol->header.btlog_enables1_low = firmware_btlog_enables1_low;
+		bt_svc->bsmhcp_protocol->header.btlog_enables1_high = firmware_btlog_enables1_high;
+
+		bt_svc->fw_log.btlog_enables0_low = firmware_btlog_enables0_low;
+		bt_svc->fw_log.btlog_enables0_high = firmware_btlog_enables0_high;
+		bt_svc->fw_log.btlog_enables1_low = firmware_btlog_enables1_low;
+		bt_svc->fw_log.btlog_enables1_high = firmware_btlog_enables1_high;
 
 		/* Trigger the interrupt in the mailbox */
-		scsc_service_mifintrbit_bit_set(bt_service.service,
-				bt_service.bsmhcp_protocol->header.ap_to_bg_int_src,
+		scsc_service_mifintrbit_bit_set(bt_svc->service,
+				bt_svc->bsmhcp_protocol->header.ap_to_bg_int_src,
 				SCSC_MIFINTR_TARGET_WPAN);
 	}
 	mutex_unlock(&bt_start_mutex);
@@ -2408,6 +2682,40 @@ static int scsc_btlog_enables_set_param_cb(const char *buffer,
 	return ret;
 }
 
+static int scsc_fw_log_circ_buf_size_set_param_cb(const char *buffer,
+						  const struct kernel_param *kp)
+{
+	int ret;
+	u32 value;
+
+	ret = kstrtou32(buffer, 0, &value);
+	if (!ret) {
+		if ((value & (value-1)) == 0 && value >= 128)
+			fw_log_circ_buf_size = value;
+		else
+			return -1;
+	}
+
+	return ret;
+}
+
+static int scsc_fw_log_circ_buf_threshold_set_param_cb(const char *buffer,
+						       const struct kernel_param *kp)
+{
+	int ret;
+	u32 value;
+
+	ret = kstrtou32(buffer, 0, &value);
+	if (!ret) {
+		if (value >= 128 && value <= 1017)
+			fw_log_circ_buf_threshold = value;
+		else
+			return -1;
+	}
+
+	return ret;
+}
+
 static int scsc_mxlog_filter_get_param_cb(char *buffer,
 					  const struct kernel_param *kp)
 {
@@ -2422,6 +2730,18 @@ static int scsc_btlog_enables_get_param_cb(char *buffer,
 			firmware_btlog_enables0_high, firmware_btlog_enables0_low);
 }
 
+static int scsc_fw_log_circ_buf_size_get_param_cb(char *buffer,
+						  const struct kernel_param *kp)
+{
+	return sprintf(buffer, "fw_log_circ_buf_size = %d\n", fw_log_circ_buf_size);
+}
+
+static int scsc_fw_log_circ_buf_threshold_get_param_cb(char *buffer,
+						       const struct kernel_param *kp)
+{
+	return sprintf(buffer, "fw_log_circ_buf_threshold = %d\n", fw_log_circ_buf_threshold);
+}
+
 static struct kernel_param_ops scsc_mxlog_filter_ops = {
 	.set = scsc_mxlog_filter_set_param_cb,
 	.get = scsc_mxlog_filter_get_param_cb,
@@ -2432,6 +2752,16 @@ static struct kernel_param_ops scsc_btlog_enables_ops = {
 	.get = scsc_btlog_enables_get_param_cb,
 };
 
+static struct kernel_param_ops fw_log_circ_buf_size_ops = {
+	.set = scsc_fw_log_circ_buf_size_set_param_cb,
+	.get = scsc_fw_log_circ_buf_size_get_param_cb,
+};
+
+static struct kernel_param_ops fw_log_circ_buf_threshold_ops = {
+	.set = scsc_fw_log_circ_buf_threshold_set_param_cb,
+	.get = scsc_fw_log_circ_buf_threshold_get_param_cb,
+};
+
 module_param_cb(mxlog_filter, &scsc_mxlog_filter_ops, NULL, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mxlog_filter,
 		 	 	 "Set the enables for btlog sources in Bluetooth firmware (31..0)");
@@ -2439,6 +2769,14 @@ MODULE_PARM_DESC(mxlog_filter,
 module_param_cb(btlog_enables, &scsc_btlog_enables_ops, NULL, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(btlog_enables,
 				"Set the enables for btlog sources in Bluetooth firmware (127..0)");
+
+module_param_cb(fw_log_circ_buf_size, &fw_log_circ_buf_size_ops, NULL, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(fw_log_circ_buf_size,
+	"Set the size of fw_loc_circ_buf that has to be a multiple of 2 and bigger than 128 bytes");
+
+module_param_cb(fw_log_circ_buf_threshold, &fw_log_circ_buf_threshold_ops, NULL, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(fw_log_circ_buf_threshold,
+	"Set the threshold for fw_loc_circ_buf (size has to be between 64 bytes and 1017 bytes)");
 
 static int scsc_force_crash_set_param_cb(const char *buffer,
 					 const struct kernel_param *kp)
@@ -2449,9 +2787,9 @@ static int scsc_force_crash_set_param_cb(const char *buffer,
 	ret = kstrtou32(buffer, 0, &value);
 	if (!ret && value == 0xDEADDEAD) {
 		mutex_lock(&bt_start_mutex);
-		if (bt_service.service) {
-			atomic_inc(&bt_service.error_count);
-			wake_up(&bt_service.read_wait);
+		if (bt_svc->service) {
+			atomic_inc(&bt_svc->error_count);
+			wake_up(&bt_svc->read_wait);
 		}
 		mutex_unlock(&bt_start_mutex);
 	}
@@ -2538,7 +2876,7 @@ int scsc_bt_audio_register(struct scsc_bt_audio_driver *driver)
 	else {
 		audio_driver = driver;
 
-		if (bt_service.h4_users && bt_audio.dev != NULL) {
+		if (bt_svc->h4_users && bt_audio.dev != NULL) {
 			audio_driver->probe(audio_driver, &bt_audio);
 
 			audio_driver_probed = true;
@@ -2573,7 +2911,7 @@ int scsc_bt_audio_unregister(struct scsc_bt_audio_driver *driver)
 		 * driver unloads at shutdown, so it would be safe to leave the
 		 * memmory mapped.
 		 */
-		if (atomic_read(&bt_service.service_users) == 0 && audio_device_probed)
+		if (atomic_read(&bt_svc->service_users) == 0 && audio_device_probed)
 			slsi_bt_audio_remove();
 
 		bt_audio.dev			= NULL;
@@ -2614,7 +2952,7 @@ static int __init scsc_bt_module_init(void)
 	SCSC_TAG_INFO(BT_COMMON, "%s %s (C) %s\n",
 		      SCSC_MODDESC, SCSC_MODVERSION, SCSC_MODAUTH);
 	bt_module_irq_mask = 0;
-	bt_service.recovery_level = 0;
+	bt_svc->recovery_level = 0;
 #ifdef CONFIG_SCSC_ANT
 	ant_service.recovery_level = 0;
 #endif
@@ -2624,17 +2962,17 @@ static int __init scsc_bt_module_init(void)
 	memset(&ant_service, 0, sizeof(ant_service));
 #endif
 
-	init_waitqueue_head(&bt_service.read_wait);
-	init_waitqueue_head(&bt_service.info_wait);
+	init_waitqueue_head(&bt_svc->read_wait);
+	init_waitqueue_head(&bt_svc->info_wait);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
-	wake_lock_init(&bt_service.read_wake_lock,
+	wake_lock_init(&bt_svc->read_wake_lock,
 		       WAKE_LOCK_SUSPEND,
 		       "bt_read_wake_lock");
-	wake_lock_init(&bt_service.write_wake_lock,
+	wake_lock_init(&bt_svc->write_wake_lock,
 		       WAKE_LOCK_SUSPEND,
 		       "bt_write_wake_lock");
-	wake_lock_init(&bt_service.service_wake_lock,
+	wake_lock_init(&bt_svc->service_wake_lock,
 		       WAKE_LOCK_SUSPEND,
 		       "bt_service_wake_lock");
 
@@ -2652,11 +2990,11 @@ static int __init scsc_bt_module_init(void)
 		       "ant_service_wake_lock");
 #endif
 #else
-	wake_lock_init(NULL, &bt_service.read_wake_lock.ws,
+	wake_lock_init(NULL, &bt_svc->read_wake_lock.ws,
 		       "bt_read_wake_lock");
-	wake_lock_init(NULL, &bt_service.write_wake_lock.ws,
+	wake_lock_init(NULL, &bt_svc->write_wake_lock.ws,
 		       "bt_write_wake_lock");
-	wake_lock_init(NULL, &bt_service.service_wake_lock.ws,
+	wake_lock_init(NULL, &bt_svc->service_wake_lock.ws,
 		       "bt_service_wake_lock");
 
 #ifdef CONFIG_SCSC_ANT
@@ -2676,43 +3014,48 @@ static int __init scsc_bt_module_init(void)
 				 procfs_dir, &scsc_bt_procfs_fops, NULL);
 	}
 
-	ret = alloc_chrdev_region(&bt_service.device, 0,
+	ret = alloc_chrdev_region(&bt_svc->device, 0,
 				  SCSC_TTY_MINORS, "scsc_char");
 	if (ret) {
 		SCSC_TAG_ERR(BT_COMMON, "error alloc_chrdev_region %d\n", ret);
 		return ret;
 	}
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+	common_service.class = class_create("scsc_char");
+#else
 	common_service.class = class_create(THIS_MODULE, "scsc_char");
+#endif
+
 	if (IS_ERR(common_service.class)) {
 		ret = PTR_ERR(common_service.class);
 		goto error;
 	}
 
-	cdev_init(&bt_service.h4_cdev, &scsc_bt_shm_fops);
-	ret = cdev_add(&bt_service.h4_cdev,
-		       MKDEV(MAJOR(bt_service.device), MINOR(0)), 1);
+	cdev_init(&bt_svc->h4_cdev, &scsc_bt_shm_fops);
+	ret = cdev_add(&bt_svc->h4_cdev,
+		       MKDEV(MAJOR(bt_svc->device), MINOR(0)), 1);
 	if (ret) {
 		SCSC_TAG_ERR(BT_COMMON,
 			     "cdev_add failed for device %s\n",
 			     SCSC_H4_DEVICE_NAME);
-		bt_service.h4_cdev.dev = 0;
+		bt_svc->h4_cdev.dev = 0;
 		goto error;
 	}
 
-	bt_service.h4_device = device_create(common_service.class,
+	bt_svc->h4_device = device_create(common_service.class,
 					     NULL,
-					     bt_service.h4_cdev.dev,
+					     bt_svc->h4_cdev.dev,
 					     NULL,
 					     SCSC_H4_DEVICE_NAME);
-	if (bt_service.h4_device == NULL) {
-		cdev_del(&bt_service.h4_cdev);
+	if (bt_svc->h4_device == NULL) {
+		cdev_del(&bt_svc->h4_cdev);
 		ret = -EFAULT;
 		goto error;
 	}
 
-	init_completion(&bt_service.recovery_probe_complete);
-	init_completion(&bt_service.recovery_release_complete);
+	init_completion(&bt_svc->recovery_probe_complete);
+	init_completion(&bt_svc->recovery_release_complete);
 
 #ifdef CONFIG_SCSC_ANT
 	ret = alloc_chrdev_region(&ant_service.device, 0,
@@ -2766,19 +3109,19 @@ static int __init scsc_bt_module_init(void)
 #endif
 
 	SCSC_TAG_DEBUG(BT_COMMON, "dev=%u class=%p\n",
-			   bt_service.device, common_service.class);
+			   bt_svc->device, common_service.class);
 
-	spin_lock_init(&bt_service.avdtp_detect.lock);
-	spin_lock_init(&bt_service.avdtp_detect.fw_write_lock);
+	spin_lock_init(&bt_svc->avdtp_detect.lock);
+	spin_lock_init(&bt_svc->avdtp_detect.fw_write_lock);
 
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
 	sprintf(bluetooth_address_fallback, "%02X:%02X:%02X:%02X:%02X:%02X",
-	       (exynos_soc_info.unique_id & 0x000000FF0000) >> 16,
-	       (exynos_soc_info.unique_id & 0x00000000FF00) >> 8,
-	       (exynos_soc_info.unique_id & 0x0000000000FF) >> 0,
-	       (exynos_soc_info.unique_id & 0xFF0000000000) >> 40,
-	       (exynos_soc_info.unique_id & 0x00FF00000000) >> 32,
-	       (exynos_soc_info.unique_id & 0x0000FF000000) >> 24);
+		(char)((exynos_soc_info.unique_id & 0x000000FF0000) >> 16),
+		(char)((exynos_soc_info.unique_id & 0x00000000FF00) >> 8),
+		(char)((exynos_soc_info.unique_id & 0x0000000000FF) >> 0),
+		(char)((exynos_soc_info.unique_id & 0xFF0000000000) >> 40),
+		(char)((exynos_soc_info.unique_id & 0x00FF00000000) >> 32),
+		(char)((exynos_soc_info.unique_id & 0x0000FF000000) >> 24));
 #endif
 
 #ifdef CONFIG_SCSC_ANT
@@ -2793,7 +3136,7 @@ static int __init scsc_bt_module_init(void)
 
 error:
 	SCSC_TAG_ERR(BT_COMMON, "error class_create bt device\n");
-	unregister_chrdev_region(bt_service.device, SCSC_TTY_MINORS);
+	unregister_chrdev_region(bt_svc->device, SCSC_TTY_MINORS);
 
 #ifdef CONFIG_SCSC_ANT
 	SCSC_TAG_ERR(BT_COMMON, "error class_create ant device\n");
@@ -2803,16 +3146,18 @@ error:
 	return ret;
 }
 
-
 static void __exit scsc_bt_module_exit(void)
 {
 	SCSC_TAG_INFO(BT_COMMON, "\n");
 
-	wake_lock_destroy(&bt_service.write_wake_lock);
-	wake_lock_destroy(&bt_service.read_wake_lock);
-	wake_lock_destroy(&bt_service.service_wake_lock);
-	complete_all(&bt_service.recovery_probe_complete);
-	complete_all(&bt_service.recovery_release_complete);
+#ifdef CONFIG_SCSC_QOS
+	scsc_bt_qos_service_exit();
+#endif
+	wake_lock_destroy(&bt_svc->write_wake_lock);
+	wake_lock_destroy(&bt_svc->read_wake_lock);
+	wake_lock_destroy(&bt_svc->service_wake_lock);
+	complete_all(&bt_svc->recovery_probe_complete);
+	complete_all(&bt_svc->recovery_release_complete);
 
 #ifdef CONFIG_SCSC_ANT
 	wake_lock_destroy(&ant_service.write_wake_lock);
@@ -2828,14 +3173,14 @@ static void __exit scsc_bt_module_exit(void)
 	/* Register with MX manager */
 	scsc_mx_module_unregister_client_module(&bt_driver);
 
-	if (bt_service.h4_device) {
-		device_destroy(common_service.class, bt_service.h4_cdev.dev);
-		bt_service.h4_device = NULL;
+	if (bt_svc->h4_device) {
+		device_destroy(common_service.class, bt_svc->h4_cdev.dev);
+		bt_svc->h4_device = NULL;
 	}
 
-	cdev_del(&bt_service.h4_cdev);
+	cdev_del(&bt_svc->h4_cdev);
 
-	unregister_chrdev_region(bt_service.device, SCSC_TTY_MINORS);
+	unregister_chrdev_region(bt_svc->device, SCSC_TTY_MINORS);
 
 #ifdef CONFIG_SCSC_ANT
 	slsi_kic_ant_ops_unregister(&scsc_ant_kic_ops);
@@ -2852,7 +3197,6 @@ static void __exit scsc_bt_module_exit(void)
 
 	unregister_chrdev_region(ant_service.device, SCSC_TTY_MINORS);
 #endif
-
 	SCSC_TAG_INFO(BT_COMMON, "exit, module unloaded\n");
 }
 

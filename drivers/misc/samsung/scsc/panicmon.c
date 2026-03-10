@@ -10,6 +10,10 @@
 #include "scsc_mif_abs.h"
 #include "mxman.h"
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_panicmon.c"
+#endif
+
 static void panicmon_isr(int irq, void *data)
 {
 	struct panicmon *panicmon = (struct panicmon *)data;

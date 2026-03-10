@@ -67,7 +67,9 @@ static struct work_struct	wlbtd_work;
 #endif
 
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/debug-snapshot.h>
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 #include <soc/samsung/debug-snapshot.h>
 #else
 #include <linux/debug-snapshot.h>
@@ -78,8 +80,14 @@ static struct work_struct	wlbtd_work;
 #include <scsc/api/bt_audio.h>
 
 #if IS_ENABLED(CONFIG_SCSC_MEMLOG)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/memlogger.h>
+#else
 #include <soc/samsung/memlogger.h>
 #endif
+#endif
+
+#include <scsc/scsc_warn.h>
 
 #define STRING_BUFFER_MAX_LENGTH 512
 #define NUMBER_OF_STRING_ARGS	5
@@ -126,8 +134,6 @@ static struct work_struct	wlbtd_work;
 #define SCSC_R4_V2_MINOR_53 53
 #define SCSC_R4_V2_MINOR_54 54
 
-#define MM_HALT_RSP_TIMEOUT_MS 100
-
 /* If limits below are exceeded, a service level reset will be raised to level 7 */
 #define SYSERR_LEVEL7_HISTORY_SIZE      (4)
 /* Minimum time between system error service resets (ms) */
@@ -163,6 +169,10 @@ MODULE_PARM_DESC(crc_check_period_ms, "Time period for checking the firmware CRC
 static ulong mm_completion_timeout_ms = 2000;
 module_param(mm_completion_timeout_ms, ulong, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mm_completion_timeout_ms, "Timeout wait_for_mm_msg_start_ind (ms) - default 1000. 0 = infinite");
+
+static ulong mm_halt_rsp_timeout_ms = 1000;
+module_param(mm_halt_rsp_timeout_ms, ulong, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(mm_halt_rsp_timeout_ms, "Timeout wait_for_mm_msg_halt_rsp (ms) - default 1000");
 
 static bool skip_mbox0_check;
 module_param(skip_mbox0_check, bool, S_IRUGO | S_IWUSR);
@@ -368,7 +378,7 @@ struct kobject *mxman_wifi_kobject_ref_get(void)
 		kobject_get(wifi_kobj_ref);
 		kobject_uevent(wifi_kobj_ref, KOBJ_ADD);
 		SCSC_TAG_INFO(MXMAN, "wifi_kobj_ref: 0x%p\n", wifi_kobj_ref);
-		WARN_ON(refcount == 0);
+		WLBT_WARN_ON(refcount == 0);
 	}
 	return wifi_kobj_ref;
 }
@@ -380,7 +390,7 @@ void mxman_wifi_kobject_ref_put(void)
 		kobject_put(wifi_kobj_ref);
 		kobject_uevent(wifi_kobj_ref, KOBJ_REMOVE);
 		wifi_kobj_ref = NULL;
-		WARN_ON(refcount < 0);
+		WLBT_WARN_ON(refcount < 0);
 	}
 }
 EXPORT_SYMBOL(mxman_wifi_kobject_ref_put);
@@ -441,6 +451,24 @@ static bool send_fw_config_to_active_mxman(uint32_t fw_runtime_flags);
 static bool send_syserr_cmd_to_active_mxman(u32 syserr_cmd);
 static void mxman_fail_level8(struct mxman *mxman, u16 scsc_panic_code, const char *reason);
 
+
+bool mxman_is_failed(void)
+{
+	bool ret = false;
+	if ((active_mxman != NULL) && (active_mxman->mxman_state == MXMAN_STATE_FAILED))
+		ret = true;
+	return ret;
+}
+EXPORT_SYMBOL(mxman_is_failed);
+
+bool mxman_is_frozen(void)
+{
+	bool ret = false;
+	if ((active_mxman != NULL) && (active_mxman->mxman_state == MXMAN_STATE_FROZEN))
+		ret = true;
+	return ret;
+}
+EXPORT_SYMBOL(mxman_is_frozen);
 
 static bool reset_failed;
 static bool mxman_check_reset_failed(struct scsc_mif_abs *mif)
@@ -709,14 +737,14 @@ static int wait_for_mm_msg_halt_rsp(struct mxman *mxman)
 	int r;
 	(void)mxman; /* unused */
 
-	if (MM_HALT_RSP_TIMEOUT_MS == 0) {
+	if (mm_halt_rsp_timeout_ms == 0) {
 		/* Zero implies infinite wait */
 		r = wait_for_completion_interruptible(&mxman->mm_msg_halt_rsp_completion);
 		/* r = -ERESTARTSYS if interrupted, 0 if completed */
 		return r;
 	}
 
-	r = wait_for_completion_timeout(&mxman->mm_msg_halt_rsp_completion, msecs_to_jiffies(MM_HALT_RSP_TIMEOUT_MS));
+	r = wait_for_completion_timeout(&mxman->mm_msg_halt_rsp_completion, msecs_to_jiffies(mm_halt_rsp_timeout_ms));
 	if (r)
 		SCSC_TAG_INFO(MXMAN, "Received MM_HALT_RSP from firmware\n");
 
@@ -1475,6 +1503,7 @@ static int mxman_start(struct mxman *mxman)
 
 		/* do the new BAAW mapings */
 		r = mif->set_mem_region2(mif, obj->vaddr, MXL_POOL_SZ);
+		memset(obj->vaddr, 0, MXL_POOL_SZ);
 
 		start_dram_section2 = (char *)obj->vaddr;
 		miframman_init(scsc_mx_get_ramman2(mxman->mx),
@@ -2047,12 +2076,24 @@ static void mxman_failure_work(struct work_struct *work)
 	struct scsc_mif_abs *mif = scsc_mx_get_mif_abs(mxman->mx);
 	int used = 0, r = 0;
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock(&mxman->failure_recovery_wake_lock);
 #endif
 	/* Take mutex shared with syserr recovery */
 	mutex_lock(&mxman->mxman_recovery_mutex);
 
+	SCSC_TAG_INFO(MXMAN, "Complete mm_msg_start_ind_completion\n");
+	complete(&mxman->mm_msg_start_ind_completion);
+	mutex_lock(&mxman->mxman_mutex);
+	if (mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STARTING) {
+		SCSC_TAG_WARNING(MXMAN, "Not in started state: mxman->mxman_state=%d\n", mxman->mxman_state);
+#ifdef CONFIG_SCSC_COMMON_ANDROID
+		wake_unlock(&mxman->failure_recovery_wake_lock);
+#endif
+		mutex_unlock(&mxman->mxman_mutex);
+		mutex_unlock(&mxman->mxman_recovery_mutex);
+		return;
+	}
 	/* Check panic code for error promotion early on.
 	 * Attempt to parse the panic record, to get the panic ID. This will
 	 * only succeed for FW induced panics. Later we'll try again and dump.
@@ -2076,20 +2117,7 @@ static void mxman_failure_work(struct work_struct *work)
 
 	blocking_notifier_call_chain(&firmware_chain, SCSC_FW_EVENT_FAILURE, NULL);
 
-	SCSC_TAG_INFO(MXMAN, "Complete mm_msg_start_ind_completion\n");
-	complete(&mxman->mm_msg_start_ind_completion);
-	mutex_lock(&mxman->mxman_mutex);
 	srvman = scsc_mx_get_srvman(mxman->mx);
-
-	if (mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STARTING) {
-		SCSC_TAG_WARNING(MXMAN, "Not in started state: mxman->mxman_state=%d\n", mxman->mxman_state);
-#ifdef CONFIG_ANDROID
-		wake_unlock(&mxman->failure_recovery_wake_lock);
-#endif
-		mutex_unlock(&mxman->mxman_mutex);
-		mutex_unlock(&mxman->mxman_recovery_mutex);
-		return;
-	}
 
 	/**
 	 * Set error on mxlog and unregister mxlog msg-handlers.
@@ -2113,10 +2141,10 @@ static void mxman_failure_work(struct work_struct *work)
 
 	if (mxman->mxman_state != MXMAN_STATE_FAILED
 	    && mxman->mxman_state != MXMAN_STATE_FROZEN) {
-		WARN_ON(mxman->mxman_state != MXMAN_STATE_FAILED
+		WLBT_WARN_ON(mxman->mxman_state != MXMAN_STATE_FAILED
 			&& mxman->mxman_state != MXMAN_STATE_FROZEN);
 		SCSC_TAG_ERR(MXMAN, "Bad state=%d\n", mxman->mxman_state);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&mxman->failure_recovery_wake_lock);
 #endif
 		mutex_unlock(&mxman->mxman_mutex);
@@ -2291,7 +2319,7 @@ static void mxman_failure_work(struct work_struct *work)
 	/* Safe to allow syserr recovery thread to run */
 	mutex_unlock(&mxman->mxman_recovery_mutex);
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_unlock(&mxman->failure_recovery_wake_lock);
 #endif
 }
@@ -2330,12 +2358,12 @@ static void mxman_syserr_recovery_work(struct work_struct *work)
 	struct mxman  *mxman = container_of(work, struct mxman, syserr_recovery_work);
 	struct srvman *srvman;
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock(&mxman->syserr_recovery_wake_lock);
 #endif
 	if (!mutex_trylock(&mxman->mxman_recovery_mutex)) {
 		SCSC_TAG_WARNING(MXMAN, "Syserr during full reset - ignored\n");
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&mxman->syserr_recovery_wake_lock);
 #endif
 		return;
@@ -2345,7 +2373,7 @@ static void mxman_syserr_recovery_work(struct work_struct *work)
 
 	if (mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STARTING) {
 		SCSC_TAG_WARNING(MXMAN, "Syserr reset ignored: mxman->mxman_state=%d\n", mxman->mxman_state);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 		wake_unlock(&mxman->syserr_recovery_wake_lock);
 #endif
 		mutex_unlock(&mxman->mxman_mutex);
@@ -2367,7 +2395,7 @@ static void mxman_syserr_recovery_work(struct work_struct *work)
 
 	srvman_unfreeze_sub_system(srvman, &mxman->last_syserr);
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_unlock(&mxman->syserr_recovery_wake_lock);
 #endif
 	mutex_unlock(&mxman->mxman_recovery_mutex);
@@ -2514,7 +2542,7 @@ static int __mxman_open(struct mxman *mxman)
 
 	if (mxman->mxman_state == MXMAN_STATE_STARTED) {
 		/* if in the STARTED state there MUST already be some users */
-		if (WARN_ON(!mxman->users)) {
+		if (WLBT_WARN_ON(!mxman->users)) {
 			SCSC_TAG_ERR(MXMAN, "ERROR mxman->mxman_state=%d users=%d\n", mxman->mxman_state, mxman->users);
 			mutex_unlock(&mxman->mxman_mutex);
 			return -EINVAL;
@@ -2552,7 +2580,7 @@ static int __mxman_open(struct mxman *mxman)
 		}
 		return 0;
 	}
-	WARN_ON(mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STOPPED);
+	WLBT_WARN_ON(mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STOPPED);
 	SCSC_TAG_ERR(MXMAN, "Bad state: mxman->mxman_state=%d\n", mxman->mxman_state);
 	mutex_unlock(&mxman->mxman_mutex);
 	return -EIO;
@@ -2563,7 +2591,9 @@ int mxman_open(struct mxman *mxman)
 	int r;
 	int try = 0;
 
-	struct scsc_mif_abs *mif = scsc_mx_get_mif_abs(mxman->mx);
+	struct scsc_mif_abs *mif;
+
+	mif = scsc_mx_get_mif_abs(mxman->mx);
 
 	for (try = 0; try < 2; try++) {
 		/* Boot WLBT. This will determine the h/w version */
@@ -2693,7 +2723,7 @@ void mxman_close(struct mxman *mxman)
 	SCSC_TAG_INFO(MXMAN, "\n");
 
 	if (mxman->mxman_state == MXMAN_STATE_STARTED) {
-		if (WARN_ON(!mxman->users)) {
+		if (WLBT_WARN_ON(!mxman->users)) {
 			SCSC_TAG_ERR(MXMAN, "ERROR users=%d\n", mxman->users);
 			mutex_unlock(&mxman->mxman_mutex);
 			return;
@@ -2726,7 +2756,7 @@ void mxman_close(struct mxman *mxman)
 		mxman->mxman_state = MXMAN_STATE_STOPPED;
 		mutex_unlock(&mxman->mxman_mutex);
 	} else if (mxman->mxman_state == MXMAN_STATE_FAILED) {
-		if (WARN_ON(!mxman->users))
+		if (WLBT_WARN_ON(!mxman->users))
 			SCSC_TAG_ERR(MXMAN, "ERROR users=%d\n", mxman->users);
 
 		mxman->users--;
@@ -2751,7 +2781,7 @@ void mxman_close(struct mxman *mxman)
 		mutex_unlock(&mxman->mxman_mutex);
 		complete(&mxman->recovery_completion);
 	} else {
-		WARN_ON(mxman->mxman_state != MXMAN_STATE_STARTED);
+		WLBT_WARN_ON(mxman->mxman_state != MXMAN_STATE_STARTED);
 		SCSC_TAG_ERR(MXMAN, "Bad state: mxman->mxman_state=%d\n", mxman->mxman_state);
 		mutex_unlock(&mxman->mxman_mutex);
 		return;
@@ -2867,7 +2897,7 @@ void mxman_init(struct mxman *mxman, struct scsc_mx *mx)
 	mutex_init(&mxman->mxman_mutex);
 	mutex_init(&mxman->mxman_recovery_mutex);
 	init_completion(&mxman->recovery_completion);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 	wake_lock_init(&mxman->failure_recovery_wake_lock, WAKE_LOCK_SUSPEND, "mxman_recovery");
 	wake_lock_init(&mxman->syserr_recovery_wake_lock, WAKE_LOCK_SUSPEND, "mxman_syserr_recovery");
@@ -2933,7 +2963,7 @@ void mxman_deinit(struct mxman *mxman)
 #ifdef CONFIG_SCSC_WLBTD
 	wlbtd_wq_deinit(mxman);
 #endif
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 	wake_lock_destroy(&mxman->failure_recovery_wake_lock);
 	wake_lock_destroy(&mxman->syserr_recovery_wake_lock);
 #endif

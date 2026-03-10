@@ -15,12 +15,67 @@
 /* Implements */
 #include "mifintrbit.h"
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mifintrbit.c"
+#endif
+
+const char *wlbt_irq_types[48] = {
+	"DEFAULT_IRQ_TYPE",
+	"GDB_TRANSPORT_FXM_1_INPUT_TYPE",
+	"GDB_TRANSPORT_FXM_1_OUTPUT_TYPE",
+	"GDB_TRANSPORT_FXM_2_INPUT_TYPE",
+	"GDB_TRANSPORT_FXM_2_OUTPUT_TYPE",
+	"GDB_TRANSPORT_FXM_3_INPUT_TYPE",
+	"GDB_TRANSPORT_FXM_3_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WPAN_INPUT_TYPE",
+	"GDB_TRANSPORT_WPAN_OUTPUT_TYPE",
+	"GDB_TRANSPORT_PMU_INPUT_TYPE",
+	"GDB_TRANSPORT_PMU_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_2_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_2_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_3_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_3_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_4_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_4_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_5_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_5_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_6_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_6_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_7_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_7_OUTPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_8_INPUT_TYPE",
+	"GDB_TRANSPORT_WLAN_8_OUTPUT_TYPE",
+	"MXLOG_WLAN_TYPE",
+	"MXLOG_WPAN_TYPE",
+	"MXMGMT_WLAN_INPUT_TYPE",
+	"MXMGMT_WLAN_OUTPUT_TYPE",
+	"MXMGMT_WPAN_INPUT_TYPE",
+	"MXMGMT_WPAN_OUTPUT_TYPE",
+	"MX_DBG_SAMPLER_TYPE",
+	"SCSC_ANT_SHM_IRQ_TYPE",
+	"SCSC_BT_SHM_IRQ_TYPE",
+	"HIP4_SMAPPER_REFILL_TYPE",
+	"HIP4_IRQ_HANDLER_FB_TYPE",
+	"HIP4_IRQ_HANDLER_CTRL_TYPE",
+	"HIP4_IRQ_HANDLER_DATA_TYPE",
+	"HIP4_IRQ_HANDLER_TYPE",
+	"HIP4_IRQ_HANDLER_DPD_TYPE",
+	"HIP5_IRQ_HANDLER_CTRL_TYPE",
+	"HIP5_IRQ_HANDLER_FB_TYPE",
+	"HIP5_IRQ_HANDLER_DAT_TYPE",
+	"HIP5_IRQ_HANDLER_DPD_TYPE",
+	"HIP5_IRQ_HANDLER_STUB_TYPE",
+	"LAST_IRQ_TYPE"
+};
+
 /* default handler just logs a warning and clears the bit */
 static void mifintrbit_default_handler(int irq, void *data)
 {
 	struct mifintrbit *intr = (struct mifintrbit *)data;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	intr->mif->irq_bit_clear(intr->mif, irq, intr->target);
 #else
 	intr->mif->irq_bit_clear(intr->mif, irq);
@@ -30,7 +85,7 @@ static void mifintrbit_default_handler(int irq, void *data)
 static void print_bitmaps(struct mifintrbit *intr)
 {
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	unsigned long dst1, dst2;
 
 	bitmap_copy_le(&dst1, intr->bitmap_tohost, MIFINTRBIT_NUM_INT);
@@ -44,7 +99,7 @@ static void print_bitmaps(struct mifintrbit *intr)
 #endif
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 static void mifiintrman_isr_wpan(int irq, void *data)
 {
 	struct mifintrbit *intr = (struct mifintrbit *)data;
@@ -81,7 +136,7 @@ static void mifiintrman_isr(int irq, void *data)
 	(void)irq;
 
 	spin_lock_irqsave(&intr->spinlock, flags);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	irq_reg = intr->mif->irq_get(intr->mif, SCSC_MIF_ABS_TARGET_WLAN);
 #else
 	irq_reg = intr->mif->irq_get(intr->mif);
@@ -92,7 +147,7 @@ static void mifiintrman_isr(int irq, void *data)
 		if (intr->mifintrbit_irq_handler[bit] != mifintrbit_default_handler)
 			intr->mifintrbit_irq_handler[bit](bit, intr->irq_data[bit]);
 		else
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 			intr->mif->irq_bit_clear(intr->mif, bit, SCSC_MIF_ABS_TARGET_WLAN);
 #else
 			intr->mif->irq_bit_clear(intr->mif, bit);
@@ -102,8 +157,37 @@ static void mifiintrman_isr(int irq, void *data)
 	spin_unlock_irqrestore(&intr->spinlock, flags);
 }
 
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+static inline int assign_prealloc_bit(struct mifintrbit *intr,  enum IRQ_TYPE irq_type)
+{
+	int prealloc_bit = 0;
+	/* preallocate TH irq for REDWOOD where we are running out of IRQs */
+	switch (irq_type) {
+	case GDB_TRANSPORT_FXM_1_INPUT_TYPE:
+	case GDB_TRANSPORT_FXM_2_INPUT_TYPE:
+	case GDB_TRANSPORT_FXM_3_INPUT_TYPE:
+	case GDB_TRANSPORT_PMU_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_2_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_3_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_4_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_5_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_6_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_7_INPUT_TYPE:
+	case GDB_TRANSPORT_WLAN_8_INPUT_TYPE:
+		prealloc_bit = MIFINTRBIT_RESERVED_GDB_IN_WLAN;
+		break;
+
+	default:
+		prealloc_bit = find_first_zero_bit(intr->bitmap_tohost, MIFINTRBIT_NUM_INT);
+		break;
+	}
+	return prealloc_bit;
+}
+#endif
+
 /* Public functions */
-int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler, void *data)
+int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler, void *data, enum IRQ_TYPE irq_type)
 {
 	struct scsc_mif_abs *mif;
 	unsigned long flags;
@@ -111,20 +195,25 @@ int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler,
 
 	spin_lock_irqsave(&intr->spinlock, flags);
 	/* Search for free slots */
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	which_bit = assign_prealloc_bit(intr, irq_type);
+#else
 	which_bit = find_first_zero_bit(intr->bitmap_tohost, MIFINTRBIT_NUM_INT);
+#endif
 
 	if (which_bit >= MIFINTRBIT_NUM_INT)
 		goto error;
 
+#if !defined(CONFIG_SCSC_BB_REDWOOD)
 	if (intr->mifintrbit_irq_handler[which_bit] != mifintrbit_default_handler) {
 		spin_unlock_irqrestore(&intr->spinlock, flags);
 		goto error;
 	}
-
+#endif
 	/* Get abs implementation */
 	mif = intr->mif;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Mask to prevent spurious incoming interrupts */
 	mif->irq_bit_mask(mif, which_bit, intr->target);
 	/* Clear the interrupt */
@@ -133,6 +222,7 @@ int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler,
 	/* Register the handler */
 	intr->mifintrbit_irq_handler[which_bit] = handler;
 	intr->irq_data[which_bit] = data;
+	intr->irq_type[which_bit] = irq_type;
 
 	/* Once registration is set, and IRQ has been cleared, unmask the interrupt */
 	mif->irq_bit_unmask(mif, which_bit, intr->target);
@@ -151,6 +241,7 @@ int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler,
 #endif
 	/* Update bit mask */
 	set_bit(which_bit, intr->bitmap_tohost);
+	SCSC_TAG_INFO(MIF, "allocated irq bit %d for %s\n", which_bit, wlbt_irq_types[irq_type]);
 
 	spin_unlock_irqrestore(&intr->spinlock, flags);
 
@@ -158,7 +249,7 @@ int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler,
 
 error:
 	spin_unlock_irqrestore(&intr->spinlock, flags);
-	SCSC_TAG_ERR(MIF, "Error registering irq\n");
+	SCSC_TAG_ERR(MIF, "Error registering irq %d for %s\n", which_bit, wlbt_irq_types[which_bit]);
 	return -EIO;
 }
 
@@ -173,7 +264,7 @@ int mifintrbit_free_tohost(struct mifintrbit *intr, int which_bit)
 	spin_lock_irqsave(&intr->spinlock, flags);
 	/* Get abs implementation */
 	mif = intr->mif;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Mask to prevent spurious incoming interrupts */
 	mif->irq_bit_mask(mif, which_bit, intr->target);
 	/* Set the handler with default */
@@ -201,7 +292,7 @@ error:
 	return -EIO;
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mifintrbit_alloc_fromhost(struct mifintrbit *intr)
 #else
 int mifintrbit_alloc_fromhost(struct mifintrbit *intr, enum scsc_mif_abs_target target)
@@ -213,7 +304,7 @@ int mifintrbit_alloc_fromhost(struct mifintrbit *intr, enum scsc_mif_abs_target 
 
 
 	spin_lock_irqsave(&intr->spinlock, flags);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	p = intr->bitmap_fromhost;
 #else
 	if (target == SCSC_MIF_ABS_TARGET_WLAN)
@@ -245,7 +336,7 @@ int mifintrbit_alloc_fromhost(struct mifintrbit *intr, enum scsc_mif_abs_target 
 	return which_bit;
 error:
 	spin_unlock_irqrestore(&intr->spinlock, flags);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	SCSC_TAG_ERR(MIF, "Error allocating bit %d on %s\n",
 		     which_bit, (intr->target == SCSC_MIF_ABS_TARGET_WPAN) ? "WPAN" : "WLAN");
 #else
@@ -255,7 +346,7 @@ error:
 	return -EIO;
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mifintrbit_free_fromhost(struct mifintrbit *intr, int which_bit)
 #else
 int mifintrbit_free_fromhost(struct mifintrbit *intr, int which_bit, enum scsc_mif_abs_target target)
@@ -270,7 +361,7 @@ int mifintrbit_free_fromhost(struct mifintrbit *intr, int which_bit, enum scsc_m
 	if (which_bit >= MIFINTRBIT_NUM_INT)
 		goto error;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	p = intr->bitmap_fromhost;
 #else
 	if (target == SCSC_MIF_ABS_TARGET_WLAN)
@@ -295,7 +386,7 @@ int mifintrbit_free_fromhost(struct mifintrbit *intr, int which_bit, enum scsc_m
 	return 0;
 error:
 	spin_unlock_irqrestore(&intr->spinlock, flags);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	SCSC_TAG_ERR(MIF, "Error freeing bit %d on %s\n",
 		     which_bit, (intr->target == SCSC_MIF_ABS_TARGET_WPAN) ? "WPAN" : "WLAN");
 #else
@@ -306,7 +397,7 @@ error:
 }
 
 /* core API */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 void mifintrbit_deinit(struct mifintrbit *intr, enum scsc_mif_abs_target target)
 #else
 void mifintrbit_deinit(struct mifintrbit *intr)
@@ -317,10 +408,12 @@ void mifintrbit_deinit(struct mifintrbit *intr)
 
 	spin_lock_irqsave(&intr->spinlock, flags);
 	/* Set all handlers to default before unregistering the handler */
-	for (i = 0; i < MIFINTRBIT_NUM_INT; i++)
+	for (i = 0; i < MIFINTRBIT_NUM_INT; i++){
 		intr->mifintrbit_irq_handler[i] = mifintrbit_default_handler;
+		intr->irq_type[i] = DEFAULT_IRQ_TYPE;
+	}
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	SCSC_TAG_INFO(MIF, "MIF IRQ deinit on %s\n", (target == SCSC_MIF_ABS_TARGET_WPAN) ? "WPAN" : "WLAN");
 
 	if (target == SCSC_MIF_ABS_TARGET_WLAN) {
@@ -336,29 +429,28 @@ void mifintrbit_deinit(struct mifintrbit *intr)
 	spin_unlock_irqrestore(&intr->spinlock, flags);
 }
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif, enum scsc_mif_abs_target target)
 #else
 void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif)
 #endif
 {
 	int i;
-#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) || IS_ENABLED(CONFIG_SOC_S5E9925)
+#if defined(CONFIG_SCSC_PCIE_CHIP)
 	u8 start;
 	u8 end;
 #endif
-
 	spin_lock_init(&intr->spinlock);
 	/* Set all handlers to default before hooking the hardware interrupt */
 	for (i = 0; i < MIFINTRBIT_NUM_INT; i++)
 		intr->mifintrbit_irq_handler[i] = mifintrbit_default_handler;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* reset bitmaps */
 	/* store the target "type", we will use it to get the obj pointer */
 	intr->target = target;
 	bitmap_zero(intr->bitmap_fromhost, MIFINTRBIT_NUM_INT);
-#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) || IS_ENABLED(CONFIG_SOC_S5E9925)
+#if defined(CONFIG_SCSC_PCIE_CHIP)
 	mif->get_msi_range(mif, &start, &end, target);
 	/* fill bitmap */
 	bitmap_fill(intr->bitmap_tohost, MIFINTRBIT_NUM_INT);
@@ -382,7 +474,7 @@ void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif)
 	 * These bits are used for purpose of forcing Panics from
 	 * either MX manager or GDB monitor channels.
 	 */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (target == SCSC_MIF_ABS_TARGET_WLAN) {
 		set_bit(MIFINTRBIT_RESERVED_PANIC_WLAN, intr->bitmap_fromhost);
 		SCSC_TAG_INFO(MIF, "MIF IRQ Registering IRQ handler WLAN\n");
@@ -409,4 +501,13 @@ void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif)
 
 	/* cache mif */
 	intr->mif = mif;
+}
+
+void mifintrbit_dump(struct mifintrbit *intr)
+{
+	int i = 0;
+	for(i = 0; i < MIFINTRBIT_NUM_INT; i++)	{
+		if(intr->irq_type[i])
+			SCSC_TAG_INFO(MXMAN, "bit:%d, handler %s\n", i, wlbt_irq_types[intr->irq_type[i]]);
+	}
 }

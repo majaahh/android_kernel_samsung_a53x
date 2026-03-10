@@ -1,13 +1,17 @@
 /******************************************************************************
  *
- * Copyright (c) 2012 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2012 - 2022 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
 
 #ifndef __SLSI_MGT_H__
 #define __SLSI_MGT_H__
 
+#include <linux/version.h>
 #include <linux/mutex.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#include <uapi/linux/if_arp.h>
+#endif
 
 #include "dev.h"
 #include "reg_info.h"
@@ -31,6 +35,10 @@
 
 #define SLSI_IEEE8021X_TYPE_EAPOL_KEY    3
 #define SLSI_IEEE8021X_TYPE_EAP_PACKET   0
+#define SLSI_IEEE8021X_TYPE_EAP_START    1
+
+#define VHT_CAP_INFO_CHAN_WIDTH_SET_MASK                0x0000000C
+#define VHT_CAP_INFO_SUPPORTED_BW_160_80P80             BIT(2)
 
 #define SLSI_EAPOL_KEY_INFO_KEY_TYPE_BIT_IN_LOWER_BYTE      BIT(3) /* Group = 0, Pairwise = 1 */
 #define SLSI_EAPOL_KEY_INFO_ACK_BIT_IN_LOWER_BYTE           BIT(7)
@@ -134,7 +142,7 @@ struct slsi_wpa_eapol_key {
 #define SLSI_IS_VIF_INDEX_P2P_GROUP(sdev, ndev_vif) (SLSI_UNUSED_PARAMETER(sdev), (ndev_vif)->ifnum == SLSI_NET_INDEX_P2PX_SWLAN)
 #endif
 #if defined(CONFIG_SCSC_WLAN_WIFI_SHARING)
-#define SLSI_IS_VIF_INDEX_MHS(sdev, ndev_vif) ((ndev_vif->ifnum == SLSI_NET_INDEX_P2PX_SWLAN) &&\
+#define SLSI_IS_VIF_INDEX_MHS(sdev, ndev_vif) ((ndev_vif->ifnum == SLSI_NET_INDEX_AP) &&\
 					       (ndev_vif->iftype == NL80211_IFTYPE_AP) &&\
 					       (sdev->netdev_ap == sdev->netdev[SLSI_NET_INDEX_P2PX_SWLAN]))
 #endif
@@ -319,6 +327,51 @@ struct slsi_wpa_eapol_key {
 #define SLSI_MGMT_FRAME_SUBTYPE_REASSOC_REQ  2
 #define SLSI_MGMT_FRAME_SUBTYPE_REASSOC_RESP 3
 
+#ifdef CONFIG_SCSC_WLAN_SUPPORT_6G
+#define SLSI_WIFISHARING_PERMITTED_CHANNELS_SIZE 13
+#else
+#define SLSI_WIFISHARING_PERMITTED_CHANNELS_SIZE 8
+#endif
+
+#define TWT_SETUP_EVENT_SUCCESS               0
+#define TWT_SETUP_EVENT_REJECTED              1
+#define TWT_SETUP_EVENT_TIMEOUT               2
+#define TWT_SETUP_EVENT_INVALID_IE            3
+#define TWT_SETUP_EVENT_PARAMS_VALUE_REJECTED 4
+#define TWT_SETUP_EVENT_AP_NO_TWT_INFO        5
+
+#define TWT_TEARDOWN_HOST_INITIATED                      0
+#define TWT_TEARDOWN_PEER_INITIATED                      1
+#define TWT_TEARDOWN_CONCURRENT_OPERATION_SAME_BAND      2
+#define TWT_TEARDOWN_CONCURRENT_OPERATION_DIFFERENT_BAND 3
+#define TWT_TEARDOWN_ROAMING_OR_ECSA                     4
+#define TWT_TEARDOWN_BT_COEX                             5
+#define TWT_TEARDOWN_TIMEOUT                             6
+#define TWT_TEARDOWN_PS_DISABLE                          7
+
+#define TWT_RESULTCODE_UNKNOWN 255
+
+#define SLSI_MODE_EHT         BIT(3)
+#define SLSI_MODE_HE          BIT(2)
+#define SLSI_MODE_VHT         BIT(1)
+#define SLSI_MODE_LEGACY_HT   BIT(0)
+#define SLSI_2_4_BAND_SUPPORT BIT(0)
+#define SLSI_5_BAND_SUPPORT   BIT(1)
+#define SLSI_6_BAND_SUPPORT   BIT(2)
+
+#define SLSI_GETCAP_TWT_REQUESTER_SUPPORT BIT(0)
+#define SLSI_GETCAP_TWT_RESPONDER_SUPPORT BIT(1)
+#define SLSI_GETCAP_BROADCAST_TWT_SUPPORT BIT(2)
+#define SLSI_GETCAP_FLEXIBLE_TWT_SUPPORT  BIT(3)
+#define SLSI_GETCAP_TWT_REQUIRED          BIT(4)
+
+#define SLSI_TWT_FW_BROADCAST_SUPPORT BIT(0)
+#define SLSI_TWT_FW_RESPONDER_SUPPORT BIT(1)
+#define SLSI_TWT_FW_REQUESTER_SUPPORT BIT(2)
+#define SLSI_TWT_FW_FLEXIBLE_SUPPORT  BIT(3)
+
+#define SLSI_TWT_FW_RESPONDER_SUPPORT_BIT_POS 1
+
 enum slsi_dhcp_tx {
 	SLSI_TX_IS_NOT_DHCP,
 	SLSI_TX_IS_DHCP_SERVER,
@@ -326,13 +379,17 @@ enum slsi_dhcp_tx {
 };
 
 enum slsi_fw_regulatory_rule_flags {
-	SLSI_REGULATORY_NO_IR = 1 << 0,
-	SLSI_REGULATORY_DFS = 1 << 1,
-	SLSI_REGULATORY_NO_OFDM = 1 << 2,
-	SLSI_REGULATORY_NO_INDOOR = 1 << 3,
-	SLSI_REGULATORY_NO_OUTDOOR = 1 << 4,
+	SLSI_REGULATORY_NO_IR = BIT(0),
+	SLSI_REGULATORY_DFS = BIT(1),
+	SLSI_REGULATORY_NO_OFDM = BIT(2),
+	SLSI_REGULATORY_NO_INDOOR = BIT(3),
+	SLSI_REGULATORY_NO_OUTDOOR = BIT(4),
+	SLSI_REGULATORY_AUTO_BW = BIT(5),
 	SLSI_REGULATORY_FW_DUP_RULE = BIT(6),
 	SLSI_REGULATORY_DUP_RULE = BIT(28),
+	SLSI_REGULATORY_6GHZ_VLP = BIT(29),
+	SLSI_REGULATORY_6GHZ_LPI = BIT(30),
+	SLSI_REGULATORY_6GHZ_SP = BIT(31)
 };
 
 enum slsi_sta_conn_state {
@@ -349,15 +406,46 @@ enum slsi_wlan_vendor_attr_rcl_channel_list {
 	SLSI_WLAN_VENDOR_ATTR_RCL_CHANNEL_LIST_EVENT_MAX
 };
 
+enum slsi_vendor_attr_twt_setup {
+	SLSI_VENDOR_ATTR_SETUP_ID = 1,
+	SLSI_VENDOR_ATTR_RESULT_CODE,
+	SLSI_VENDOR_ATTR_NEGOTIATION_TYPE,
+	SLSI_VENDOR_ATTR_FLOW_TYPE,
+	SLSI_VENDOR_ATTR_TRIGGERED_TYPE,
+	SLSI_VENDOR_ATTR_WAKE_TIME,
+	SLSI_VENDOR_ATTR_WAKE_DURATION,
+	SLSI_VENDOR_ATTR_WAKE_INTERVAL
+};
+
+enum slsi_vendor_attr_twt_teardown {
+	SLSI_VENDOR_ATTR_TEARDOWN_SETUP_ID = 1,
+	SLSI_VENDOR_ATTR_TEARDOWN_RESULT_CODE
+};
+
+enum slsi_vendor_attr_twt_notify {
+	SLSI_VENDOR_ATTR_NOTIFY_NOTIFICATION = 1
+};
+
+enum slsi_vendor_attr_sched_pm_teardown {
+	SLSI_VENDOR_ATTR_SCHED_PM_TEARDOWN_RESULT_CODE
+};
+
+struct slsi_twt_setup_event {
+	u16 setup_id;
+	u8  reason_code;
+	u16 negotiation_type;
+	u16 flow_type;
+	u16 triggered_type;
+	u64 wake_time;
+	u32 wake_duration;
+	u32 wake_interval;
+};
+
 static inline unsigned compare_ether_addr(const u8 *addr1, const u8 *addr2)
 {
 	return !ether_addr_equal(addr1, addr2);
 }
 
-#ifdef CONFIG_SCSC_WLAN_WIFI_SHARING
-static int slsi_5ghz_all_chans[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124,
-				    128, 132, 136, 140, 144, 149, 153, 157, 161, 165};
-#endif
 /**
  * Peer record handling:
  * Records are created/destroyed by the control path eg cfg80211 connect or
@@ -375,9 +463,16 @@ static int slsi_5ghz_all_chans[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 10
 static inline struct slsi_peer *slsi_get_peer_from_mac(struct slsi_dev *sdev, struct net_device *dev, const u8 *mac)
 {
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
+	struct net_device *ap_dev = NULL;
 
 	(void)sdev; /* unused */
 
+	if (ndev_vif->iftype == NL80211_IFTYPE_AP_VLAN) {
+		rcu_read_lock();
+		ap_dev = ndev_vif->netdev_ap;
+		rcu_read_unlock();
+		ndev_vif = netdev_priv(ap_dev);
+	}
 	/* Accesses the peer records but doesn't block as called from the data path.
 	 * MUST check the valid flag on the record before accessing any other data in the record.
 	 * Records are static, so having obtained a pointer the pointer will remain valid
@@ -610,7 +705,7 @@ void slsi_p2p_group_start_remove_unsync_vif(struct slsi_dev *sdev);
 int slsi_p2p_dev_probe_rsp_ie(struct slsi_dev *sdev, struct net_device *dev, u8 *probe_rsp_ie, size_t probe_rsp_ie_len);
 int slsi_p2p_dev_null_ies(struct slsi_dev *sdev, struct net_device *dev);
 int slsi_get_public_action_subtype(const struct ieee80211_mgmt *mgmt);
-int slsi_p2p_get_go_neg_rsp_status(struct net_device *dev, const struct ieee80211_mgmt *mgmt);
+int slsi_p2p_get_action_frame_status(struct net_device *dev, const struct ieee80211_mgmt *mgmt);
 u8 slsi_get_exp_peer_frame_subtype(u8 subtype);
 int slsi_send_txq_params(struct slsi_dev *sdev, struct net_device *ndev);
 void slsi_abort_sta_scan(struct slsi_dev *sdev);
@@ -635,6 +730,8 @@ int  slsi_update_packet_filters(struct slsi_dev *sdev, struct net_device *dev);
 int  slsi_clear_packet_filters(struct slsi_dev *sdev, struct net_device *dev);
 int slsi_ap_prepare_add_info_ies(struct netdev_vif *ndev_vif, const u8 *ies, size_t ies_len);
 int slsi_set_mib_roam(struct slsi_dev *dev, struct net_device *ndev, u16 psid, int value);
+int slsi_twt_update_ctrl_flags(struct net_device *dev, int enable);
+
 #ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
 int slsi_set_mib_preferred_antenna(struct slsi_dev *dev, u16 value);
 #endif
@@ -645,12 +742,10 @@ int slsi_set_mib_soft_roaming_enabled(struct slsi_dev *sdev, struct net_device *
 #endif
 #ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
 int slsi_read_enhanced_arp_rx_count_by_lower_mac(struct slsi_dev *sdev, struct net_device *dev, u16 psid);
-void slsi_fill_enhanced_arp_out_of_order_drop_counter(struct netdev_vif *ndev_vif,
-						      struct sk_buff *skb);
+void slsi_fill_enhanced_arp_out_of_order_drop_counter(struct net_device *dev, struct sk_buff *skb);
 #endif
 void slsi_modify_ies_on_channel_switch(struct net_device *dev, struct cfg80211_ap_settings *settings,
-				       u8 *ds_params_ie, u8 *ht_operation_ie, struct ieee80211_mgmt  *mgmt,
-				       u16 beacon_ie_head_len);
+				       struct ieee80211_mgmt *mgmt, u16 beacon_ie_head_len);
 #ifdef CONFIG_SCSC_WLAN_WIFI_SHARING
 void slsi_extract_valid_wifi_sharing_channels(struct slsi_dev *sdev);
 bool slsi_if_valid_wifi_sharing_channel(struct slsi_dev *sdev, int freq);
@@ -667,23 +762,28 @@ int slsi_check_if_channel_restricted_already(struct slsi_dev *sdev, int channel)
 struct net_device *slsi_dynamic_interface_create(struct wiphy        *wiphy,
 					     const char          *name,
 					     enum nl80211_iftype type,
-					     struct vif_params   *params);
+					     struct vif_params   *params,
+					     bool is_cfg80211);
 void slsi_stop_chip(struct slsi_dev *sdev);
 int slsi_get_beacon_cu(struct slsi_dev *sdev, struct net_device *dev, int *mib_value);
+int slsi_get_ps_disabled_duration(struct slsi_dev *sdev, struct net_device *dev, int *mib_value);
+int slsi_get_ps_entry_counter(struct slsi_dev *sdev, struct net_device *dev, int *mib_value);
 int slsi_get_mib_roam(struct slsi_dev *sdev, u16 psid, int *mib_value);
+void slsi_roam_channel_cache_add_entry(struct slsi_dev *sdev, struct net_device *dev, const u8 *ssid, u8 ssid_len,
+				       const u8 *bssid, u8 channel, enum nl80211_band band);
 void slsi_roam_channel_cache_add(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_roam_channel_cache_prune(struct net_device *dev, int seconds, char *ssid);
-int slsi_roaming_scan_configure_channels(struct slsi_dev *sdev, struct net_device *dev, const u8 *ssid, u8 *channels);
+int slsi_roaming_scan_configure_channels(struct slsi_dev *sdev, struct net_device *dev, const u8 *ssid, u16 *channels);
 int slsi_send_max_transmit_msdu_lifetime(struct slsi_dev *dev, struct net_device *ndev, u32 msdu_lifetime);
 int slsi_read_max_transmit_msdu_lifetime(struct slsi_dev *dev, struct net_device *ndev, u32 *msdu_lifetime);
-int slsi_read_unifi_countrylist(struct slsi_dev *sdev, u16 psid);
-int slsi_read_default_country(struct slsi_dev *sdev, u8 *alpha2, u16 index);
 int slsi_read_disconnect_ind_timeout(struct slsi_dev *sdev, u16 psid);
 int slsi_read_regulatory_rules(struct slsi_dev *sdev, struct slsi_802_11d_reg_domain *domain_info, const char *alpha2);
-int slsi_read_regulatory_rules_fw(struct slsi_dev *sdev, struct slsi_802_11d_reg_domain *domain_info, const char *alpha2);
-int slsi_send_acs_event(struct slsi_dev *sdev, struct slsi_acs_selected_channels acs_selected_channels);
+int slsi_send_acs_event(struct slsi_dev *sdev, struct net_device *dev,
+			struct slsi_acs_selected_channels acs_selected_channels);
 struct slsi_roaming_network_map_entry *slsi_roam_channel_cache_get(struct net_device *dev, const u8 *ssid);
-int slsi_roam_channel_cache_get_channels_int(struct net_device *dev, struct slsi_roaming_network_map_entry *network_map, u8 *channels);
+int slsi_roam_channel_cache_get_channels_int(struct net_device *dev,
+					     struct slsi_roaming_network_map_entry *network_map,
+					     u16 *channels);
 int slsi_send_rcl_event(struct slsi_dev *sdev, u32 channel_count, u16 *channel_list, u8 *ssid, u8 ssid_len);
 #ifdef CONFIG_SCSC_WLAN_ENABLE_MAC_RANDOMISATION
 int slsi_set_mac_randomisation_mask(struct slsi_dev *sdev, u8 *mac_address_mask);
@@ -716,13 +816,13 @@ int slsi_send_forward_beacon_vendor_event(struct slsi_dev *sdev, struct net_devi
 int slsi_send_forward_beacon_abort_vendor_event(struct slsi_dev *sdev, struct net_device *dev, u16 reason_code);
 #endif
 void slsi_wlan_dump_public_action_subtype(struct slsi_dev *sdev, struct ieee80211_mgmt *mgmt, bool tx);
-#if !(defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION < 11)
-u8 slsi_bss_connect_type_get(struct slsi_dev *sdev, const u8 *ie, size_t ie_len);
+#if !(defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION < 11) || defined(CONFIG_SCSC_WLAN_SUPPORT_6G)
+u8 slsi_bss_connect_type_get(struct slsi_dev *sdev, const u8 *ie, size_t ie_len, u8 *sec_ie);
 #endif
 void slsi_reset_channel_flags(struct slsi_dev *sdev);
-int slsi_merge_lists(u8 ar1[], int len1, u8 ar2[], int len2, u8 result[]);
-int slsi_remove_duplicates(u8 arr[], int n);
-void slsi_sort_array(u8 arr[], int n);
+int slsi_merge_lists(u16 ar1[], int len1, u16 ar2[], int len2, u16 result[]);
+int slsi_remove_duplicates(u16 arr[], int n);
+void slsi_sort_array(u16 arr[], int n);
 #ifdef CONFIG_SCSC_WLAN_SAR_SUPPORTED
 int slsi_configure_tx_power_sar_scenario(struct net_device *dev, int mode);
 #endif
@@ -741,18 +841,20 @@ void slsi_create_sysfs_pm(void);
 void slsi_destroy_sysfs_pm(void);
 void slsi_create_sysfs_ant(void);
 void slsi_destroy_sysfs_ant(void);
-int slsi_find_chan_idx(u16 chan, u8 hw_mode);
+int slsi_find_chan_idx(u16 chan, u8 hw_mode, int band);
 int slsi_set_latency_mode(struct net_device *dev, int latency_mode, int cmd_len);
 void slsi_trigger_service_failure(struct work_struct *work);
 void slsi_failure_reset(struct work_struct *work);
 int slsi_start_ap(struct wiphy *wiphy, struct net_device *dev,
 		  struct cfg80211_ap_settings *settings);
 void slsi_subsystem_reset(struct work_struct *work);
+void slsi_wakeup_time_work(struct work_struct *work);
 void slsi_chip_recovery(struct work_struct *work);
 void slsi_system_error_recovery(struct work_struct *work);
 int slsi_set_acl(struct slsi_dev *sdev, struct net_device *dev);
 void slsi_purge_blacklist(struct netdev_vif *ndev_vif);
-void slsi_rx_update_wake_stats(struct slsi_dev *sdev, struct ethhdr *ehdr, int buff_len);
+void slsi_rx_update_mlme_stats(struct slsi_dev *sdev, struct sk_buff *skb);
+void slsi_rx_update_wake_stats(struct slsi_dev *sdev, struct ethhdr *ehdr, size_t buff_len, struct sk_buff *skb);
 int slsi_set_latency_crt_data(struct net_device *dev, int latency_mode);
 bool slsi_is_bssid_in_hal_blacklist(struct net_device *dev, u8 *bssid);
 bool slsi_is_bssid_in_ioctl_blacklist(struct net_device *dev, u8 *bssid);
@@ -760,6 +862,7 @@ int slsi_remove_bssid_blacklist(struct slsi_dev *sdev, struct net_device *dev, u
 int slsi_add_ioctl_blacklist(struct slsi_dev *sdev, struct net_device *dev, u8 *addr);
 u8 *slsi_get_scan_extra_ies(struct slsi_dev *sdev, const u8 *ies,
 			    int total_len, int *extra_len);
+
 #ifdef CONFIG_SCSC_WLAN_DYNAMIC_ITO
 int slsi_set_ito(struct net_device *dev, char *command, int buf_len);
 int slsi_enable_ito(struct net_device *dev, char *command, int buf_len);
@@ -767,6 +870,8 @@ int slsi_enable_ito(struct net_device *dev, char *command, int buf_len);
 #if !defined(CONFIG_SCSC_WLAN_TX_API) && defined(CONFIG_SCSC_WLAN_ARP_FLOW_CONTROL)
 void slsi_arp_q_stuck_work_handle(struct work_struct *work);
 #endif
+int slsi_fill_ap_sta_info(struct slsi_dev *sdev, struct net_device *dev,
+			  const u8 *peer_mac, struct slsi_ap_sta_info *peer_info, const u16 reason_code);
 #if !(defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION < 11)
 int slsi_retry_connection(struct slsi_dev *sdev, struct net_device *dev);
 void slsi_free_connection_params(struct slsi_dev *sdev, struct net_device *dev);
@@ -774,3 +879,16 @@ void slsi_free_connection_params(struct slsi_dev *sdev, struct net_device *dev);
 int slsi_add_probe_ies_request(struct slsi_dev *sdev, struct net_device *dev);
 int slsi_dump_eth_packet(struct slsi_dev *sdev, struct sk_buff *skb);
 #endif /*__SLSI_MGT_H__*/
+int slsi_send_twt_setup_event(struct slsi_dev *sdev, struct net_device *dev, struct slsi_twt_setup_event setup_event);
+int slsi_send_twt_teardown(struct slsi_dev *sdev, struct net_device *dev, u16 setup_id, u8 result_code);
+int slsi_send_twt_notification(struct slsi_dev *sdev, struct net_device *dev);
+
+int slsi_set_mib_obss_pd_enable(struct slsi_dev *sdev, struct net_device *dev, bool enable, int rssi);
+int slsi_set_mib_obss_pd_enable_per_obss(struct slsi_dev *sdev, struct net_device *dev,
+					 int config_cnt, int *rssi, u8 mac_addr[][ETH_ALEN]);
+int slsi_set_mib_srp_non_srg_obss_pd_prohibited(struct slsi_dev *sdev, bool enable);
+
+bool slsi_release_dp_resources(struct slsi_dev *sdev, struct net_device *dev, struct netdev_vif *ndev_vif);
+#ifdef CONFIG_SCSC_WLAN_SUPPORT_6G
+int slsi_set_mib_6g_safe_mode(struct slsi_dev *sdev, bool enable);
+#endif

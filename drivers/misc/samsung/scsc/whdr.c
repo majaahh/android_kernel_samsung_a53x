@@ -98,6 +98,10 @@ struct whdr {
 	struct delayed_work fw_crc_work;
 };
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_whdr.c"
+#endif
+
 /*
  * This function calulates and checks two or three (depending on crc32_over_binary flag)
  * crc32 values in the firmware header. The function will check crc32 over the firmware binary
@@ -246,6 +250,13 @@ static u32 whdr_get_fw_rt_len(struct fwhdr_if *interface)
 	struct whdr *whdr = whdr_from_fwhdr_if(interface);
 
 	return whdr->fw_runtime_length;
+}
+
+static u32 whdr_get_fw_len(struct fwhdr_if *interface)
+{
+	struct whdr *whdr = whdr_from_fwhdr_if(interface);
+
+	return whdr->fw_size;
 }
 
 static void whdr_set_fw_rt_len(struct fwhdr_if *interface, u32 rt_len)
@@ -434,6 +445,7 @@ struct fwhdr_if *whdr_create(void)
 	fw_if->get_parsed_ok = whdr_get_parsed_ok;
 	fw_if->get_check_crc = whdr_get_check_crc;
 	fw_if->get_fw_rt_len = whdr_get_fw_rt_len;
+	fw_if->get_fw_len = whdr_get_fw_len;
 	fw_if->get_fwapi_major = whdr_get_fwapi_major;
 	fw_if->get_fwapi_minor = whdr_get_fwapi_minor;
 
@@ -447,6 +459,13 @@ struct fwhdr_if *whdr_create(void)
 	fw_if->set_check_crc = whdr_set_check_crc;
 	fw_if->get_panic_record_offset = whdr_get_panic_record_offset;
 	whdr->fw_crc_wq = create_singlethread_workqueue("fwhdr_crc_wq");
+	if (!whdr->fw_crc_wq) {
+		SCSC_TAG_ERR(FW_LOAD, "create_singlethread_workqueue() failed\n");
+		kfree(whdr);
+		whdr = NULL;
+		return NULL;
+	}
+
 	INIT_DELAYED_WORK(&whdr->fw_crc_work, whdr_crc_work_func);
 
 	return fw_if;
@@ -455,15 +474,27 @@ struct fwhdr_if *whdr_create(void)
 /* Implementation destroy */
 void whdr_destroy(struct fwhdr_if *interface)
 {
-	struct whdr *whdr = whdr_from_fwhdr_if(interface);
+	struct whdr *whdr;
 	struct fwhdr_if *fw_if;
 
+	if (!interface)
+		return;
+
+	whdr = whdr_from_fwhdr_if(interface);
 	if (!whdr)
 		return;
 
 	fw_if = &whdr->fw_if;
+
+	if (!fw_if)
+		goto whdr_destroy_error;
 	whdr_crc_wq_stop(fw_if);
+
+	if (!whdr->fw_crc_wq)
+		goto whdr_destroy_error;
 	destroy_workqueue(whdr->fw_crc_wq);
+
+whdr_destroy_error:
 	kfree(whdr);
 	whdr = NULL;
 }

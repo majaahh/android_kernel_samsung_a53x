@@ -8,7 +8,7 @@
 #define __HIP4_SMAPPER_H__
 
 struct slsi_dev;
-struct slsi_hip4;
+struct slsi_hip;
 
 enum smapper_type {
 	TX_5G,
@@ -89,12 +89,12 @@ struct hip4_smapper_bank {
 	u16 align;
 };
 
-int hip4_smapper_init(struct slsi_dev *sdev, struct slsi_hip4 *hip);
-void hip4_smapper_deinit(struct slsi_dev *sdev, struct slsi_hip4 *hip);
+int hip4_smapper_init(struct slsi_dev *sdev, struct slsi_hip *hip);
+void hip4_smapper_deinit(struct slsi_dev *sdev, struct slsi_hip *hip);
 
-struct mbulk *hip4_smapper_send(struct slsi_hip4 *hip, struct sk_buff *skb, int *val);
-int hip4_smapper_consume_entry(struct slsi_dev *sdev, struct slsi_hip4 *hip, struct sk_buff *skb_fapi);
-void *hip4_smapper_get_skb_data(struct slsi_dev *sdev, struct slsi_hip4 *hip, struct sk_buff *skb_fapi);
-struct sk_buff *hip4_smapper_get_skb(struct slsi_dev *sdev, struct slsi_hip4 *hip, struct sk_buff *skb_fapi);
+struct mbulk *hip4_smapper_send(struct slsi_hip *hip, struct sk_buff *skb, int *val);
+int hip4_smapper_consume_entry(struct slsi_dev *sdev, struct slsi_hip *hip, struct sk_buff *skb_fapi);
+void *hip4_smapper_get_skb_data(struct slsi_dev *sdev, struct slsi_hip *hip, struct sk_buff *skb_fapi);
+struct sk_buff *hip4_smapper_get_skb(struct slsi_dev *sdev, struct slsi_hip *hip, struct sk_buff *skb_fapi);
 void hip4_smapper_free_mapped_skb(struct sk_buff *skb);
 #endif

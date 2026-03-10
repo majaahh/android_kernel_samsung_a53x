@@ -4,12 +4,35 @@
  *
  ****************************************************************************/
 
-#ifndef __MIF_REG_H
-#define __MIF_REG_H
-
 /*********************************/
 /* PLATFORM register definitions */
 /*********************************/
+
+#ifndef __MIF_REG_H__
+#define __MIF_REG_H__
+
+#if defined(CONFIG_WLBT_REFACTORY)
+
+#if IS_ENABLED(CONFIG_SOC_S5E5515)
+#include "modap/s5e5515/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SOC_S5E8535)
+#include "modap/s5e8535/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SOC_S5E8825)
+#include "modap/s5e8825/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SOC_S5E8835)
+#include "modap/s5e8835/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SOC_S5E8845)
+#include "modap/s5e8845/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SOC_S5E5535)
+#include "modap/s5e5535/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SCSC_BB_PAEAN)
+#include "pcie/s6165/mif_reg.h"
+#elif IS_ENABLED(CONFIG_SCSC_BB_REDWOOD)
+#include "pcie/s6175/mif_reg.h"
+#endif
+
+#else
+
 #define NUM_MBOX_PLAT   8
 #define NUM_SEMAPHORE   12
 
@@ -132,4 +155,6 @@
  *   from WIFI. (It use make function within GIC) WIFI_RESET_REQ_CLR is auto clear by direct-write function.
  */
 
-#endif /* __MIF_REG_H */
+
+#endif
+#endif

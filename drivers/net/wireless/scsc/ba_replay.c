@@ -8,7 +8,7 @@
 #include "dev.h"
 #include "ba.h"
 
-static bool ba_replay_check_enable = false;
+static bool ba_replay_check_enable = true;
 module_param(ba_replay_check_enable, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(ba_replay_check_enable, "Replay check (1: enable (default), 0: disable)");
 
@@ -113,14 +113,24 @@ void slsi_ba_replay_store_pn(struct net_device *dev, struct slsi_peer *peer, str
 bool ba_replay_check_option_1(struct net_device *dev, struct slsi_ba_session_rx *ba_session_rx, struct slsi_ba_frame_desc *frame_desc)
 {
 	struct slsi_peer *peer = ba_session_rx->peer;
+	struct slsi_skb_cb *skb_cb = (struct slsi_skb_cb *)frame_desc->signal->cb;
+	u8 zero_pn[SLSI_RX_PN_LEN] = {0};
 
 	if (frame_desc->flag_old_sn) {
-		SLSI_NET_WARN(dev, "old frame, drop: sn=%d, expected_sn=%d\n", frame_desc->sn, ba_session_rx->expected_sn);
+		SLSI_NET_DBG1(dev, SLSI_RX_BA, "old frame, drop: sn=%d, expected_sn=%d\n", frame_desc->sn, ba_session_rx->expected_sn);
 		ba_session_rx->ba_drops_old++;
 		return true;
 	}
 
-	if (memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) <= 0) {
+	if (!skb_cb->is_ciphered)
+		return false;
+
+	/* check if current PN is less than already received PN
+	 * If it is less, accept PN=0 if received PN=0
+	 */
+	if ((memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) <= 0) &&
+		(!memcmp(frame_desc->pn, zero_pn, SLSI_RX_PN_LEN) ||
+		 !memcmp(peer->rx_pn[frame_desc->tid], zero_pn, SLSI_RX_PN_LEN))) {
 		SLSI_NET_WARN(dev, "replay detected: tid=%d sn=%d previous PN %pm received PN %pm\n",
 			frame_desc->tid,
 			frame_desc->sn,
@@ -138,10 +148,15 @@ bool ba_replay_check_option_1(struct net_device *dev, struct slsi_ba_session_rx 
 bool ba_replay_check_option_2(struct net_device *dev, struct slsi_ba_session_rx *ba_session_rx, struct slsi_ba_frame_desc *frame_desc)
 {
 	struct slsi_peer *peer = ba_session_rx->peer;
+	struct slsi_skb_cb *skb_cb = (struct slsi_skb_cb *)frame_desc->signal->cb;
+	u8 zero_pn[SLSI_RX_PN_LEN] = {0};
 	u8 i = 0;
 
 	if (!frame_desc->flag_old_sn) {
-		if (memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) <= 0) {
+		if ((skb_cb->is_ciphered) &&
+			(memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) <= 0) &&
+			(!memcmp(frame_desc->pn, zero_pn, SLSI_RX_PN_LEN) ||
+			!memcmp(peer->rx_pn[frame_desc->tid], zero_pn, SLSI_RX_PN_LEN))) {
 			SLSI_NET_WARN(dev, "replay detected: tid=%d sn=%d previous PN %pm received PN %pm\n",
 				frame_desc->tid,
 				frame_desc->sn,
@@ -173,29 +188,31 @@ bool ba_replay_check_option_2(struct net_device *dev, struct slsi_ba_session_rx 
 	}
 
 	/* check if SN is more than highest SN passed so far, if not */
-	if (IS_SN_LESS(ba_session_rx->highest_received_sn, frame_desc->sn)) {
-		/* check if its PN is more than highest PN paseed to the UL so far */
-		if (memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) <= 0) {
-			SLSI_NET_WARN(dev, "replay detected: tid=%d sn=%d, previous PN %pm received PN %pm\n",
-				frame_desc->tid,
-				frame_desc->sn,
-				peer->rx_pn[frame_desc->tid],
-				frame_desc->pn);
+	if (skb_cb->is_ciphered) {
+		if (IS_SN_LESS(ba_session_rx->highest_received_sn, frame_desc->sn)) {
+			/* check if its PN is more than highest PN passed to the UL so far */
+			if (memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) <= 0) {
+				SLSI_NET_WARN(dev, "replay detected: tid=%d sn=%d, previous PN %pm received PN %pm\n",
+					frame_desc->tid,
+					frame_desc->sn,
+					peer->rx_pn[frame_desc->tid],
+					frame_desc->pn);
 
-			ba_session_rx->ba_drops_replay++;
-			return true;
-		}
-	} else {
-		/* check if	its PN is less than the highest PN passed to the UL so far */
-		if (memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) >= 0) {
-			SLSI_NET_WARN(dev, "replay detected: tid=%d sn=%d, previous PN %pm received PN %pm\n",
-				frame_desc->tid,
-				frame_desc->sn,
-				peer->rx_pn[frame_desc->tid],
-				frame_desc->pn);
+				ba_session_rx->ba_drops_replay++;
+				return true;
+			}
+		} else {
+			/* check if	its PN is less than the highest PN passed to the UL so far */
+			if (memcmp(frame_desc->pn, peer->rx_pn[frame_desc->tid], SLSI_RX_PN_LEN) >= 0) {
+				SLSI_NET_WARN(dev, "replay detected: tid=%d sn=%d, previous PN %pm received PN %pm\n",
+					frame_desc->tid,
+					frame_desc->sn,
+					peer->rx_pn[frame_desc->tid],
+					frame_desc->pn);
 
-			ba_session_rx->ba_drops_replay++;
-			return true;
+				ba_session_rx->ba_drops_replay++;
+				return true;
+			}
 		}
 	}
 
@@ -208,19 +225,19 @@ bool ba_replay_check_option_2(struct net_device *dev, struct slsi_ba_session_rx 
 
 bool slsi_ba_replay_check_pn(struct net_device *dev, struct slsi_ba_session_rx *ba_session_rx, struct slsi_ba_frame_desc *frame_desc)
 {
-	struct slsi_skb_cb *skb_cb;
 	u8 i = 0;
 	bool ret = false;
 
-	if (!ba_replay_check_enable)
+	if (!ba_replay_check_enable) {
+		if (frame_desc->flag_old_sn) {
+			SLSI_NET_DBG1(dev, SLSI_RX_BA, "old frame, drop: sn=%d, expected_sn=%d\n", frame_desc->sn, ba_session_rx->expected_sn);
+			ba_session_rx->ba_drops_old++;
+			return true;
+		}
 		return false;
+	}
 
 	if (frame_desc->flag_old_tdls)
-		return false;
-
-	skb_cb = (struct slsi_skb_cb *)frame_desc->signal->cb;
-
-	if (!skb_cb->is_ciphered)
 		return false;
 
 	for (i = 0; i < ARRAY_SIZE(replay_check_types); i++) {

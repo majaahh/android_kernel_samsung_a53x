@@ -1,10 +1,11 @@
 /*****************************************************************************
  *
- * Copyright (c) 2012 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2012 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 
 #include "nl80211_vendor_nan.h"
+#include "channels.h"
 
 #ifndef __SLSI_NL80211_VENDOR_H_
 #define __SLSI_NL80211_VENDOR_H_
@@ -17,8 +18,8 @@
 #define SLSI_NL80211_LOGGING_SUBCMD_RANGE_START         0x1400
 #define SLSI_NL80211_NAN_SUBCMD_RANGE_START             0x1500
 #define SLSI_NL80211_APF_SUBCMD_RANGE_START             0x1600
-#define SLSI_GSCAN_SCAN_ID_START                        0x410
-#define SLSI_GSCAN_SCAN_ID_END                          0x500
+#define SLSI_GSCAN_SCAN_ID_START                        0xf010
+#define SLSI_GSCAN_SCAN_ID_END                          0xf100
 
 #define SLSI_GSCAN_MAX_BUCKETS                          (8)
 #define SLSI_GSCAN_MAX_CHANNELS                         (16) /* As per gscan.h */
@@ -112,24 +113,19 @@
 #define SLSI_WIFI_ROAMING_SEARCH_REASON_CU_TRIGGER            4
 #define SLSI_WIFI_ROAMING_SEARCH_REASON_EMERGENCY             5
 #define SLSI_WIFI_ROAMING_SEARCH_REASON_IDLE                  6
-#define SLSI_WIFI_ROAMING_SEARCH_REASON_SCAN_TIMER1_EXPIRY    7
-#define SLSI_WIFI_ROAMING_SEARCH_REASON_SCAN_TIMER2_EXPIRY    8
-#define SLSI_WIFI_ROAMING_SEARCH_REASON_INACTIVE_TIMER_EXPIRY 9
-
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_REQUEST_RX                      0x0050
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_RESPONSE_RX                     0x0051
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_CONFIRM_RX                      0x0052
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_INSTALL_RX                      0x0053
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_REQUEST_TX_STATUS               0x0054
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_RESPONSE_TX_STATUS              0x0055
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_CONFIRM_TX_STATUS               0x0056
-#define FAPI_EVENT_WIFI_EVENT_NAN_NDP_INSTALL_TX_STATUS               0x0057
-/*autogen pending*/
-#define FAPI_EVENT_WIFI_EVENT_NAN_PEER_AVAILABILITY_UPDATE	      0x0058
+#define SLSI_WIFI_ROAMING_SEARCH_REASON_WTC                   7
+#define SLSI_WIFI_ROAMING_SEARCH_REASON_BT_COEX               8
 
 #define SLSI_WIFI_RTT_RESULT_MAX_ENTRY	8
 #define SLSI_WIFI_RTT_RESULT_ID		0xdd
 #define SLSI_WIFI_RTT_RESULT_LENGTH	0x30
+
+enum slsi_roaming_trigger_event_value {
+	SLSI_SOFT_ROAMING_TRIGGER_EVENT_DEFAULT,
+	SLSI_SOFT_ROAMING_TRIGGER_EVENT_INACTIVITY_TIMER,
+	SLSI_SOFT_ROAMING_TRIGGER_EVENT_RESCAN_TIMER,
+	SLSI_SOFT_ROAMING_TRIGGER_EVENT_BACKGROUND_RESCAN_TIMER
+};
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0))
 enum slsi_low_latency_attr {
@@ -182,6 +178,7 @@ enum slsi_acs_attr_offload {
 	SLSI_ACS_ATTR_VHT_SEG0_CENTER_CHANNEL,
 	SLSI_ACS_ATTR_VHT_SEG1_CENTER_CHANNEL,
 	SLSI_ACS_ATTR_FREQ_LIST,
+	SLSI_ACS_ATTR_BAND,
 	/* keep last */
 	SLSI_ACS_ATTR_AFTER_LAST,
 	SLSI_ACS_ATTR_MAX =
@@ -352,9 +349,6 @@ enum lls_attribute {
 	LLS_ATTRIBUTE_SET_AGGR_STATISTICS_GATHERING,
 	LLS_ATTRIBUTE_CLEAR_STOP_REQUEST_MASK,
 	LLS_ATTRIBUTE_CLEAR_STOP_REQUEST,
-	LLS_ATTRIBUTE_STATS_VERSION,
-	LLS_ATTRIBUTE_GET_STATS_TYPE,
-	LLS_ATTRIBUTE_GET_STATS_STRUCT,
 	LLS_ATTRIBUTE_MAX
 };
 
@@ -389,6 +383,7 @@ enum slsi_hal_vendor_subcmds {
 	SLSI_NL80211_VENDOR_SUBCMD_GET_ROAMING_CAPABILITIES,
 	SLSI_NL80211_VENDOR_SUBCMD_SET_ROAMING_STATE,
 	SLSI_NL80211_VENDOR_SUBCMD_SET_LATENCY_MODE,
+	SLSI_NL80211_VENDOR_SUBCMD_GET_USABLE_CHANNELS,
 	SLSI_NL80211_VENDOR_SUBCMD_SET_DTIM_CONFIG,
 	SLSI_NL80211_VENDOR_SUBCMD_SELECT_TX_POWER_SCENARIO,
 	SLSI_NL80211_VENDOR_SUBCMD_RESET_TX_POWER_SCENARIO,
@@ -480,7 +475,9 @@ enum slsi_vendor_event_values {
 	SLSI_NL80211_VENDOR_SCHED_PM_TEARDOWN_EVENT = 37,
 	SLSI_NL80211_VENDOR_SCHED_PM_LEAKY_AP_DETECT_EVENT = 38,
 	SLSI_NL80211_NAN_INTERFACE_CREATED_EVENT = 39,
-	SLSI_NL80211_NAN_INTERFACE_DELETED_EVENT = 40
+	SLSI_NL80211_NAN_INTERFACE_DELETED_EVENT = 40,
+	SLSI_NL80211_VENDOR_DELAY_WAKEUP_EVENT = 41,
+	SLSI_NL80211_VENDOR_SPATIAL_REUSE_PARAM_CHANGE_EVENT = 42
 };
 
 enum slsi_lls_interface_mode {
@@ -640,7 +637,8 @@ enum slsi_wifi_rtt_bw {
 enum slsi_wifi_rtt_preamble {
 	SLSI_WIFI_RTT_PREAMBLE_LEGACY = 0x1,
 	SLSI_WIFI_RTT_PREAMBLE_HT = 0x2,
-	SLSI_WIFI_RTT_PREAMBLE_VHT = 0x4
+	SLSI_WIFI_RTT_PREAMBLE_VHT = 0x4,
+	SLSI_WIFI_RTT_PREAMBLE_HE = 0x8
 };
 
 /* RTT Type */
@@ -692,6 +690,57 @@ enum slsi_wifi_rtt_status {
 	SLSI_RTT_STATUS_INVALID_REQ,    /* bad request args */
 	SLSI_RTT_STATUS_NO_WIFI,    /* WiFi not enabled */
 	SLSI_RTT_STATUS_FAIL_FTM_PARAM_OVERRIDE /* Responder overrides param info, cannot range with new params */
+};
+
+enum slsi_usable_channel_attr {
+	SLSI_UC_ATTRIBUTE_BAND = 1,
+	SLSI_UC_ATTRIBUTE_IFACE_MODE,
+	SLSI_UC_ATTRIBUTE_FILTER,
+	SLSI_UC_ATTRIBUTE_MAX_NUM,
+	SLSI_UC_ATTRIBUTE_NUM_CHANNELS,
+	SLSI_UC_ATTRIBUTE_CHANNEL_LIST,
+	SLSI_UC_ATTRIBUTE_MAX
+};
+
+enum slsi_uc_band {
+	SLSI_UC_MAC_2_4_BAND = 1 << 0,
+	SLSI_UC_MAC_5_BAND = 1 << 1,
+	SLSI_UC_MAC_6_BAND = 1 << 2,
+	SLSI_UC_MAC_60_0_BAND = 1 << 3
+};
+
+enum slsi_uc_iface_mode {
+	SLSI_UC_ITERFACE_STA = 1 << 0,
+	SLSI_UC_ITERFACE_SOFTAP = 1 << 1,
+	SLSI_UC_ITERFACE_IBSS = 1 << 2,
+	SLSI_UC_ITERFACE_P2P_CLIENT = 1 << 3,
+	SLSI_UC_ITERFACE_P2P_GO = 1 << 4,
+	SLSI_UC_ITERFACE_P2P_NAN = 1 << 5,
+	SLSI_UC_ITERFACE_P2P_MESH = 1 << 6,
+	SLSI_UC_ITERFACE_P2P_TDLS = 1 << 7,
+	SLSI_UC_ITERFACE_UNKNOWN = -1,
+};
+
+enum slsi_uc_filter {
+	SLSI_UC_FILTER_REGULATORY = 0,
+	SLSI_UC_FILTER_CELLULAR_COEX = 1 << 0,
+	SLSI_UC_FILTER_CONCURRENCY = 1 << 1,
+	SLSI_UC_FILTER_NAN_INSTANT_MODE = 1 << 2
+};
+
+enum slsi_vendor_attr_delayed_wakeup_ind {
+	SLSI_VENDOR_ATTR_DELAYED_WAKEUP_WAKEUP_ID = 1,
+	SLSI_VENDOR_ATTR_DELAYED_WAKEUP_COUNT,
+	SLSI_VENDOR_ATTR_DELAYED_WAKEUP_LENGTH,
+	SLSI_VENDOR_ATTR_DELAYED_WAKEUP_PACKET
+};
+
+enum slsi_vendor_attr_spatial_reuse_parameter_ind {
+	SLSI_VENDOR_ATTR_SRG_OBSS_PD_MIN_OFFSET = 0,
+	SLSI_VENDOR_ATTR_SRG_OBSS_PD_MAX_OFFSET,
+	SLSI_VENDOR_ATTR_NON_SRG_OBSS_PD_MAX_OFFSET,
+	SLSI_VENDOR_ATTR_HESIGA_SPATIAL_REUSE_VAL15_DISALLOWED,
+	SLSI_VENDOR_ATTR_NON_SRG_OBSS_PD_SR_DISALLOWED
 };
 
 enum wifi_dtim_config_attr {
@@ -889,6 +938,11 @@ struct slsi_lls_interface_link_layer_info {
 	u8 bssid[6];                       /* bssid*/
 	u8 ap_country_str[3];              /* country string advertised by AP*/
 	u8 country_str[3];                 /* country string for this association*/
+	u8 time_slicing_duty_cycle_percent;/* if this iface is being served using time slicing
+					    * on a radio with one or more ifaces (i.e MCC),
+					    * then the duty cycle assigned to this iface in %.
+					    * If not using time slicing (i.e SCC or DBS), set to 100.
+					    */
 };
 
 /* per peer statistics */
@@ -1077,9 +1131,6 @@ struct slsi_rtt_config {
 	u16 LCR_request;              /* 1: request LCR, 0: do not request LCR */
 };
 
-#define MAX_24G_CHANNELS 14  /*Max number of 2.4G channels*/
-#define MAX_5G_CHANNELS 25  /*Max number of 5G channels*/
-#define MAX_CHAN_VALUE_ACS (MAX_24G_CHANNELS + MAX_5G_CHANNELS)
 #define MAX_AP_THRESHOLD 10  /*Max AP threshold in ACS*/
 
 struct slsi_acs_chan_info {
@@ -1093,19 +1144,47 @@ struct slsi_acs_chan_info {
 };
 
 struct slsi_acs_selected_channels {
-	u8 pri_channel;
-	u8 sec_channel;
+	u16 pri_channel;
+	u16 sec_channel;
 	u8 vht_seg0_center_ch;
 	u8 vht_seg1_center_ch;
 	u16 ch_width;
 	enum slsi_acs_hw_mode hw_mode;
+	u8 band;
 };
 
 struct slsi_acs_request {
-	struct slsi_acs_chan_info acs_chan_info[MAX_CHAN_VALUE_ACS];
+	struct slsi_acs_chan_info acs_chan_info[SLSI_MAX_CHAN_VALUE_ACS];
 	u8 hw_mode;
 	u16 ch_width;
 	u8 ch_list_len;
+	u8 band;
+};
+
+struct slsi_uc_request {
+	u32 band;
+	u32 iface_mode;
+	u32 filter;
+	u32 max_num;
+};
+
+struct slsi_usable_channel {
+	int freq;                           /* channel frequency in MHz */
+	enum slsi_lls_channel_width width;  /* Channel operating width (20, 40, 80, 160, 320 etc.) */
+	u32 iface_mode_mask;                /* BIT MASK represented by slsi_uc_iface_mode */
+};
+
+struct slsi_delayed_wakeup_ind {
+	u8 wakeup_reason;
+	u8 delayed_pkt_count;
+};
+
+struct slsi_spatial_reuse_params {
+	u8 srg_obss_pd_min_offset;
+	u8 srg_obss_pd_max_offset;
+	u8 non_srg_obss_pd_max_offset;
+	u8 hesiga_sr_value15allowed;
+	u8 non_srg_obss_pd_sr_allowed;
 };
 
 void slsi_nl80211_vendor_init(struct slsi_dev *sdev);
@@ -1120,6 +1199,8 @@ int slsi_mib_get_gscan_cap(struct slsi_dev *sdev, struct slsi_nl_gscan_capabilit
 void slsi_rx_rssi_report_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 int slsi_mib_get_apf_cap(struct slsi_dev *sdev, struct net_device *dev);
 int slsi_mib_get_rtt_cap(struct slsi_dev *sdev, struct net_device *dev, struct slsi_rtt_capabilities *cap);
+int slsi_mib_get_sta_tdls_activated(struct slsi_dev *sdev, struct net_device *dev, bool *tdls_supported);
+int slsi_mib_get_sta_tdls_max_peer(struct slsi_dev *sdev, struct net_device *dev, struct netdev_vif *ndev_vif);
 void slsi_rx_range_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_range_done_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 int slsi_tx_rate_calc(struct sk_buff *nl_skb, u16 fw_rate, int res, bool tx_rate);
@@ -1127,7 +1208,10 @@ void slsi_rx_event_log_indication(struct slsi_dev *sdev, struct net_device *dev,
 #ifdef CONFIG_SCSC_WLAN_DEBUG
 char *slsi_print_event_name(int event_id);
 #endif
-
+void slsi_vendor_delay_wakeup_event(struct slsi_dev *sdev, struct net_device *dev,
+				    struct slsi_delayed_wakeup_ind delayed_wakeup_ind);
+void slsi_vendor_change_sr_parameter_event(struct slsi_dev *sdev, struct net_device *dev,
+					   struct slsi_spatial_reuse_params spatial_reuse_ind);
 static inline bool slsi_is_gscan_id(u16 scan_id)
 {
 	if ((scan_id >= SLSI_GSCAN_SCAN_ID_START) && (scan_id <= SLSI_GSCAN_SCAN_ID_END))
@@ -1152,4 +1236,11 @@ static inline enum slsi_lls_traffic_ac slsi_fapi_to_android_traffic_q(enum slsi_
 	}
 }
 
+#if defined(CONFIG_SCSC_WLAN_TAS)
+void slsi_tas_notify_wifi_status(bool enabled);
+int slsi_tas_notify_sar_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+int slsi_tas_notify_sar_limit_upper(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_tas_nl_init(void);
+void slsi_tas_nl_deinit(void);
+#endif
 #endif

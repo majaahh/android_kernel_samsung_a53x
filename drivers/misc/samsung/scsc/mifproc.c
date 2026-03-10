@@ -10,6 +10,11 @@
 #include "mifproc.h"
 #include "scsc_mif_abs.h"
 #include "miframman.h"
+#include <scsc/scsc_warn.h>
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mifproc.c"
+#endif
 
 #define MX_MAX_PROC_RAMMAN 2	/* Number of RAMMANs to track */
 
@@ -26,6 +31,7 @@ static int mifprocfs_open_file_generic(struct inode *inode, struct file *file)
 	return 0;
 }
 
+MIF_PROCFS_RW_FILE_OPS(log_karam_dump);
 #ifdef CONFIG_SCSC_PCIE
 MIF_PROCFS_RW_FILE_OPS(mif_dump);
 MIF_PROCFS_RW_FILE_OPS(mif_writemem);
@@ -366,6 +372,42 @@ static int mifprocfs_ramman_list_show(struct seq_file *m, void *v)
 	return 0;
 }
 
+static ssize_t mifprocfs_log_karam_dump_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char         buf[128];
+	int          pos = 0;
+	const size_t bufsz = sizeof(buf);
+
+	(void)file;
+	if (!mif_global) {
+		pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "Error: mif_global not set");
+	} else {
+		if (mif_global->wlbt_karamdump)
+			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "OK");
+		else
+			pos += scnprintf(buf + pos, bufsz - pos, "%s\n", "KARAM Dump is not implemented.");
+	}
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, pos);
+}
+
+static ssize_t mifprocfs_log_karam_dump_write(struct file *file, const char __user *user_buf,
+					      size_t count, loff_t *ppos)
+{
+	if (!mif_global) {
+		SCSC_TAG_INFO(MIF, "Endpoint not registered\n");
+		return 0;
+	}
+
+	SCSC_TAG_INFO(MIF, "Dump KARAM in kernel log\n");
+	if (mif_global->wlbt_karamdump)
+		mif_global->wlbt_karamdump(mif_global);
+	else
+		SCSC_TAG_INFO(MIF, "KARAM DUMP not implemented\n");
+
+	return count;
+}
+
 static const char *procdir = "driver/mif_ctrl";
 static int refcount;
 
@@ -391,7 +433,7 @@ static void destroy_procfs_dir(void)
 		remove_proc_entry(dir, NULL);
 		procfs_dir = NULL;
 	}
-	WARN_ON(refcount < 0);
+	WLBT_WARN_ON(refcount < 0);
 }
 
 
@@ -410,7 +452,7 @@ int mifproc_create_proc_dir(struct scsc_mif_abs *mif)
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(3, 4, 0))
 		parent->data = NULL;
 #endif
-
+		MIF_PROCFS_ADD_FILE(NULL, log_karam_dump, parent, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 #ifdef CONFIG_SCSC_PCIE
 		MIF_PROCFS_ADD_FILE(NULL, mif_writemem, parent, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 		MIF_PROCFS_ADD_FILE(NULL, mif_dump, parent, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
@@ -433,10 +475,12 @@ err:
 void mifproc_remove_proc_dir(void)
 {
 	if (procfs_dir) {
+		MIF_PROCFS_REMOVE_FILE(log_karam_dump, procfs_dir);
+#ifdef CONFIG_SCSC_PCIE
 		MIF_PROCFS_REMOVE_FILE(mif_writemem, procfs_dir);
 		MIF_PROCFS_REMOVE_FILE(mif_dump, procfs_dir);
 		MIF_PROCFS_REMOVE_FILE(mif_reg, procfs_dir);
-
+#endif
 		/* De-ref the root dir */
 		destroy_procfs_dir();
 	}
@@ -497,7 +541,7 @@ void mifproc_remove_ramman_proc_dir(struct miframman *ramman)
 	(void)ramman;
 
 	if (ramman_instance <= 0) {
-		WARN_ON(ramman_instance < 0);
+		WLBT_WARN_ON(ramman_instance < 0);
 		return;
 	}
 

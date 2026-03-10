@@ -5,6 +5,7 @@
  ****************************************************************************/
 
 #include "cac.h"
+#include <scsc/scsc_warn.h>
 
 static struct cac_tspec *tspec_list;
 static int              tspec_list_next_id;
@@ -466,7 +467,7 @@ static int cac_send_delts(struct slsi_dev *sdev, int id)
 	}
 
 	stapeer = slsi_get_peer_from_qs(sdev, netdev, SLSI_STA_PEER_QUEUESET);
-	if (WARN_ON(!stapeer)) {
+	if (WLBT_WARN_ON(!stapeer)) {
 		r = -1;
 		goto exit;
 	}
@@ -602,7 +603,7 @@ static int cac_create_tspec(struct slsi_dev *sdev, char *args)
 		tid_auto_done = 1;
 	}
 
-	if ((!tid_auto_done) && (strtoint(args, &id) < 0)) {
+	if ((!tid_auto_done) && (slsi_str2int(args, &id) < 0)) {
 		/* Invalid input for tid, so we use the auto increment*/
 		if (tspec_list_next_id <= 7) {
 			id = tspec_list_next_id++;
@@ -769,6 +770,7 @@ int cac_ctrl_create_tspec(struct slsi_dev *sdev, char *args)
 
 	return id;
 }
+
 /* Name: cac_ctrl_config_tspec
  * Desc: public function to configure a tspec
  * sdev: pointer to the slsi_dev struct
@@ -797,12 +799,12 @@ int cac_ctrl_config_tspec(struct slsi_dev *sdev, char *args)
 	}
 	*value++ = '\0';
 
-	if (strtoint(id, &tspec_id) < 0) {
+	if (slsi_str2int(id, &tspec_id) < 0) {
 		SLSI_ERR(sdev, "CAC: Conversion error for tspecid\n");
 		return -1;
 	}
 
-	if (strtoint(value, &val) < 0) {
+	if (slsi_str2int(value, &val) < 0) {
 		SLSI_ERR(sdev, "CAC: Conversion error for tspecid value\n");
 		return -1;
 	}
@@ -839,7 +841,7 @@ int cac_ctrl_send_addts(struct slsi_dev *sdev, char *args)
 		if (!strncmp(ebw_str, "ebw", 3))
 			ebw = 1;
 	}
-	if (strtoint(id_str, &id) < 0) {
+	if (slsi_str2int(id_str, &id) < 0) {
 		SLSI_ERR(sdev, "CAC: Conversion error for tspecid value\n");
 		return -1;
 	}
@@ -863,7 +865,7 @@ int cac_ctrl_send_delts(struct slsi_dev *sdev, char *args)
 	if (args == NULL)
 		return -1;
 
-	if (strtoint(args, &id) < 0) {
+	if (slsi_str2int(args, &id) < 0) {
 		SLSI_ERR(sdev, "CAC: Invalid TSPEC ID\n");
 		return -1;
 	}
@@ -888,7 +890,7 @@ static void cac_process_delts_req(struct slsi_dev *sdev, struct net_device *netd
 	struct slsi_peer  *stapeer;
 	u8 tid;
 
-	WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
+	WLBT_WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
 
 	if ((!ndev_vif->activated) || (ndev_vif->vif_type != FAPI_VIFTYPE_STATION) ||
 	    (ndev_vif->sta.vif_status != SLSI_VIF_STATUS_CONNECTED) || (ndev_vif->sta.sta_bss == NULL)) {
@@ -897,7 +899,7 @@ static void cac_process_delts_req(struct slsi_dev *sdev, struct net_device *netd
 	}
 
 	stapeer = slsi_get_peer_from_qs(sdev, netdev, SLSI_STA_PEER_QUEUESET);
-	if (WARN_ON(!stapeer))
+	if (WLBT_WARN_ON(!stapeer))
 		return;
 
 	tid = (CAC_GET_LE24(req->tspec.ts_info) >> 1) & 0xF;
@@ -987,7 +989,7 @@ static void cac_process_addts_rsp(struct slsi_dev *sdev, struct net_device *netd
 	struct slsi_peer         *peer;
 	u16 medium_time;
 
-	WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
+	WLBT_WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
 
 	SLSI_DBG1(sdev, SLSI_MLME, "\n");
 
@@ -998,7 +1000,7 @@ static void cac_process_addts_rsp(struct slsi_dev *sdev, struct net_device *netd
 	}
 
 	peer = slsi_get_peer_from_qs(sdev, netdev, SLSI_STA_PEER_QUEUESET);
-	if (WARN_ON(!peer))
+	if (WLBT_WARN_ON(!peer))
 		return;
 
 	SLSI_MUTEX_LOCK(sdev->tspec_mutex);
@@ -1398,8 +1400,8 @@ void cac_update_roam_traffic_params(struct slsi_dev *sdev, struct net_device *de
 	cac_deactivate_tspecs(sdev);
 	SLSI_MUTEX_UNLOCK(sdev->tspec_mutex);
 
-	if (!peer) {
-		SLSI_ERR(sdev, "AP peer entry not found\n");
+	if (!peer || !peer->assoc_resp_ie) {
+		SLSI_ERR(sdev, "AP peer entry or assoc_resp_ie not found\n");
 		return;
 	}
 
@@ -1413,12 +1415,12 @@ void cac_update_roam_traffic_params(struct slsi_dev *sdev, struct net_device *de
 		return;
 
 	/* update the admitted TSPECs from assoc resp and set traffic params in FW.*/
-	SLSI_MUTEX_LOCK(sdev->tspec_mutex);
 	for (i = 0; i < assoc_rsp_tspec_count; i++) {
 		assoc_rsp_tspec = (struct wmm_tspec_element *)tspec_ie_arr[i];
 		SLSI_DBG3(sdev, SLSI_MLME, "rsp_tspec:[%d] ts: [%x|%x|%x] medium time[%x]\n", i,
 			  assoc_rsp_tspec->ts_info[0], assoc_rsp_tspec->ts_info[1], assoc_rsp_tspec->ts_info[2],
 			  assoc_rsp_tspec->medium_time);
+
 		itr = find_tspec_entry((assoc_rsp_tspec->ts_info[0] & 0x1E) >> 1, 0);
 		if (!itr) {
 			SLSI_DBG3(sdev, SLSI_MLME, "tspec entry not found\n");
@@ -1434,5 +1436,5 @@ void cac_update_roam_traffic_params(struct slsi_dev *sdev, struct net_device *de
 		slsi_mlme_set_traffic_parameters(sdev, dev, priority, assoc_rsp_tspec->medium_time,
 						 assoc_rsp_tspec->minimum_data_rate, ndev_vif->sta.sta_bss->bssid);
 	}
-	SLSI_MUTEX_UNLOCK(sdev->tspec_mutex);
 }
+

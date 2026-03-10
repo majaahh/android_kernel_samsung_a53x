@@ -35,12 +35,19 @@ void slsi_dev_attach_post(struct slsi_dev *sdev);
 void slsi_dev_detach_post(struct slsi_dev *sdev);
 
 /**
+ * Lock: No lock is acquired.
+ * Context: Process
+ * Description: It is called at the end of slsi_hip_setup.
+ * It sets up the maximum TX units in the HIP that the TXBP will use as MOD.
+ */
+void slsi_hip_setup_post(struct slsi_dev *sdev, u16 tx_slots);
+
+/**
  * Lock: netdev_add_remove_mutex
  * Context: Process.
  * Description: return # of Tx queue. Return value should be > 1.
  */
 int slsi_tx_get_number_of_queues(void);
-
 /**
  * Lock: netdev_add_remove_mutex
  * Context: Process
@@ -85,7 +92,7 @@ bool slsi_vif_activated_post(struct slsi_dev *sdev, struct net_device *dev, stru
  * We should free the resources allocated in on_vif_activated.
  * At this stage, ndev_vif->activated is false.
  */
-void slsi_vif_deactivated_post(struct slsi_dev *sdev, struct net_device *dev, struct netdev_vif *ndev_vif);
+bool slsi_vif_deactivated_post(struct slsi_dev *sdev, struct net_device *dev, struct netdev_vif *ndev_vif);
 
 /**
  * Lock:
@@ -107,21 +114,18 @@ int slsi_tx_ps_port_control(struct slsi_dev *sdev, struct net_device *dev, struc
 bool slsi_tx_tdls_update(struct slsi_dev *sdev, struct net_device *dev, struct slsi_peer *sta_peer, struct slsi_peer *tdls_peer, bool connection);
 
 /**
- * Lock:
- * - Mutex: vif_mutex
- * Context: Process with BHs disabled or BH
+ * Lock: N/A
+ * Context: Process or interrupt
  * Description: This function should return tx q index for skb.
  */
-#if (KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE)
+#if (KERNEL_VERSION(5, 2, 0) <= LINUX_VERSION_CODE)
 u16 slsi_tx_select_queue(struct net_device *dev, struct sk_buff *skb, struct net_device *sb_dev);
 #elif (KERNEL_VERSION(4, 19, 0) <= LINUX_VERSION_CODE)
-u16 slsi_tx_select_queue(struct net_device *dev, struct sk_buff *skb, struct net_device *sb_dev, select_queue_fallback_t fallback);
-#elif (KERNEL_VERSION(3, 18, 0) <= LINUX_VERSION_CODE)
-u16 slsi_tx_select_queue(struct net_device *dev, struct sk_buff *skb, void *accel_priv, select_queue_fallback_t fallback);
-#elif (KERNEL_VERSION(3, 13, 0) <= LINUX_VERSION_CODE)
-u16 slsi_tx_select_queue(struct net_device *dev, struct sk_buff *skb, void *accel_priv);
+u16 slsi_tx_select_queue(struct net_device *dev, struct sk_buff *skb, struct net_device *sb_dev,
+			 select_queue_fallback_t fallback);
 #else
-u16 slsi_select_tx_queue(struct net_device *dev, struct sk_buff *skb);
+u16 slsi_tx_select_queue(struct net_device *dev, struct sk_buff *skb, void *accel_priv,
+			 select_queue_fallback_t fallback);
 #endif
 
 /**
@@ -179,4 +183,33 @@ int slsi_tx_done(struct slsi_dev *sdev, u32 colour, bool more);
  * Need to check if it is still used.
  */
 int slsi_tx_transmit_lower(struct slsi_dev *sdev, struct sk_buff *skb);
+
+/**
+ * Lock: net_device tx_global_lock
+ * Context: softirq
+ * Description: Print debug message if tx timeout happens
+ */
+void slsi_tx_timeout(struct net_device *dev);
+
+/**
+ * Lock: start_stop_mutex
+ * Context: Process
+ * Description: It is called when host goes to suspend.
+ * It disables TX napis.
+ */
+void slsi_txbp_suspend(struct slsi_dev *sdev);
+/**
+ * Lock: start_stop_mutex
+ * Context: Process
+ * Description: It is called when host wakes up.
+ * It enables TX napis.
+ */
+void slsi_txbp_resume(struct slsi_dev *sdev);
+
+/**
+ * Lock: N/A
+ * Context: N/A
+ * Description: Get gcod value
+ */
+int slsi_tx_get_gcod(void);
 #endif

@@ -8,6 +8,7 @@
 #define __SLSI_UNITTEST_H__
 
 #include "dev.h"
+#include <scsc/scsc_warn.h>
 
 struct slsi_test_dev;
 struct slsi_test_bh_work {
@@ -115,7 +116,7 @@ static inline void slsi_test_bh_deinit(struct slsi_test_dev *uftestdev)
 	struct workqueue_struct *workqueue = NULL;
 
 	slsi_spinlock_lock(&uftestdev->bh_work.spinlock);
-	WARN_ON(uftestdev->bh_work.available);
+	WLBT_WARN_ON(uftestdev->bh_work.available);
 	uftestdev->bh_work.available = false;
 	workqueue = uftestdev->bh_work.workqueue;
 	uftestdev->bh_work.workqueue = NULL;

@@ -545,7 +545,7 @@ irqreturn_t pcie_mif_isr(int irq, void *data)
 	struct pcie_mif *pcie = (struct pcie_mif *)data;
 	uint32_t val= 0;
 
-	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "IN ISR!!!!!!!!!!!!!!!!!");
+	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "IRQ received\n");
 
 	val = readl(pcie->registers + TB_ICONNECT_SINGLE_IRQ_TO_HOST_CLEAR);
 	SCSC_TAG_INFO_DEV(PCIE_MIF, pcie->dev, "TB_ICONNECT_SINGLE_IRQ_TO_HOST_CLEAR %x\n", val);
@@ -1408,6 +1408,7 @@ struct scsc_mif_abs *pcie_mif_create(struct pci_dev *pdev, const struct pci_devi
 	pcie_if->load_pmu_fw = pcie_load_pmu_fw;
 	pcie_if->irq_reg_pmu_handler = pcie_mif_irq_reg_pmu_handler;
 #endif
+	pcie_if->pcie_is_on = pcie_is_on;
 	pcie->pmu_handler = pcie_mif_irq_default_handler;
 	pcie->irq_dev_pmu = NULL;
 
@@ -1501,7 +1502,6 @@ struct scsc_mif_abs *pcie_mif_create(struct pci_dev *pdev, const struct pci_devi
 
 void pcie_mif_destroy_pcie(struct pci_dev *pdev, struct scsc_mif_abs *interface)
 {
-	struct pcie_mif *pcie = pcie_mif_from_mif_abs(interface);
 
 	pcie_remove_proc_dir();
 

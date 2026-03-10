@@ -25,7 +25,7 @@ static int slsi_qsf_get_wifi_fw_feature_version(struct slsi_dev *sdev, u32 *fw_v
 {
 	struct slsi_mib_data mibrsp = { 0, NULL };
 	struct slsi_mib_value *values = NULL;
-	struct slsi_mib_get_entry get_values[] = { { SLSI_PSID_UNIFI_QSFS_VERION, { 0, 0 } },};
+	struct slsi_mib_get_entry get_values[] = { { SLSI_PSID_UNIFI_QSFS_VERSION, { 0, 0 } },};
 	const struct firmware *e = NULL;
 	int r = 0;
 
@@ -75,14 +75,31 @@ void slsi_qsf_deinit(void)
 	mxman_wifi_kobject_ref_put();
 }
 
-static u8 slsi_get_wifi_standard(struct slsi_dev *sdev)
+static u8 slsi_get_wifi_standard(struct slsi_dev *sdev, bool he_active)
 {
+	if (sdev->band_6g_supported)
+		return SLSI_WIFI_6E;
+
+	if (he_active)
+		return SLSI_WIFI_6;
+
 	if (sdev->fw_vht_enabled)
 		return SLSI_WIFI_5;
 
 	if (sdev->fw_ht_enabled)
 		return SLSI_WIFI_4;
 	return 0xFF;
+}
+
+static u32 slsi_get_band_conc(struct slsi_dev *sdev, bool he_activate)
+{
+	if (sdev->dualband_concurrency) {
+		if (sdev->band_6g_supported && (he_activate | sdev->fw_vht_enabled))
+			return DUAL_BAND_CONCURRANCY_WITH_6G;
+		else if (he_activate && sdev->fw_vht_enabled)
+			return DUAL_BAND_CONCURRANCY;
+	}
+	return 0;
 }
 
 static u32 slsi_get_antenna_from_ht_caps(u8 *caps)
@@ -146,6 +163,41 @@ static u32 slsi_get_antenna_from_vht_caps(u8 *caps)
 	return max(tx_max_nss, rx_max_nss);
 }
 
+static u32 slsi_get_antenna_from_he_caps(u8 *caps)
+{
+	u16 rx_he_mcs_map_80mhz = 0, tx_he_mcs_map_80mhz = 0;
+	u16 rx_he_mcs_map_160mhz = 0, tx_he_mcs_map_160mhz = 0;
+	u8 tx_max_nss_80 = 0, rx_max_nss_80 = 0;
+	u8 tx_max_nss_160 = 0, rx_max_nss_160 = 0;
+	u8 tx_max_nss = 0, rx_max_nss = 0;
+
+	rx_he_mcs_map_80mhz = SLSI_GET_HE_RX_80MHZ_MCS_MAP(caps);
+	tx_he_mcs_map_80mhz = SLSI_GET_HE_TX_80MHZ_MCS_MAP(caps);
+	if (SLSI_SUPPORT_FOR_HE_160MHZ_CHANNEL_WIDTH(caps)) {
+		rx_he_mcs_map_160mhz = SLSI_GET_HE_RX_160MHZ_MCS_MAP(caps);
+		tx_he_mcs_map_160mhz = SLSI_GET_HE_TX_160MHZ_MCS_MAP(caps);
+	}
+
+	tx_max_nss_80 = slsi_get_nss_from_mcs_nss_map(tx_he_mcs_map_80mhz);
+
+	if (SLSI_SUPPORT_FOR_HE_160MHZ_CHANNEL_WIDTH(caps))
+		tx_max_nss_160 = slsi_get_nss_from_mcs_nss_map(tx_he_mcs_map_160mhz);
+
+	tx_max_nss = max(tx_max_nss_80, tx_max_nss_160);
+
+	rx_max_nss_80 = slsi_get_nss_from_mcs_nss_map(rx_he_mcs_map_80mhz);
+
+	if (SLSI_SUPPORT_FOR_HE_160MHZ_CHANNEL_WIDTH(caps))
+		rx_max_nss_160 = slsi_get_nss_from_mcs_nss_map(rx_he_mcs_map_160mhz);
+
+	rx_max_nss = max(rx_max_nss_80, rx_max_nss_160);
+
+	if (tx_max_nss == 0 && rx_max_nss == 0)
+		return 1;
+
+	return max(tx_max_nss, rx_max_nss);
+}
+
 static u32 slsi_qsf_encode_hw_feature(struct slsi_dev *sdev, u8 *misc_features_activated,
 				      bool he_active, char *buf, u32 bytes, u32 buf_size,
 				      u8 *he_caps, u8 *vht_caps, u8 *ht_caps)
@@ -154,11 +206,12 @@ static u32 slsi_qsf_encode_hw_feature(struct slsi_dev *sdev, u8 *misc_features_a
 	u32 hw_feature = 0;
 	u8 low_rx_core = 0;
 	u32 main_cores = 0;
+	u32 supp_conc_mode = 0;
 	u32 antenna = 0;
 	u32 hw_feature_len = 4;
 
-	wifi_standard = slsi_get_wifi_standard(sdev);
-	if (wifi_standard <= SLSI_WIFI_5) {
+	wifi_standard = slsi_get_wifi_standard(sdev, he_active);
+	if (wifi_standard <= SLSI_WIFI_7) {
 		SLSI_QSF_SET_WIFI_STANDARD(hw_feature, wifi_standard);
 	} else {
 		SLSI_ERR(sdev, "Error while getting wifi_standard, %d\n", wifi_standard);
@@ -178,8 +231,18 @@ static u32 slsi_qsf_encode_hw_feature(struct slsi_dev *sdev, u8 *misc_features_a
 		SLSI_ERR(sdev, "Error in getting main_cores, %d\n", main_cores);
 		return bytes;
 	}
-
+	supp_conc_mode = slsi_get_band_conc(sdev, he_active);
+	if (supp_conc_mode <= 2) {
+		SLSI_QSF_SET_CONCURRENCY_MODES(hw_feature, supp_conc_mode);
+	} else {
+		SLSI_ERR(sdev, "Error in getting supp_conc_mode, %d\n", supp_conc_mode);
+		return bytes;
+	}
 	switch (wifi_standard) {
+	case SLSI_WIFI_6E:
+	case SLSI_WIFI_6:
+		antenna = slsi_get_antenna_from_he_caps(he_caps);
+		break;
 	case SLSI_WIFI_5:
 		antenna = slsi_get_antenna_from_vht_caps(vht_caps);
 		break;
@@ -218,6 +281,8 @@ static u32 slsi_qsf_encode_sw_feature_1(struct slsi_dev *sdev, u8 *misc_features
 	u32 enhanced_passive_scan = SLSI_GET_ENHANCED_PASSIVE_SCAN(misc_features_activated);
 	u32 sched_pm_support = SLSI_GET_SCHED_PM_SUPPORT(misc_features_activated);
 	u32 delayed_wakeup_supp = SLSI_GET_DELAYED_WAKEUP_SUPPORT(misc_features_activated);
+	u32 sched_pm_min_service_period = SLSI_GET_SCHED_PM_SERVICE_PERIOD(misc_features_activated);
+	u32 sched_pm_min_sleep_period = SLSI_GET_SCHED_PM_SLEEP_PERIOD(misc_features_activated);
 
 	if (pno_enabled)
 		pno |= SLSI_PNO_ENABLED;
@@ -253,6 +318,8 @@ static u32 slsi_qsf_encode_sw_feature_1(struct slsi_dev *sdev, u8 *misc_features
 
 	if (sched_pm_support)
 		scheduled_pm = SLSI_SCHED_PM_ENABLED;
+	SLSI_SET_SCHED_PM_SERVICE_PERIOD(scheduled_pm, sched_pm_min_service_period);
+	SLSI_SET_SCHED_PM_SLEEP_PERIOD(scheduled_pm, sched_pm_min_sleep_period);
 	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_SCHEDULED_PM_ID,
 			   SLSI_QSF_SW_FEATURE_SCHEDULED_PM_LEN, scheduled_pm);
 	if (delayed_wakeup_supp)
@@ -397,7 +464,8 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 	u32 get_bssi_info_api_supp = 1, get_assoc_reject_info_api_supp = 1;
 	u32 get_sta_info_api_supp = 1;
 	u8 p2p[6] = {0};
-	u8 big_data = 0;
+	u8 big_data = 0, get_sta_dump = 0;
+	u32 get_sta_dump_supp = 1;
 
 	u32 max_nan_ndps = SLSI_GET_MAX_NAN_NDPS(misc_features_activated);
 
@@ -435,8 +503,8 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 		p2p[5] |= SLSI_QSF_NAN_VERSION_SET(nan_version);
 
 	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X%02X%02X%02X%02X%02X",
-			   SLSI_QSF_SW_FEATURE_P2P_ID, SLSI_QSF_SW_FEATURE_P2P_LEN, p2p[0],
-			   p2p[1], p2p[2], p2p[3], p2p[4], p2p[5]);
+			   SLSI_QSF_SW_FEATURE_P2P_ID, SLSI_QSF_SW_FEATURE_P2P_LEN, p2p[5],
+			   p2p[4], p2p[3], p2p[2], p2p[1], p2p[0]);
 
 	if (get_bssi_info_api_supp)
 		big_data |= SLSI_QSF_BSSI_INFO_API_SUPP_ENABLED;
@@ -446,6 +514,11 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 		big_data |= SLSI_QSF_STA_INFO_API_SUPP_ENABLED;
 	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_BIG_DATA_ID,
 			   SLSI_QSF_SW_FEATURE_BIG_DATA_LEN, big_data);
+
+	if (get_sta_dump_supp)
+		get_sta_dump |= SLSI_QSF_GET_STA_DUMP_SUPPORTED;
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_GET_STA_DUMP_ID,
+			   SLSI_QSF_SW_FEATURE_GET_STA_DUMP_LEN, get_sta_dump);
 	return bytes;
 }
 
@@ -464,14 +537,18 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 	struct slsi_mib_value *values = NULL;
 	struct slsi_mib_get_entry get_values[] = { { SLSI_PSID_UNIFI_HE_ACTIVATED, { 0, 0 } },
 						   { SLSI_PSID_UNIFI_TWT_ACTIVATED, {0, 0} },
+						   { SLSI_PSID_UNIFI_HE_ACTIVATED_SOFT_AP, {0, 0} },
 						   { SLSI_PSID_UNIFI_WP_A3_ACTIVATED, {0, 0} },
 						   { SLSI_PSID_UNIFI_TDLS_ACTIVATED, {0, 0} },
 						   { SLSI_PSID_DOT11_TDLS_PEER_UAPSD_BUFFER_STA_ACTIVATED, {0, 0} },
+						   { SLSI_PSID_UNIFI_NAN_FAST_CONNECT_ENABLED, {0, 0} },
+						   { SLSI_PSID_UNIFI_MAX_TDLS_CLIENT, {0, 0} },
 						   { SLSI_PSID_UNIFI_HT_CAPABILITIES, {0, 0} },
 						   { SLSI_PSID_UNIFI_VHT_CAPABILITIES, {0, 0} },
 						   { SLSI_PSID_UNIFI_HE_CAPABILITIES, {0, 0} },
 						   { SLSI_PSID_UNIFI_MISC_FEATURES_ACTIVATED, {0, 0} },
 						   { SLSI_PSID_UNIFI_APPENDIX_VERSIONS, {0, 0} },
+						   { SLSI_PSID_UNIFI_FIRMWARE_BUILD_ID, {0, 0} },
 						   { SLSI_PSID_UNIFI_TWT_CONTROL_FLAGS, {0, 0} },
 						 };
 
@@ -489,63 +566,94 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 		return -1;
 	}
 
-	qsf_data->max_tdls_cli = SLSI_MAX_TDLS_LINK;
 	slsi_qsf_extract_bool_data(sdev, values, 0, &qsf_data->he_active);
 	slsi_qsf_extract_bool_data(sdev, values, 1, &qsf_data->twt_active);
-	slsi_qsf_extract_bool_data(sdev, values, 2, &qsf_data->wpa3_active);
-	slsi_qsf_extract_bool_data(sdev, values, 3, &qsf_data->tdls_active);
-	slsi_qsf_extract_bool_data(sdev, values, 4, &qsf_data->tdls_peer_uapsd_active);
+	slsi_qsf_extract_bool_data(sdev, values, 2, &qsf_data->he_softap_active);
+	slsi_qsf_extract_bool_data(sdev, values, 3, &qsf_data->wpa3_active);
+	slsi_qsf_extract_bool_data(sdev, values, 4, &qsf_data->tdls_active);
+	slsi_qsf_extract_bool_data(sdev, values, 5, &qsf_data->tdls_peer_uapsd_active);
+	slsi_qsf_extract_bool_data(sdev, values, 6, &qsf_data->nan_fast_connect);
 
-	if (values[5].type == SLSI_MIB_TYPE_OCTET && values[5].u.octetValue.dataLength >= 21)
-		memcpy(qsf_data->ht_caps, values[5].u.octetValue.data, 21);
+	SLSI_CHECK_TYPE(sdev, values[7].type, SLSI_MIB_TYPE_UINT);
+	qsf_data->max_tdls_cli = values[7].u.uintValue;
+
+	if (values[8].type == SLSI_MIB_TYPE_OCTET && values[8].u.octetValue.dataLength >= 21)
+		memcpy(qsf_data->ht_caps, values[8].u.octetValue.data, 21);
 	else
-		SLSI_ERR(sdev, "invalid type or len for index: %d len:%d\n", 5,
-			 values[5].u.octetValue.dataLength);
-	if (values[6].type == SLSI_MIB_TYPE_OCTET && values[6].u.octetValue.dataLength >= 12)
-		memcpy(qsf_data->vht_caps, values[6].u.octetValue.data, 12);
-	else
-		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 6,
-			 values[6].u.octetValue.dataLength);
-	if (values[7].type == SLSI_MIB_TYPE_OCTET && values[7].u.octetValue.dataLength >= 28)
-		memcpy(qsf_data->he_caps, values[7].u.octetValue.data, values[7].u.octetValue.dataLength);
-	else
-		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 7,
-			 values[7].u.octetValue.dataLength);
-	if (values[8].type == SLSI_MIB_TYPE_OCTET && values[8].u.octetValue.dataLength >= 18)
-		memcpy(qsf_data->misc_features_activated, values[8].u.octetValue.data, 18);
-	else
-		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 8,
+		SLSI_ERR(sdev, "invalid type or len for index: %d len:%d\n", 8,
 			 values[8].u.octetValue.dataLength);
-	if (values[9].type == SLSI_MIB_TYPE_OCTET && values[9].u.octetValue.dataLength >= 4)
-		memcpy(&qsf_data->appendix_versions, values[9].u.octetValue.data, 4);
+	if (values[9].type == SLSI_MIB_TYPE_OCTET && values[9].u.octetValue.dataLength >= 12)
+		memcpy(qsf_data->vht_caps, values[9].u.octetValue.data, 12);
 	else
 		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 9,
 			 values[9].u.octetValue.dataLength);
+	if (values[10].type == SLSI_MIB_TYPE_OCTET && values[10].u.octetValue.dataLength >= 28)
+		memcpy(qsf_data->he_caps, values[10].u.octetValue.data, values[10].u.octetValue.dataLength);
+	else
+		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 10,
+			 values[10].u.octetValue.dataLength);
+	if (values[11].type == SLSI_MIB_TYPE_OCTET && values[11].u.octetValue.dataLength >= 18)
+		memcpy(qsf_data->misc_features_activated, values[11].u.octetValue.data, 18);
+	else
+		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 11,
+			 values[11].u.octetValue.dataLength);
+	if (values[12].type == SLSI_MIB_TYPE_OCTET && values[12].u.octetValue.dataLength >= 4)
+		memcpy(&qsf_data->appendix_versions, values[12].u.octetValue.data, 4);
+	else
+		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 12,
+			 values[12].u.octetValue.dataLength);
 
-	SLSI_CHECK_TYPE(sdev, values[10].type, SLSI_MIB_TYPE_UINT);
-	qsf_data->twt_control = values[10].u.uintValue;
+	SLSI_CHECK_TYPE(sdev, values[13].type, SLSI_MIB_TYPE_UINT);
+	sdev->fw_build_id = values[13].u.uintValue;
+	SLSI_CHECK_TYPE(sdev, values[14].type, SLSI_MIB_TYPE_UINT);
+	qsf_data->twt_control = values[14].u.uintValue;
 	kfree(mibrsp.data);
 	kfree(values);
 	return 0;
 }
 
+static void slsi_get_qsfs_sol_name_ver(struct slsi_dev *sdev)
+{
+	int r = 0;
+	u32 fw_feature_ver = 0;
+	u32 wifi_feature_ver = 0;
+	u32 pos = 0;
+	u32 buf_size = sizeof(sdev->qsfs_feature_set);
+
+	r = slsi_qsf_get_wifi_fw_feature_version(sdev, &fw_feature_ver);
+	SLSI_INFO(sdev, "fw_feature_ver: %d\n", fw_feature_ver);
+	if (r < 0)
+		SLSI_ERR(sdev, "QSFS Wifi FW feature version couldn't be identified\n");
+	if (fw_feature_ver)
+		wifi_feature_ver = fw_feature_ver + SLSI_QSF_WIFI_FEATURE_VERSION;
+
+	pos += scnprintf(sdev->qsfs_feature_set, buf_size, "%04X", wifi_feature_ver);
+	pos += scnprintf(sdev->qsfs_feature_set + pos, buf_size - pos, "%.3s", sol_name);
+	sdev->qsf_feature_set_len = pos;
+}
+
 void slsi_get_qsfs_feature_set(struct slsi_dev *sdev)
 {
-	int sw_feature_len = 0;
+	int  sw_feature_len = 0;
 	int sw_feature_len_offset = 0;
-	u32 pos = sdev->qsf_feature_set_len;
+	u32 pos = 0;
 	int ret = 0;
-	u32 buf_size = 128;
+	u32 buf_size = 132;
 	struct slsi_qsf_mib_data qsf_data = {0};
 	u8  *buf = sdev->qsfs_feature_set;
 	char tmp_buf[5] = {0};
 
+	if (!sdev->qsf_feature_set_len)
+		slsi_get_qsfs_sol_name_ver(sdev);
+	pos = sdev->qsf_feature_set_len;
+
 	ret = slsi_get_qsf_mib_data(sdev, &qsf_data);
 	if (ret) {
-		SLSI_ERR(sdev, "Error in getting thr mib data Error:%d\n", ret);
+		SLSI_ERR(sdev, "Error in getting the mib data Error:%d\n", ret);
 		return;
 	}
 
+	SLSI_INFO(sdev, "QSF features set buffer is being filled\n");
 	pos = slsi_qsf_encode_hw_feature(sdev, qsf_data.misc_features_activated, qsf_data.he_active,
 					 buf, pos, buf_size, qsf_data.he_caps,
 					 qsf_data.vht_caps, qsf_data.ht_caps);
@@ -570,24 +678,10 @@ void slsi_get_qsfs_feature_set(struct slsi_dev *sdev)
 static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	struct slsi_dev *sdev = slsi_get_sdev();
-	int r = 0;
-	u32 fw_feature_ver = 0;
-	u32 wifi_feature_ver = 0;
-	u32 pos = 0;
-	u32 buf_size = sizeof(sdev->qsfs_feature_set);
 
-	if (!sdev->qsf_feature_set_len) {
-		r = slsi_qsf_get_wifi_fw_feature_version(sdev, &fw_feature_ver);
-		SLSI_INFO(sdev, "fw_feature_ver: %d\n", fw_feature_ver);
-		if (r < 0)
-			SLSI_ERR(sdev, "QSFS Wifi FW feature version couldn't be identified\n");
-		if (fw_feature_ver)
-			wifi_feature_ver = fw_feature_ver + SLSI_QSF_WIFI_FEATURE_VERSION;
+	if (!sdev->qsf_feature_set_len)
+		slsi_get_qsfs_sol_name_ver(sdev);
 
-		pos += scnprintf(sdev->qsfs_feature_set, buf_size, "%04X", wifi_feature_ver);
-		pos += scnprintf(sdev->qsfs_feature_set + pos, buf_size - pos, "%.3s", sol_name);
-		sdev->qsf_feature_set_len = pos;
-	}
 	SLSI_INFO(sdev, "sysfs node for QSF is being read\n");
 	memcpy(buf, sdev->qsfs_feature_set, sdev->qsf_feature_set_len);
 	return sdev->qsf_feature_set_len;

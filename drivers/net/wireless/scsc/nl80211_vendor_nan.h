@@ -25,6 +25,7 @@
 #define SLSI_NAN_TLV_TAG_APP_INFO                  0x010f
 #define SLSI_NAN_TLV_TAG_RANGING                   0x0110
 #define SLSI_NAN_TLV_TAG_CONFIG_SUPPLEMENTAL       0x0111
+#define SLSI_NAN_TLV_TAG_INSTANT_COMM_MODE         0x0114
 #define SLSI_NAN_TLV_WFA_IPV6_LOCAL_LINK           0x0000
 #define SLSI_NAN_TLV_WFA_SERVICE_INFO              0x0001
 #define SLSI_NAN_TLV_NAN_RTT_CONFIG                0x0112
@@ -32,13 +33,10 @@
 #define SLSI_NAN_TLV_NAN_RTT_RESULT                0x0113
 #define SLSI_NAN_TLV_NAN_RTT_RESULT_LEN            0x0021
 
-#define SLSI_NAN_MAX_SERVICE_ID 16
+#define SLSI_NAN_MAX_SERVICE_ID 128
 #define SLSI_NAN_MAX_HOST_FOLLOWUP_REQ 20
 #define SLSI_NAN_MAX_NDP_INSTANCES 8
-#define SLSI_NAN_DATA_IFINDEX_START 5
-#define SLSI_NAN_CLUSTER_MERGE_ENABLE_MASK 0xC0000000
-#define SLSI_NAN_CLUSTER_MERGE_DISABLE_MASK 0x80000000
-#define SLSI_NAN_MAC_RANDOM_INTERVAL_MASK 0x3fffffff
+#define SLSI_NAN_MAC_RANDOM_INTERVAL_MASK 0x1fffffff
 
 enum SLSI_NAN_REPLY_ATTRIBUTES {
 	NAN_REPLY_ATTR_STATUS_TYPE,
@@ -66,6 +64,7 @@ enum SLSI_NAN_REPLY_ATTRIBUTES {
 	NAN_REPLY_ATTR_CAP_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN,
 	NAN_REPLY_ATTR_CAP_MAX_SUBSCRIBE_ADDRESS,
 	NAN_REPLY_ATTR_CAP_NDPE_ATTR_SUPPORTED,
+	NAN_REPLY_ATTR_CAP_INSTANT_COMM_SUPPORTED,
 	NAN_REPLY_ATTR_HAL_TRANSACTION_ID
 };
 
@@ -219,6 +218,8 @@ enum SLSI_NAN_REQ_ATTRIBUTES {
 	NAN_REQ_ATTR_NSS,
 	NAN_REQ_ATTR_ENABLE_RANGING,
 	NAN_REQ_ATTR_DW_EARLY_TERMINATION,
+	NAN_REQ_ATTR_ENABLE_INSTANT_MODE,
+	NAN_REQ_ATTR_INSTANT_MODE_CHANNEL,
 	NAN_REQ_ATTR_MAX
 };
 
@@ -669,6 +670,8 @@ struct slsi_hal_nan_enable_req {
 	u32 nss_discovery;
 	u32 enable_dw_early_termination;
 	u32 enable_ranging;
+	u16 enable_instant_mode;
+	u16 instant_mode_channel;
 };
 
 struct slsi_hal_nan_publish_req {
@@ -961,6 +964,8 @@ struct slsi_hal_nan_config_req {
 	u32 nss_discovery;
 	u32 enable_dw_early_termination;
 	u32 enable_ranging;
+	u16 enable_instant_mode;
+	u16 instant_mode_channel;
 };
 
 struct slsi_hal_nan_data_path_cfg {
@@ -1026,6 +1031,7 @@ struct slsi_hal_nan_capabilities {
 	u32 max_sdea_service_specific_info_len;
 	u32 max_subscribe_address;
 	u32 ndpe_attr_supported;
+	u32 instant_comm_supported;
 };
 
 struct slsi_hal_nan_followup_ind {
@@ -1132,12 +1138,12 @@ int slsi_nan_ndp_initiate(struct wiphy *wiphy, struct wireless_dev *wdev, const 
 int slsi_nan_ndp_respond(struct wiphy *wiphy, struct wireless_dev *wdev, const void *data, int len);
 int slsi_nan_ndp_end(struct wiphy *wiphy, struct wireless_dev *wdev, const void *data, int len);
 int slsi_nan_ndp_new_entry(struct slsi_dev *sdev, struct net_device *dev, u32 ndp_instance_id,
-			   u16 ndl_vif_id, u8 *local_ndi, u8 *peer_nmi);
+			   u16 ndl_vif_id, const u8 *local_ndi, u8 *peer_nmi);
 void slsi_nan_ndp_del_entry(struct slsi_dev *sdev, struct net_device *dev, u32 ndp_instance_id, const bool ndl_vif_locked);
 void slsi_nan_ndp_setup_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb, bool is_req_ind);
 void slsi_nan_ndp_requested_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_nan_ndp_termination_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
-u32 slsi_nan_get_ndp_from_ndl_local_ndi(struct net_device *dev, u16 ndl_vif_id, u8 *local_ndi);
+u32 slsi_nan_get_ndp_from_ndl_local_ndi(struct net_device *dev, u16 ndl_vif_id, const u8 *local_ndi);
 void slsi_nan_del_peer(struct slsi_dev *sdev, struct net_device *dev, u8 *local_ndi, u16 ndp_instance_id);
 void slsi_nan_ndp_termination_handler(struct slsi_dev *sdev, struct net_device *dev, u16 ndp_instance_id, u8 *ndi);
 int slsi_nan_push_followup_ids(struct slsi_dev *sdev, struct net_device *dev, u16 match_id, u16 trans_id);
@@ -1150,5 +1156,4 @@ void slsi_nan_data_interface_create_wq(struct work_struct *work);
 void slsi_nan_data_interface_delete_wq(struct work_struct *work);
 #endif
 void slsi_vendor_nan_event_create_delete(struct slsi_dev *sdev, int hal_event, int transaction_id,int reply_status);
-
 #endif

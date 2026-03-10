@@ -94,8 +94,11 @@ static u32 proc_count;
 		.open = mx_clk20_procfs_generic_open,                                  \
 		.llseek = generic_file_llseek                               \
 	}
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#define MX_PDE_DATA(inode) pde_data(inode)
+#else
 #define MX_PDE_DATA(inode) PDE_DATA(inode)
+#endif
 
 #define MX_CLK20_PROCFS_SET_UID_GID(_entry) \
 	do { \

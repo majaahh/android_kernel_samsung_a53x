@@ -20,6 +20,7 @@
 
 /** Uses */
 #include <linux/kthread.h>
+#include <linux/spinlock.h>
 #include "mifstream.h"
 
 struct mxmgmt_transport;
@@ -61,11 +62,13 @@ void mxmgmt_transport_register_channel_handler(struct mxmgmt_transport *mxmgmt_t
 void mxmgmt_transport_send(struct mxmgmt_transport *mxmgmt_transport, enum mxmgr_channels channel_id,
 			   void *message, uint32_t message_length);
 
+void mxmgmt_print_sent_data_dump(bool sm_msg);
+
 /**
  * Initialises the maxwell management transport and configures the necessary
  * interrupt handlers. Called once during boot.
  */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mxmgmt_transport_init(struct mxmgmt_transport *mxmgmt_transport, struct scsc_mx *mx, enum scsc_mif_abs_target target);
 #else
 int mxmgmt_transport_init(struct mxmgmt_transport *mxmgmt_transport, struct scsc_mx *mx);
@@ -103,7 +106,9 @@ struct mxmgmt_transport {
 	mxmgmt_channel_handler channel_handler_fns[MMTRANS_NUM_CHANNELS];
 	void                   *channel_handler_data[MMTRANS_NUM_CHANNELS];
 	struct mutex           channel_handler_mutex;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	spinlock_t             mxmgmt_spinlock;
+	unsigned int           discard_cnt;
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	enum scsc_mif_abs_target target;
 #endif
 };

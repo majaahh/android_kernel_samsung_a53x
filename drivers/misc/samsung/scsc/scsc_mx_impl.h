@@ -25,20 +25,20 @@ struct scsc_mx          *scsc_mx_create(struct scsc_mif_abs *mif);
 void scsc_mx_destroy(struct scsc_mx *mx);
 struct scsc_mif_abs     *scsc_mx_get_mif_abs(struct scsc_mx *mx);
 struct mifintrbit       *scsc_mx_get_intrbit(struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct mifintrbit       *scsc_mx_get_intrbit_wpan(struct scsc_mx *mx);
 struct mifpmuman	*scsc_mx_get_mifpmuman(struct scsc_mx *mx);
 #endif
 struct mifmuxman        *scsc_mx_get_muxman(struct scsc_mx *mx);
 struct miframman        *scsc_mx_get_ramman(struct scsc_mx *mx);
 struct miframman        *scsc_mx_get_ramman2(struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct miframman        *scsc_mx_get_ramman_wpan(struct scsc_mx *mx);
 struct miframman        *scsc_mx_get_ramman2_wpan(struct scsc_mx *mx);
 #endif
 struct mifabox          *scsc_mx_get_aboxram(struct scsc_mx *mx);
 struct mifmboxman       *scsc_mx_get_mboxman(struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct mifmboxman       *scsc_mx_get_mboxman_wpan(struct scsc_mx *mx);
 #endif
 #ifdef CONFIG_SCSC_SMAPPER
@@ -52,7 +52,7 @@ struct mxman            *scsc_mx_get_mxman(struct scsc_mx *mx);
 struct srvman           *scsc_mx_get_srvman(struct scsc_mx *mx);
 struct mxproc           *scsc_mx_get_mxproc(struct scsc_mx *mx);
 struct mxmgmt_transport *scsc_mx_get_mxmgmt_transport(struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct mxmgmt_transport *scsc_mx_get_mxmgmt_transport_wpan(struct scsc_mx *mx);
 #endif
 struct gdb_transport    *scsc_mx_get_gdb_transport_wlan(struct scsc_mx *mx);
@@ -60,15 +60,28 @@ struct gdb_transport    *scsc_mx_get_gdb_transport_fxm_1(struct scsc_mx *mx);
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
 struct gdb_transport    *scsc_mx_get_gdb_transport_fxm_2(struct scsc_mx *mx);
 #endif
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+struct gdb_transport *scsc_mx_get_gdb_transport_pmu(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_fxm_3(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_2(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_3(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_4(struct scsc_mx *mx);
+#endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_5(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_6(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_7(struct scsc_mx *mx);
+struct gdb_transport *scsc_mx_get_gdb_transport_wlan_8(struct scsc_mx *mx);
+#endif
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct gdb_transport *scsc_mx_get_gdb_transport_wpan(struct scsc_mx *mx);
 #endif
 struct mxlog            *scsc_mx_get_mxlog(struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct mxlog            *scsc_mx_get_mxlog_wpan(struct scsc_mx *mx);
 #endif
 struct mxlog_transport  *scsc_mx_get_mxlog_transport(struct scsc_mx *mx);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 struct mxlog_transport  *scsc_mx_get_mxlog_transport_wpan(struct scsc_mx *mx);
 #endif
 struct mxlogger         *scsc_mx_get_mxlogger(struct scsc_mx *mx);
@@ -91,4 +104,7 @@ int mx140_basedir_file(struct scsc_mx *mx);
 int mx140_exe_path(struct scsc_mx *mx, char *path, size_t len, const char *bin);
 int mx140_file_select_fw(struct scsc_mx *mx, u32 suffix);
 bool mx140_file_supported_hw(struct scsc_mx *mx, u32 hw_ver);
+#ifdef CONFIG_DUAL_FIRMWARE
+void mx140_update_suffix(struct scsc_mx *mx);
+#endif
 #endif

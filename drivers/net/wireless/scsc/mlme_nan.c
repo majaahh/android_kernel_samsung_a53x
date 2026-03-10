@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "mlme.h"
 #include "nl80211_vendor_nan.h"
+#include <scsc/scsc_warn.h>
 
 #define SLSI_FAPI_NAN_ATTRIBUTE_PUT_U8(req, attribute, val) \
 	{ \
@@ -116,7 +117,7 @@ static u16 slsi_mlme_nan_service_info_tlv_length(struct slsi_hal_nan_data_path_a
 
 static u32 slsi_mlme_nan_append_config_tlv(struct sk_buff *req, u8 master_pref, u16 include_ps_id, u8 ps_id_count,
 					   u16 include_ss_id, u8 ss_id_count, u16 rssi_window, u32 nmi_rand_interval,
-					   u16 cluster_merge)
+					   u16 cluster_merge, u16 enable_instant_mode)
 {
 	u8 *p;
 
@@ -136,8 +137,20 @@ static u32 slsi_mlme_nan_append_config_tlv(struct sk_buff *req, u8 master_pref, 
 	p = fapi_append_data_u32(req, nmi_rand_interval);
 	p = fapi_append_data_u16(req, cluster_merge);
 	/* instantCommunicationMode */
-	p = fapi_append_data_bool(req, 0);
+	p = fapi_append_data_bool(req, enable_instant_mode);
 
+	if (p)
+		return 0;
+	return 1;
+}
+
+static u32 slsi_mlme_nan_append_instant_communication_mode_config_tlv(struct sk_buff *req, u16 freq)
+{
+	u8 *p;
+
+	p = fapi_append_data_u16(req, SLSI_NAN_TLV_TAG_INSTANT_COMM_MODE);
+	p = fapi_append_data_u16(req, 0x0002);
+	p = fapi_append_data_u16(req, SLSI_FREQ_HOST_TO_FW(freq));
 	if (p)
 		return 0;
 	return 1;
@@ -332,7 +345,7 @@ static u32 slsi_mlme_nan_append_ranging(struct sk_buff *req, struct slsi_nan_ran
 	return 1;
 }
 
-static int slsi_mlme_nan_append_ipv6_link_tlv(struct sk_buff *req, u8 *local_ndi)
+static int slsi_mlme_nan_append_ipv6_link_tlv(struct sk_buff *req, const u8 *local_ndi)
 {
 	u8 *p;
 	u8 interface_identifier[8];
@@ -341,6 +354,7 @@ static int slsi_mlme_nan_append_ipv6_link_tlv(struct sk_buff *req, u8 *local_ndi
 	interface_identifier[3] = 0xFF;
 	interface_identifier[4] = 0xFE;
 	memcpy(&interface_identifier[5], &local_ndi[3], 3);
+	interface_identifier[0] ^= 0x02;
 
 	p = fapi_append_data_u16(req, SLSI_NAN_TLV_WFA_IPV6_LOCAL_LINK);
 	p = fapi_append_data_u16(req, 0x0008);
@@ -370,10 +384,20 @@ static u32 slsi_mlme_nan_enable_fapi_data(struct netdev_vif *ndev_vif, struct sk
 		service_id_inc_count = hal_req->subscribe_sid_beacon_val >> 1;
 	ret = slsi_mlme_nan_append_config_tlv(req, hal_req->master_pref, publish_id_inc, publish_id_inc_count,
 					      service_id_inc, service_id_inc_count, rssi_window,
-					      hal_req->disc_mac_addr_rand_interval_sec, cluster_merge);
+					      hal_req->disc_mac_addr_rand_interval_sec, cluster_merge,
+					      hal_req->enable_instant_mode);
 	if (ret) {
 		SLSI_WARN_NODEV("Error append config TLV\n");
 		return ret;
+	}
+
+	if (hal_req->enable_instant_mode) {
+		ret = slsi_mlme_nan_append_instant_communication_mode_config_tlv(req, hal_req->instant_mode_channel);
+
+		if (ret) {
+			SLSI_WARN_NODEV("Error append Instant communication mode config TLV\n");
+			return ret;
+		}
 	}
 
 	/* 2.4G NAN band specific config TLV*/
@@ -449,8 +473,8 @@ int slsi_mlme_nan_enable(struct slsi_dev *sdev, struct net_device *dev, struct s
 
 	SLSI_NET_DBG3(dev, SLSI_MLME, "\n");
 
-	/* mbulk data length = 0x11 + 4 + 2 * (9 + 4) + 0x07 + 4 = 58*/
-	req = fapi_alloc(mlme_nan_start_req, MLME_NAN_START_REQ, ndev_vif->ifnum, 58);
+	/* mbulk data length = 0x11 + 4 + 2 * (9 + 4) + 0x07 + 4 + 2 + 4 = 64*/
+	req = fapi_alloc(mlme_nan_start_req, MLME_NAN_START_REQ, ndev_vif->ifnum, 64);
 	if (!req) {
 		SLSI_NET_ERR(dev, "fapi alloc failure\n");
 		return -ENOMEM;
@@ -614,9 +638,9 @@ int slsi_mlme_nan_publish(struct slsi_dev *sdev, struct net_device *dev, struct 
 	}
 
 	if (hal_req && !r)
-		ndev_vif->nan.service_id_map |= (u32)BIT(publish_id);
+		set_bit(publish_id - 1, ndev_vif->nan.service_id_map);
 	else
-		ndev_vif->nan.service_id_map &= (u32)~BIT(publish_id);
+		clear_bit(publish_id - 1, ndev_vif->nan.service_id_map);
 	kfree_skb(cfm);
 	return r;
 }
@@ -776,9 +800,9 @@ int slsi_mlme_nan_subscribe(struct slsi_dev *sdev, struct net_device *dev, struc
 	}
 
 	if (hal_req && !r)
-		ndev_vif->nan.service_id_map |= (u32)BIT(subscribe_id);
+		set_bit(subscribe_id - 1, ndev_vif->nan.service_id_map);
 	else
-		ndev_vif->nan.service_id_map &= (u32)~BIT(subscribe_id);
+		clear_bit(subscribe_id - 1, ndev_vif->nan.service_id_map);
 	kfree_skb(cfm);
 	return r;
 }
@@ -878,10 +902,20 @@ static u32 slsi_mlme_nan_config_fapi_data(struct netdev_vif *ndev_vif, struct sk
 					      hal_req->config_sid_beacon && (hal_req->sid_beacon & 0x01),
 					      hal_req->config_sid_beacon ? hal_req->sid_beacon >> 1 : 0,
 					      is_sid_in_beacon, sid_count_in_beacon, rssi_window,
-					      hal_req->disc_mac_addr_rand_interval_sec, cluster_merge);
+					      hal_req->disc_mac_addr_rand_interval_sec, cluster_merge,
+					      hal_req->enable_instant_mode);
 	if (ret) {
 		SLSI_WARN_NODEV("Error append config TLV\n");
 		return ret;
+	}
+
+	if (hal_req->enable_instant_mode) {
+		ret = slsi_mlme_nan_append_instant_communication_mode_config_tlv(req, hal_req->instant_mode_channel);
+
+		if (ret) {
+			SLSI_WARN_NODEV("Error append Instant communication mode config TLV\n");
+			return ret;
+		}
 	}
 
 	/* 2.4G NAN band specific config*/
@@ -931,8 +965,8 @@ int slsi_mlme_nan_set_config(struct slsi_dev *sdev, struct net_device *dev, stru
 	u16               nan_oper_ctrl = 0;
 
 	SLSI_NET_DBG3(dev, SLSI_MLME, "\n");
-	/* mbulk data length = 0x11 + 4 + 2 * (9 + 4) + 0x07 + 4 = 58 */
-	req = fapi_alloc(mlme_nan_config_req, MLME_NAN_CONFIG_REQ, ndev_vif->ifnum, 58);
+	/* mbulk data length = 0x11 + 4 + 2 * (9 + 4) + 0x07 + 4 + 2 + 4 = 58 */
+	req = fapi_alloc(mlme_nan_config_req, MLME_NAN_CONFIG_REQ, ndev_vif->ifnum, 64);
 	if (!req) {
 		SLSI_NET_ERR(dev, "fapi alloc failure\n");
 		return -ENOMEM;
@@ -967,7 +1001,7 @@ int slsi_mlme_nan_set_config(struct slsi_dev *sdev, struct net_device *dev, stru
 static int slsi_mlme_ndp_request_fapi_data(struct sk_buff *req,
 					   struct slsi_hal_nan_data_path_initiator_req *hal_req,
 					   bool include_ipv6_addr_tlv, bool include_service_info_tlv,
-					   u8 *local_ndi)
+					   const u8 *local_ndi)
 {
 	int ret;
 
@@ -1011,7 +1045,7 @@ int slsi_mlme_ndp_request(struct slsi_dev *sdev, struct net_device *dev,
 	struct sk_buff    *cfm;
 	int               r = 0, data_len;
 	bool              include_ipv6_link_tlv, include_service_info_tlv = 0;
-	u8                *local_ndi;
+	const u8                *local_ndi;
 	struct net_device *data_dev;
 	struct netdev_vif *ndev_data_vif;
 
@@ -1080,7 +1114,7 @@ int slsi_mlme_ndp_request(struct slsi_dev *sdev, struct net_device *dev,
 static int slsi_mlme_ndp_response_fapi_data(struct sk_buff *req,
 					    struct slsi_hal_nan_data_path_indication_response *hal_req,
 					    bool include_ipv6_link_tlv, bool include_service_info_tlv,
-					    u8 *local_ndi)
+					    const u8 *local_ndi)
 {
 	int ret;
 
@@ -1124,7 +1158,7 @@ int slsi_mlme_ndp_response(struct slsi_dev *sdev, struct net_device *dev,
 	struct sk_buff    *cfm;
 	int               r = 0, data_len;
 	bool              include_ipv6_link_tlv, include_service_info_tlv = 0;
-	u8                *local_ndi;
+	const u8                *local_ndi;
 	u16               ndl_vif_id, rsp_code;
 	struct net_device *data_dev;
 	u8                nomac[ETH_ALEN] = {0, 0, 0, 0, 0, 0};
@@ -1248,7 +1282,7 @@ int slsi_mlme_nan_range_req(struct slsi_dev *sdev, struct net_device *dev, u8 co
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
 	int r = 0, i;
 
-	WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
+	WLBT_WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
 	req = fapi_alloc(mlme_nan_range_req, MLME_NAN_RANGE_REQ, 0, count * (SLSI_NAN_TLV_NAN_RTT_CONFIG_LEN + 4));
 	if (!req) {
 		SLSI_ERR(sdev, "failed to alloc %zd\n", count * (SLSI_NAN_TLV_NAN_RTT_CONFIG_LEN + 4));
@@ -1285,7 +1319,7 @@ static bool slsi_nan_range_cancel_cfm_validate(struct slsi_dev *sdev, struct net
 
 	SLSI_UNUSED_PARAMETER(sdev);
 
-	if (WARN_ON(!dev))
+	if (WLBT_WARN_ON(!dev))
 		goto exit;
 
 	if (result == FAPI_RESULTCODE_SUCCESS)
@@ -1305,7 +1339,7 @@ int slsi_mlme_nan_range_cancel_req(struct slsi_dev *sdev, struct net_device *dev
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
 	int            r = 0;
 
-	WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
+	WLBT_WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->vif_mutex));
 	/* Alloc data size */
 	req = fapi_alloc(mlme_nan_range_cancel_req, MLME_NAN_RANGE_CANCEL_REQ, 0, 0);
 	if (!req) {

@@ -48,8 +48,8 @@
  *  mismatches.
  */
 #define MXCONF_VERSION_MAJOR 0
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-#define MXCONF_VERSION_MINOR 7 /* For Service Arbitrary data */
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#define MXCONF_VERSION_MINOR 10
 #else
 #define MXCONF_VERSION_MINOR 5 /* For fleximac moredump */
 #endif
@@ -153,10 +153,12 @@ struct mxconf {
 	 */
 	/**
 	* Monitor Mode Channel 0 Transport Configuration.
+        * M7 or R7 CPU 0 Core 0
 	*/
 	struct mxtransconf   monitor_c0_trans_conf;
 	/**
 	* Monitor Mode Channel 1 Transport Configuration.
+        * First M3
 	*/
 	struct mxtransconf   monitor_c1_trans_conf;
 
@@ -191,6 +193,7 @@ struct mxconf {
 
 	/**
 	* Monitor Mode Channel 2 Transport Configuration.
+        * Second M3 if present
 	*/
 	struct mxtransconf   monitor_c2_trans_conf;
 
@@ -201,12 +204,74 @@ struct mxconf {
 	uint32_t subsysconf_offset;
 	uint32_t subsysconf_length;
 
-	/* FROM MINOR_ 7 */
-	/*
-	 * mxlogger area offset and length
-	 */
+	/* FROM MINOR_7 */
+	/**
+	* mxlogger area offset and length
+	*/
 	uint32_t mxlogger_area_offset;
 	uint32_t mxlogger_area_length;
+	/* FROM MINOR_8 */
+	/**
+	* for firmware_startup_flags
+	*/
+	uint32_t firmware_startup_flags;
+
+	/* FROM MINOR_9 */
+
+	/**
+	 * Monitor Mode Channel 3 Transport Configuration.
+	 * M0 if present
+	 */
+	struct mxtransconf monitor_c3_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 4 Transport Configuration.
+	 * Third M3 if present
+	 */
+	struct mxtransconf monitor_c4_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 5 Transport Configuration.
+	 * R7 CPU 0 Core 1 if present
+	 */
+	struct mxtransconf monitor_c5_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 6 Transport Configuration.
+	 * R7 CPU 1 Core 0  or LCPUS0 if present
+	 */
+	struct mxtransconf monitor_c6_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 7 Transport Configuration.
+	 * R7 CPU 1 Core 1 or LCPUS1 if present
+	 */
+	struct mxtransconf monitor_c7_trans_conf;
+
+	/* FROM MINOR_10 */
+	/**
+	 * Monitor Mode Channel 8 Transport Configuration.
+	 * UCPU0 if present
+	 */
+	struct mxtransconf monitor_c8_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 9 Transport Configuration.
+	 * UCPU1 if present
+	 */
+	struct mxtransconf monitor_c9_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 10 Transport Configuration.
+	 * UCPU2 if present
+	 */
+	struct mxtransconf monitor_c10_trans_conf;
+
+	/**
+	 * Monitor Mode Channel 11 Transport Configuration.
+	 * UCPU3 if present
+	 */
+	struct mxtransconf monitor_c11_trans_conf;
 } __MXPACKED;
 
 #endif /* MXCONF_H__ */

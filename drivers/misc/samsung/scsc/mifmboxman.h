@@ -19,7 +19,7 @@ int mifmboxman_init(struct mifmboxman *mbox);
 bool mifmboxman_alloc_mboxes(struct mifmboxman *mbox, int n, int *first_mbox_index);
 void mifmboxman_free_mboxes(struct mifmboxman *mbox, int first_mbox_index, int n);
 u32 *mifmboxman_get_mbox_ptr(struct mifmboxman *mbox,  struct scsc_mif_abs *mif_abs, int mbox_index);
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 u32 *mifmboxman_get_mbox_ptr_wpan(struct mifmboxman *mbox,  struct scsc_mif_abs *mif_abs, int mbox_index);
 #endif
 #if defined(CONFIG_WLBT_DCXO_TUNE)

@@ -10,6 +10,8 @@
 #include "log_clients.h"
 #include "unifiio.h"
 
+#define SLSI_RETRY_ACQUIRE_LOCK_COUNT 3
+
 /* These functions should NOT be called from interrupt context */
 /* It is supposed to be called from process context, or
  * NET_TX_SOFTIRQ - with BHs disabled and interrupts disabled
@@ -18,14 +20,19 @@
 
 void slsi_log_clients_log_signal_safe(struct slsi_dev *sdev, struct sk_buff *skb, u32 direction)
 {
-	struct list_head       *pos, *n;
-	struct slsi_log_client *log_client;
+	struct slsi_log_client *log_client, *tmp;
+	/* Variable that represents the number of attempts to acquire lock */
+	u8			retry_count;
 	int                    dir = (direction == SLSI_LOG_DIRECTION_FROM_HOST) ? UDI_FROM_HOST : UDI_TO_HOST;
 
 	spin_lock_bh(&sdev->log_clients.log_client_spinlock);
-	list_for_each_safe(pos, n, &sdev->log_clients.log_client_list) {
-		log_client = list_entry(pos, struct slsi_log_client, q);
-		log_client->log_client_cb(log_client, skb, dir);
+	list_for_each_entry_safe(log_client, tmp, &sdev->log_clients.log_client_list, q) {
+		retry_count = SLSI_RETRY_ACQUIRE_LOCK_COUNT;
+
+		do {
+			if (log_client->log_client_cb(log_client, skb, dir) != -ERESTARTSYS)
+				break;
+		} while (--retry_count);
 	}
 	spin_unlock_bh(&sdev->log_clients.log_client_spinlock);
 }
@@ -86,12 +93,10 @@ void slsi_log_clients_terminate(struct slsi_dev *sdev)
 
 void slsi_log_client_msg(struct slsi_dev *sdev, u16 event, u32 event_data_length, const u8 *event_data)
 {
-	struct list_head       *pos, *n;
-	struct slsi_log_client *log_client;
+	struct slsi_log_client *log_client, *tmp;
 
 	spin_lock_bh(&sdev->log_clients.log_client_spinlock);
-	list_for_each_safe(pos, n, &sdev->log_clients.log_client_list) {
-		log_client = list_entry(pos, struct slsi_log_client, q);
+	list_for_each_entry_safe(log_client, tmp, &sdev->log_clients.log_client_list, q) {
 		spin_unlock_bh(&sdev->log_clients.log_client_spinlock);
 		if (slsi_kernel_to_user_space_event(log_client, event, event_data_length, event_data))
 			SLSI_WARN(sdev, "Failed to send event(0x%.4X) to UDI client 0x%p\n", event, log_client);
@@ -102,15 +107,13 @@ void slsi_log_client_msg(struct slsi_dev *sdev, u16 event, u32 event_data_length
 
 void slsi_log_client_unregister(struct slsi_dev *sdev, void *log_client_ctx)
 {
-	struct list_head       *pos, *n;
-	struct slsi_log_client *log_client;
+	struct slsi_log_client *log_client, *tmp;
 
 	spin_lock_bh(&sdev->log_clients.log_client_spinlock);
-	list_for_each_safe(pos, n, &sdev->log_clients.log_client_list) {
-		log_client = list_entry(pos, struct slsi_log_client, q);
+	list_for_each_entry_safe(log_client, tmp, &sdev->log_clients.log_client_list, q) {
 		if (log_client->log_client_ctx == log_client_ctx) {
 			kfree(log_client->signal_filter);
-			list_del(pos);
+			list_del(&log_client->q);
 			kfree(log_client);
 		}
 	}

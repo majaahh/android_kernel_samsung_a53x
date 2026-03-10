@@ -18,7 +18,7 @@
 
 static void hip4_smapper_refill_isr(int irq, void *data);
 
-static int hip4_smapper_alloc_bank(struct slsi_dev *sdev, struct hip4_priv *priv, enum smapper_banks bank_name, u32 entry_size, bool is_large)
+static int hip4_smapper_alloc_bank(struct slsi_dev *sdev, struct hip_priv *priv, enum smapper_banks bank_name, u32 entry_size, bool is_large)
 {
 	u16 i;
 	struct hip4_smapper_bank *bank = &(priv)->smapper_banks[bank_name];
@@ -161,8 +161,8 @@ static int hip4_smapper_program(struct slsi_dev *sdev, struct hip4_smapper_bank 
 /* Only the Host Owned Buffers should be refilled  */
 static void hip4_smapper_refill_isr(int irq, void *data)
 {
-	struct slsi_hip4	*hip = (struct slsi_hip4 *)data;
-	struct slsi_dev 	*sdev = container_of(hip, struct slsi_dev, hip4_inst);
+	struct slsi_hip	*hip = (struct slsi_hip *)data;
+	struct slsi_dev 	*sdev = container_of(hip, struct slsi_dev, hip);
 	struct hip4_smapper_control *control;
 	struct hip4_smapper_bank *bank;
 	enum smapper_banks i;
@@ -239,7 +239,7 @@ static void hip4_smapper_refill_isr(int irq, void *data)
 	spin_unlock_irqrestore(&control->smapper_lock, flags);
 }
 
-int hip4_smapper_consume_entry(struct slsi_dev *sdev, struct slsi_hip4 *hip, struct sk_buff *skb_fapi)
+int hip4_smapper_consume_entry(struct slsi_dev *sdev, struct slsi_hip *hip, struct sk_buff *skb_fapi)
 {
 	struct sk_buff *skb;
 	struct sk_buff *skb_big = NULL;
@@ -357,7 +357,7 @@ error:
 	return -EIO;
 }
 
-void *hip4_smapper_get_skb_data(struct slsi_dev *sdev, struct slsi_hip4 *hip, struct sk_buff *skb_fapi)
+void *hip4_smapper_get_skb_data(struct slsi_dev *sdev, struct slsi_hip *hip, struct sk_buff *skb_fapi)
 {
 	struct sk_buff *skb;
 	struct slsi_skb_cb *cb = slsi_skb_cb_get(skb_fapi);
@@ -376,7 +376,7 @@ void *hip4_smapper_get_skb_data(struct slsi_dev *sdev, struct slsi_hip4 *hip, st
 	return skb->data;
 }
 
-struct sk_buff *hip4_smapper_get_skb(struct slsi_dev *sdev, struct slsi_hip4 *hip, struct sk_buff *skb_fapi)
+struct sk_buff *hip4_smapper_get_skb(struct slsi_dev *sdev, struct slsi_hip *hip, struct sk_buff *skb_fapi)
 {
 	struct sk_buff *skb;
 	struct slsi_skb_cb *cb = slsi_skb_cb_get(skb_fapi);
@@ -408,7 +408,7 @@ void hip4_smapper_free_mapped_skb(struct sk_buff *skb)
 	}
 }
 
-int hip4_smapper_init(struct slsi_dev *sdev, struct slsi_hip4 *hip)
+int hip4_smapper_init(struct slsi_dev *sdev, struct slsi_hip *hip)
 {
 	u8 i;
 	struct hip4_smapper_control *control;
@@ -440,7 +440,7 @@ int hip4_smapper_init(struct slsi_dev *sdev, struct slsi_hip4 *hip)
 
 	/* Allocate Maxwell resources */
 	control->th_req =
-		scsc_service_mifintrbit_register_tohost(sdev->service, hip4_smapper_refill_isr, hip, SCSC_MIFINTR_TARGET_WLAN);
+		scsc_service_mifintrbit_register_tohost(sdev->service, hip4_smapper_refill_isr, hip, SCSC_MIFINTR_TARGET_WLAN, HIP4_SMAPPER_REFILL_TYPE);
 	control->fh_ind =
 		scsc_service_mifintrbit_alloc_fromhost(sdev->service, SCSC_MIFINTR_TARGET_WLAN);
 
@@ -474,7 +474,7 @@ int hip4_smapper_init(struct slsi_dev *sdev, struct slsi_hip4 *hip)
 	return 0;
 }
 
-void hip4_smapper_deinit(struct slsi_dev *sdev, struct slsi_hip4 *hip)
+void hip4_smapper_deinit(struct slsi_dev *sdev, struct slsi_hip *hip)
 {
 	struct hip4_smapper_bank *bank;
 	struct hip4_smapper_control *control;

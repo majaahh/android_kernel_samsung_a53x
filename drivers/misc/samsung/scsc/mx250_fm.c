@@ -19,11 +19,6 @@
 
 #include "mxman.h"	/* Special case service driver that looks inside mxman */
 
-#if IS_ENABLED(CONFIG_SCSC_FM_TEST)
-#include "mx250_fm_test.h"
-#endif
-
-
 struct scsc_mx_fm_client {
 	/* scsc_service_client has to be the first */
 	struct scsc_service_client fm_service_client;
@@ -415,9 +410,7 @@ static int __init scsc_fm_client_module_init(void)
 		SCSC_TAG_ERR(FM, "scsc_mx_module_register_client_module failed: r=%d\n", r);
 		return r;
 	}
-#if IS_ENABLED(CONFIG_SCSC_FM_TEST)
-	mx250_fm_test_init();
-#endif
+
 	return 0;
 }
 
@@ -425,9 +418,6 @@ static void __exit scsc_fm_client_module_exit(void)
 {
 	SCSC_TAG_INFO(FM, "exit\n");
 	scsc_mx_module_unregister_client_module(&fm_client_driver);
-#if IS_ENABLED(CONFIG_SCSC_FM_TEST)
-	mx250_fm_test_exit();
-#endif
 	SCSC_TAG_DEBUG(FM, "exit\n");
 }
 

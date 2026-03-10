@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2024 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2020 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 #include <linux/kernel.h>
@@ -14,6 +14,10 @@
 #include "scsc_mif_abs.h"
 #include <scsc/scsc_mx.h>
 #include "scsc_log_in_dram.h"
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_scsc_log_in_dram.c"
+#endif
 
 #define DEVICE_NAME "scsc_log_in_dram"
 #define N_MINORS 1
@@ -82,8 +86,9 @@ static int scsc_log_in_dram_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	pos = (unsigned long)scsc_log_in_dram_ptr + offset;
-	/* Setting pgprot_noncached, pgprot_writecombine */
-	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+
+       /* Setting pgprot_noncached, pgprot_writecombine */
+       vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	while (size > 0) {
 		page = vmalloc_to_pfn((void *)pos);
@@ -119,12 +124,14 @@ int scsc_log_in_dram_mmap_create(void)
 	mutex_init(&scsc_log_in_dram_mutex);
         reinit_completion(&scsc_log_in_dram_completion);
 	scsc_log_in_dram_ptr = vzalloc(MIFRAMMAN_LOG_DRAM_SZ);
+
 	if (IS_ERR_OR_NULL(scsc_log_in_dram_ptr)) {
 		pr_err("wlbt: in_dram. open allocating scsc_log_in_dram_ptr = %ld\n",
 		       PTR_ERR(scsc_log_in_dram_ptr));
 		scsc_log_in_dram_ptr = NULL;
 		return -ENOMEM;
 	}
+
 	/* Request the kernel for N_MINOR devices */
 	ret = alloc_chrdev_region(&ram_dev_num, 0, N_MINORS,
 				  "scsc_log_in_dram");
@@ -173,7 +180,11 @@ int scsc_log_in_dram_mmap_create(void)
 		scsc_log_in_dram_status.phy_add[i] =
 			PFN_PHYS(vmalloc_to_pfn(virtual_address));
 	}
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+	pr_info("wlbt: in_dram. Log buffer physical address: %llx first entry: %llx file open count :%d\n",
+	#else
 	pr_info("wlbt: in_dram. Log buffer physical address: %lx first entry: %lx file open count :%d\n",
+	#endif
 		virt_to_phys(&scsc_log_in_dram_status),
 		PFN_PHYS(vmalloc_to_pfn(scsc_log_in_dram_ptr)),
 		atomic_read(&scsc_log_in_dram_inuse));

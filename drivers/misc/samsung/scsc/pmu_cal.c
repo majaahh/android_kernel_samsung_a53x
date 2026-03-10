@@ -1,9 +1,19 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 #include "pmu_cal.h"
+#if defined(CONFIG_WLBT_REFACTORY)
+#include "mif_reg.h"
+#include "modap/platform_mif_irq_api.h"
+#include "modap/platform_mif_regmap_api.h"
+#endif
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_pmu_cal.c"
+#endif
+
 /*  structure of pmucal_data */
 /*	struct pmucal_data{
  *		int accesstype;
@@ -15,7 +25,7 @@
  *	};
  */
 
-extern int enable_hwbypass;
+extern bool enable_hwbypass;
 
 static char *pmu_cal_getsfr(int sfr)
 {
@@ -39,6 +49,12 @@ static char *pmu_cal_getsfr(int sfr)
 		return "WLBT_INT_TYPE";
 	case WLBT_OPTION:
 		return "WLBT_OPTION";
+#if defined(CONFIG_SOC_S5E8535) || defined(CONFIG_SOC_S5E8835) || defined(CONFIG_SOC_S5E8845) || defined(CONFIG_SOC_S5E5535)
+	case VGPIO_TX_MONITOR2:
+		return "VGPIO_TX_MONITOR2";
+	case V_PWREN:
+		return "V_PWREN";
+#endif
 	default:
 		return NULL;
 	}
@@ -47,11 +63,30 @@ static char *pmu_cal_getsfr(int sfr)
 static struct regmap *pmu_cal_check_base(struct platform_mif *platform,
 					 bool pmureg)
 {
+#if defined(CONFIG_WLBT_REFACTORY)
 	/* Set base */
+	struct regmap *i3c_regmap;
+	struct regmap *pmu_regmap = platform_mif_get_regmap(platform, PMUREG);
+#if defined(CONFIG_SOC_S5E8835) || defined(CONFIG_SOC_S5E8845) || defined(CONFIG_SOC_S5E5535)
+	(void)i3c_regmap;
+	return pmu_regmap;
+#else
+	if (pmureg)
+		return pmu_regmap;
+
+	i3c_regmap = platform_mif_get_regmap(platform, I3C_APM_PMIC);
+	return i3c_regmap;
+#endif
+#else
+#if defined(CONFIG_SOC_S5E8835)
+	return platform->pmureg;
+#else
 	if (pmureg)
 		return platform->pmureg;
 
 	return platform->i3c_apm_pmic;
+#endif
+#endif
 }
 
 static int pmu_cal_write(struct platform_mif *platform, struct pmucal_data data)
@@ -135,6 +170,7 @@ static int pmu_cal_read(struct platform_mif *platform, struct pmucal_data data)
 	regmap_read(target, data.sfr, &reg_val);
 	val = reg_val & BIT(data.field);
 	val >>= data.field;
+	SCSC_TAG_INFO(PLAT_MIF,"%d %d", val, data.value);
 	if (val == data.value) {
 		SCSC_TAG_INFO(PLAT_MIF, "read %s[%d]  0x%08x\n",
 			      target_sfr, data.field, reg_val);
@@ -226,23 +262,23 @@ int pmu_cal_progress(struct platform_mif *platform,
 	for (i = 0; i < pmucal_data_size; i++) {
 		if (pmu_data[i].bypass || enable_hwbypass) {
 			switch (pmu_data[i].accesstype) {
-			case PMUCAL_WRITE:
-				ret = pmu_cal_write(platform, pmu_data[i]);
-				break;
-			case PMUCAL_DELAY:
-				udelay(pmu_data[i].value);
-				break;
-			case PMUCAL_READ:
-				ret = pmu_cal_read(platform, pmu_data[i]);
-				break;
-			case PMUCAL_ATOMIC:
-				ret = pmu_cal_atomic(platform, pmu_data[i]);
-				break;
-			case PMUCAL_CLEAR:
-				ret = pmu_cal_clear(platform, pmu_data[i]);
-				break;
-			default:
-				return -EINVAL;
+				case WLBT_PMUCAL_WRITE:
+					ret = pmu_cal_write(platform, pmu_data[i]);
+					break;
+				case WLBT_PMUCAL_DELAY:
+					udelay(pmu_data[i].value);
+					break;
+				case WLBT_PMUCAL_READ:
+					ret = pmu_cal_read(platform, pmu_data[i]);
+					break;
+				case WLBT_PMUCAL_ATOMIC:
+					ret = pmu_cal_atomic(platform, pmu_data[i]);
+					break;
+				case WLBT_PMUCAL_CLEAR:
+					ret = pmu_cal_clear(platform, pmu_data[i]);
+					break;
+				default:
+					return -EINVAL;
 			}
 			if (ret < 0)
 				return ret;

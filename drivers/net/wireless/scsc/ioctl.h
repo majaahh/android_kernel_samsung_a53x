@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2014 - 2016 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2022 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
 
@@ -20,20 +20,9 @@ struct android_wifi_priv_cmd {
 int slsi_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
 int slsi_get_sta_info(struct net_device *dev, char *command, int buf_len);
 struct slsi_ioctl_args *slsi_get_private_command_args(char *buffer, int buf_len, int max_arg_count);
-#define SLSI_VERIFY_IOCTL_ARGS(sdev, ioctl_args) \
-	do { \
-		if (!ioctl_args) { \
-			SLSI_ERR(sdev, "Malloc of ioctl_args failed.\n"); \
-			return -ENOMEM; \
-		} \
-	\
-		if (!ioctl_args->arg_count) { \
-			kfree(ioctl_args); \
-			return -EINVAL; \
-		} \
-	} while (0)
+int slsi_verify_ioctl_args(struct slsi_dev *sdev, struct slsi_ioctl_args *ioctl_args);
 
-struct slsi_supported_channels {
+struct slsi_sub_band {
 	int start_chan_num;
 	int channel_count;
 	int increment;

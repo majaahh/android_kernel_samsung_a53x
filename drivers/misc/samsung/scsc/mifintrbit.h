@@ -14,7 +14,7 @@ typedef void (*mifintrbit_handler)(int which_bit, void *data);
 
 struct mifintrbit; /* fwd - opaque pointer */
 
-#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) || IS_ENABLED(CONFIG_SOC_S5E9925)
+#if defined(CONFIG_SCSC_PCIE_CHIP)
 #define MIFINTRBIT_NUM_INT	32
 #else
 #define MIFINTRBIT_NUM_INT      16
@@ -24,6 +24,7 @@ struct mifintrbit; /* fwd - opaque pointer */
 #define MIFINTRBIT_RESERVED_PANIC_R4       0
 #define MIFINTRBIT_RESERVED_PANIC_WLAN     0
 #define MIFINTRBIT_RESERVED_PANIC_WPAN     0
+#define MIFINTRBIT_RESERVED_GDB_IN_WLAN    3
 #define MIFINTRBIT_RESERVED_PANIC_M4       0
 #define MIFINTRBIT_RESERVED_PANIC_FXM_1    0
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
@@ -31,7 +32,7 @@ struct mifintrbit; /* fwd - opaque pointer */
 #define MIFINTRBIT_RESERVED_PANIC_FXM_2    0
 #endif
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif, enum scsc_mif_abs_target target);
 void mifintrbit_deinit(struct mifintrbit *intr, enum scsc_mif_abs_target target);
 #else
@@ -41,24 +42,25 @@ void mifintrbit_deinit(struct mifintrbit *intr);
 
 /** Allocates TOHOST MIF interrupt bits, and associates handler for the AP bit.
  * Returns the bit index.*/
-int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler, void *data);
+int mifintrbit_alloc_tohost(struct mifintrbit *intr, mifintrbit_handler handler, void *data, enum IRQ_TYPE irq_type);
 /** Deallocates TOHOST MIF interrupt bits */
 int mifintrbit_free_tohost(struct mifintrbit *intr, int which_bit);
 /* Get an interrupt bit associated with the target (WLAN/WPAN) -FROMHOST direction
  * Function returns the IRQ bit associated , -EIO if error */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mifintrbit_alloc_fromhost(struct mifintrbit *intr);
 #else
 int mifintrbit_alloc_fromhost(struct mifintrbit *intr, enum scsc_mif_abs_target target);
 #endif
 /* Free an interrupt bit associated with the target (WLAN/WPAN) -FROMHOST direction
  * Function returns the 0 if succedes , -EIO if error */
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 int mifintrbit_free_fromhost(struct mifintrbit *intr, int which_bit);
 #else
 int mifintrbit_free_fromhost(struct mifintrbit *intr, int which_bit, enum scsc_mif_abs_target target);
 #endif
 
+void mifintrbit_dump(struct mifintrbit *intr);
 
 struct mifintrbit {
 	void(*mifintrbit_irq_handler[MIFINTRBIT_NUM_INT]) (int irq, void *data);
@@ -66,7 +68,8 @@ struct mifintrbit {
 	struct scsc_mif_abs *mif;
 	/* Use spinlock is it may be in IRQ context */
 	spinlock_t          spinlock;
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+	enum IRQ_TYPE 		irq_type[MIFINTRBIT_NUM_INT];
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	/* Interrupt allocation bitmaps */
 	DECLARE_BITMAP(bitmap_tohost, MIFINTRBIT_NUM_INT);
 	DECLARE_BITMAP(bitmap_fromhost, MIFINTRBIT_NUM_INT);

@@ -20,6 +20,7 @@ struct fwhdr_if {
 	bool (*get_parsed_ok)(struct fwhdr_if *interface);
 	bool (*get_check_crc)(struct fwhdr_if *interface);
 	u32 (*get_fw_rt_len)(struct fwhdr_if *interface);
+	u32 (*get_fw_len)(struct fwhdr_if *interface);
 	u32 (*get_fwapi_major)(struct fwhdr_if *interface);
 	u32 (*get_fwapi_minor)(struct fwhdr_if *interface);
 	u32 (*get_panic_record_offset)(struct fwhdr_if *interface, enum scsc_mif_abs_target target);

@@ -135,6 +135,13 @@
 #define WLBT_INT_TYPE 0x3948
 #define WLBT_INT_DIR 0x394c
 
+#define WLBT_BT_OUT 0x39a0
+#define WLBT_BT_INT_IN 0x39c0
+#define WLBT_BT_INT_EN 0x39c4
+#define WLBT_BT_INT_TYPE 0x39c8
+#define WLBT_BT_INT_DIR 0x39cc
+
+#define MIF_OUT 0x3b20
 #define WAKEUP_INT_IN 0x3c40
 #define WAKEUP_INT_EN 0x3c44
 #define WAKEUP_INT_TYPE 0x3c48
@@ -324,4 +331,5 @@
 /* TZASC (TrustZone Address Space Controller) configuration for Katmai onwards */
 #define EXYNOS_SET_CONN_TZPC 0
 #define SMC_CMD_CONN_IF (0x82000710)
+
 #endif /* __MIF_REG_5515_H */

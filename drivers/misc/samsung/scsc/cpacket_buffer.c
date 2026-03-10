@@ -97,8 +97,8 @@ static bool cpacketbuffer_write_block(struct cpacketbuffer *buffer, const void *
 	} else
 		memcpy(cpacketbuffer_index_to_address(buffer, buffer->write_index), source_data, num_bytes);
 
-	/* CPU memory barrier */
-	smp_wmb();
+	/* Barrier to outer shareable domain so WLBT can observe the write */
+	dma_wmb();
 	cpacketbuffer_advance_index(buffer->write_index, num_packets, buffer->num_packets);
 
 	return true;
@@ -127,7 +127,7 @@ int cpacketbuffer_init(struct cpacketbuffer *buffer, uint32_t num_packets, uint3
 
 	buffer->mx = mx;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (buffer->target == SCSC_MIF_ABS_TARGET_WPAN)
 		miframman = scsc_mx_get_ramman_wpan(mx);
 	else
@@ -171,7 +171,7 @@ void cpacketbuffer_release(struct cpacketbuffer *buffer)
 	if (!buffer->mx)
 		return;
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (buffer->target == SCSC_MIF_ABS_TARGET_WPAN)
 		miframman = scsc_mx_get_ramman_wpan(buffer->mx);
 	else
@@ -204,8 +204,8 @@ bool cpacketbuffer_write(struct cpacketbuffer *buffer, const void *buf, uint32_t
 		return false;
 	}
 
-	/* CPU memory barrier */
-	smp_wmb();
+	/* Barrier to outer shareable domain so WLBT can observe the write */
+	dma_wmb();
 
 	SCSC_TAG_DBG4(CPKTBUFF, "After: *buffer->read_index=0x%x *buffer->write_index=0x%x\n",
 		      *buffer->read_index, *buffer->write_index);
@@ -217,11 +217,30 @@ bool cpacketbuffer_write_gather(struct cpacketbuffer *buffer, const void **bufs,
 {
 	uint32_t start_write_index;
 	uint32_t i;
+	uint32_t total_num_bytes_required = 0;
+	uint32_t num_packets;
 
 	if (bufs == NULL || num_bytes == 0 || num_bufs == 0) {
 		SCSC_TAG_ERR(CPKTBUFF, "Error bufs %p num_bufs %u\n", bufs, num_bufs);
 		return false;
 	}
+
+	/* Work out if there's enough space for the entire data block before writing anything */
+	for (i = 0; i < num_bufs; ++i)
+		total_num_bytes_required += num_bytes[i];
+
+	num_packets = total_num_bytes_required / buffer->packet_size;
+	if (total_num_bytes_required % buffer->packet_size != 0)
+		/* Partial data packet present at the end */
+		++num_packets;
+
+	if (num_packets > cpacketbuffer_free_space(buffer)) {
+		/* Not enough free packets to write this block */
+		SCSC_TAG_ERR(CPKTBUFF, "Not enough free packets to write this block. Packets %u free_space %u\n",
+			    num_packets, cpacketbuffer_free_space(buffer));
+		return false;
+	}
+
 
 	start_write_index = cpacketbuffer_write_index(buffer);
 	for (i = 0; i < num_bufs; ++i) {
@@ -260,14 +279,14 @@ bool cpacketbuffer_write_gather(struct cpacketbuffer *buffer, const void **bufs,
 					++i;
 			}
 
-			/* CPU memory barrier */
-			smp_wmb();
+			/* Barrier to outer shareable domain so WLBT can observe the write */
+			dma_wmb();
 			cpacketbuffer_advance_index(buffer->write_index, 1, buffer->num_packets);
 		}
 	}
 
-	/* CPU memory barrier */
-	smp_wmb();
+	/* Barrier to outer shareable domain so WLBT can observe the write */
+	dma_wmb();
 
 	return true;
 }
@@ -288,6 +307,11 @@ uint32_t cpacketbuffer_read(struct cpacketbuffer *buffer, void *buf, uint32_t nu
 		/* Partial data packet read requested, this means we remove the whole thing */
 		++num_packets;
 
+	if (buffer->num_packets < cpacketbuffer_free_space(buffer) + 1) {
+		SCSC_TAG_ERR(CPKTBUFF, "Free space MUST NOT be bigger than total number of packets. \n");
+		return 0;
+	}
+
 	/* Ensure we have enough actual data to satisfy the read request, otherwise
 	 * truncate the read request to the amount of data available. */
 	num_available_packets = buffer->num_packets - (cpacketbuffer_free_space(buffer) + 1);
@@ -305,12 +329,12 @@ uint32_t cpacketbuffer_read(struct cpacketbuffer *buffer, void *buf, uint32_t nu
 	} else
 		memcpy(buf, read_start, num_bytes);
 
-	/* CPU memory barrier */
-	smp_wmb();
+	/* Barrier to outer shareable domain so WLBT can observe the write */
+	dma_wmb();
 	/* Update the read index with how many packets we pulled out of the stream */
 	cpacketbuffer_advance_index(buffer->read_index, num_packets, buffer->num_packets);
-	/* CPU memory barrier */
-	smp_wmb();
+	/* Barrier to outer shareable domain so WLBT can observe the write */
+	dma_wmb();
 
 	return num_bytes;
 }
@@ -344,8 +368,8 @@ void cpacketbuffer_peek_complete(struct cpacketbuffer *buffer, const void *curre
 	/* The address we're given is the last packet read, so the new read index is for the next one */
 	*buffer->read_index = cpacketbuffer_address_to_index(buffer,
 							     (const uint8_t *)current_packet + buffer->packet_size);
-	/* CPU memory barrier */
-	smp_wmb();
+	/* Barrier to outer shareable domain so WLBT can observe the write */
+	dma_wmb();
 }
 
 bool cpacketbuffer_is_empty(const struct cpacketbuffer *buffer)
@@ -402,3 +426,7 @@ void cpacketbuffer_log(const struct cpacketbuffer *buffer, enum scsc_log_level l
 		*(uint32_t *)read_start);
 }
 
+uint8_t *cpacketbuffer_get_dump_address(struct cpacketbuffer *buffer, uint32_t dump_index)
+{
+	return cpacketbuffer_index_to_address((struct cpacketbuffer *)buffer, &dump_index);
+}

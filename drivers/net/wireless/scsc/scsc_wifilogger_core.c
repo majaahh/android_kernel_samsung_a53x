@@ -15,6 +15,7 @@
 #include <scsc/scsc_logring.h>
 #include <linux/timer.h>
 #include <linux/uaccess.h>
+#include <scsc/scsc_warn.h>
 
 /* Implements */
 #include "scsc_wifilogger_core.h"
@@ -419,7 +420,7 @@ struct scsc_wlog_ring *scsc_wlog_ring_create(char *ring_name, u32 flags,
 {
 	struct scsc_wlog_ring *r = NULL;
 
-	WARN_ON(!ring_name || !size);
+	WLBT_WARN_ON(!ring_name || !size);
 
 	r = kzalloc(sizeof(*r), GFP_KERNEL);
 	if (!r)

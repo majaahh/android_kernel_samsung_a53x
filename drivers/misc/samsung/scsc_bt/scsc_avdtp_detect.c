@@ -48,21 +48,23 @@
  *
  * - On the L2CAP signaling CID, look for connect requests with the AVDTP PSM
  *
- * - Assume the first AVDTP connection is the signaling channel.
- *   (AVDTP 1.3, section 5.4.6 "Transport and Signaling Channel Establishment")
+ * - Assume that the first L2CAP connection request with PSM=AVDTP is for AVDTP signaling.
+ *   - If both endpoints establish a AVDTP signal connection one (or both) will be disconnected, as
+ *     only one L2CAP connection for AVDTP signaling can be active. Reference:
+ *       - GAVDP spec v1.3, chapter 3.1 (and 3.1.1 to 3.1.9))
+ *       - AVDTP spec v1.3, chapter 5.4.6
+ *       - A2DP spec v1.3, chapter 3.1
  *
- * - If a signaling channel exists, assume the next connection is the streaming channel
+ * - Assume that the L2CAP channel for AVDTP streaming will be established after the AVDTP_OPEN_RSP
+ *   signaling message exchange (response to a command).
+ *     - Additionally, when AVDTP_OPEN has been signaled, attempt a role switch for A2DP.
  *
  * - If a streaming channel exists, look for AVDTP start, suspend, abort and close signals
- * -- When one of these is found, signal the FW with updated acl_id and cid
+ *   - When one of these is found, signal the FW with updated acl_id and cid
  *
  * - If the ACL is torn down, make sure to clean up.
  *
  * */
-
-#define IS_VALID_CID_CONN_RESP(is_tx, avdtp, data) ((is_tx && avdtp->dst_cid == HCI_L2CAP_SOURCE_CID(data)) || \
-													(!is_tx && avdtp->src_cid == HCI_L2CAP_SOURCE_CID(data)))
-
 
 #define IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp, data) ((is_tx && avdtp.src_cid == HCI_L2CAP_SOURCE_CID(data) && \
 														  avdtp.dst_cid == HCI_L2CAP_RSP_DEST_CID(data)) || \
@@ -102,6 +104,51 @@ void scsc_avdtp_detect_reset(struct scsc_bt_avdtp_detect_hci_connection *avdtp_h
 							 bool reset_local_seids,
 							 bool reset_remote_seids);
 
+/**
+ * Reset a signal.
+ *
+ * Resets the given signal to idle state and clears channel identifiers associated with the signal.
+ *
+ * @param signal The signal connection to reset.
+ */
+void reset_signal_conn(struct scsc_bt_avdtp_detect_connection *signal){
+    signal->state = BT_AVDTP_STATE_IDLE_SIGNALING;
+    signal->src_cid = signal->dst_cid = 0;
+}
+
+/**
+* Reset a stream.
+*
+* Resets the given stream to idle state and clears channel identifiers associated with the stream.
+*
+* @param stream The stream connection to reset.
+*/
+void reset_stream_conn(struct scsc_bt_avdtp_detect_connection *stream)
+{
+    stream->state = BT_AVDTP_STATE_IDLE_STREAMING;
+    stream->src_cid = stream->dst_cid = 0;
+}
+
+/**
+ * Check if data contains valid connection identifiers for connect response
+ *
+ * @param direction Indicate if direction is host to controller or controller to host.
+ * @param connection Pointer to the connection to check.
+ * @param data Pointer to the data to inspect.
+ */
+bool scsc_avdtp_detect_is_valid_cid_conn_resp(enum scsc_bt_avdtp_detect_conn_req_direction_enum direction,
+                                                        const struct scsc_bt_avdtp_detect_connection *connection,
+                                                        const uint8_t *data)
+{
+    if ((direction == BT_AVDTP_CONN_REQ_DIR_OUTGOING &&
+        connection->dst_cid == HCI_L2CAP_SOURCE_CID(data)) ||
+        (direction == BT_AVDTP_CONN_REQ_DIR_INCOMING &&
+        connection->src_cid == HCI_L2CAP_SOURCE_CID(data))) {
+        return true;
+    }
+    return false;
+}
+
 /* Simple list traversal to find an existing AVDTP detection from a hci connection handle. If
  * not found, the function returns NULL
  */
@@ -110,7 +157,7 @@ static struct scsc_bt_avdtp_detect_hci_connection *scsc_avdtp_detect_search_hci_
 {
 	struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci;
 
-	avdtp_hci = bt_service.avdtp_detect.connections;
+	avdtp_hci = get_bt_service()->avdtp_detect.connections;
 	while (avdtp_hci) {
 		if (avdtp_hci->hci_connection_handle == hci_connection_handle) {
 			/* Found it */
@@ -129,9 +176,10 @@ static struct scsc_bt_avdtp_detect_hci_connection *scsc_avdtp_detect_find_or_cre
 	u16 hci_connection_handle,
 	bool create)
 {
+	struct scsc_bt_service *bt_svc = get_bt_service();
 	struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci;
 
-	spin_lock(&bt_service.avdtp_detect.lock);
+	spin_lock(&bt_svc->avdtp_detect.lock);
 
 	avdtp_hci = scsc_avdtp_detect_search_hci_connection(hci_connection_handle);
 	if (avdtp_hci)
@@ -143,7 +191,7 @@ static struct scsc_bt_avdtp_detect_hci_connection *scsc_avdtp_detect_find_or_cre
 	 * potentially is allocated twice in rare situations, and the list must therefore be locked
 	 * and searched again before inserting.
 	 */
-	spin_unlock(&bt_service.avdtp_detect.lock);
+	spin_unlock(&bt_svc->avdtp_detect.lock);
 
 	/* Check if the existing detection was found. If not create it */
 	if (!avdtp_hci && create) {
@@ -163,28 +211,29 @@ static struct scsc_bt_avdtp_detect_hci_connection *scsc_avdtp_detect_find_or_cre
 			avdtp_hci->signal.src_cid = 0;
 			avdtp_hci->signal.dst_cid = 0;
 			avdtp_hci->hci_connection_handle = hci_connection_handle;
+			avdtp_hci->opened = false;
 			scsc_avdtp_detect_reset(avdtp_hci, false, true, true, true, true, true);
 
 			/* The element is ready for insertion into the list. Recheck the list to make sure that
 			 * the hci handle hasn't been detected meanwhile.
 			 */
-			spin_lock(&bt_service.avdtp_detect.lock);
+			spin_lock(&bt_svc->avdtp_detect.lock);
 
 			recheck_avdtp_hci = scsc_avdtp_detect_search_hci_connection(hci_connection_handle);
 			if (recheck_avdtp_hci == NULL) {
 				/* Insert into list */
 				spin_lock_init(&avdtp_hci->lock);
 				spin_lock(&avdtp_hci->lock);
-				head = bt_service.avdtp_detect.connections;
-				bt_service.avdtp_detect.connections = avdtp_hci;
+				head = bt_svc->avdtp_detect.connections;
+				bt_svc->avdtp_detect.connections = avdtp_hci;
 				avdtp_hci->next = head;
-				spin_unlock(&bt_service.avdtp_detect.lock);
+				spin_unlock(&bt_svc->avdtp_detect.lock);
 			} else {
 				/* The element was already present. Free the allocated memory and return the found
 				 * element.
 				 */
 				spin_lock(&recheck_avdtp_hci->lock);
-				spin_unlock(&bt_service.avdtp_detect.lock);
+				spin_unlock(&bt_svc->avdtp_detect.lock);
 				kfree(avdtp_hci);
 				avdtp_hci = NULL;
 				avdtp_hci = recheck_avdtp_hci;
@@ -196,15 +245,17 @@ static struct scsc_bt_avdtp_detect_hci_connection *scsc_avdtp_detect_find_or_cre
 
 /* Find an existing l2cap connection struct. Works for both signal and stream since their internal
  * structures are equal */
-static struct scsc_bt_avdtp_detect_connection *scsc_avdtp_detect_find_l2cap_connection(struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci,
-																					   enum scsc_bt_avdtp_detect_conn_req_direction_enum direction)
+static struct scsc_bt_avdtp_detect_connection *scsc_avdtp_detect_find_l2cap_connection(
+    struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci,
+    enum scsc_bt_avdtp_detect_conn_req_direction_enum direction)
 {
 	struct scsc_bt_avdtp_detect_connection *avdtp_l2cap = NULL;
 
 	/* Return either signal or stream l2cap connection */
 	if (avdtp_hci) {
-		/* Check if there is already a signal connection and return the ongoing stream */
-		if (avdtp_hci->signal.state == BT_AVDTP_STATE_COMPLETE_SIGNALING) {
+		/* Check if there is already a signal connection where AVDTP_OPEN signals have been
+		* exchanged and return the ongoing stream */
+		if (avdtp_hci->signal.state == BT_AVDTP_STATE_COMPLETE_SIGNALING && avdtp_hci->opened) {
 			if (direction == BT_AVDTP_CONN_REQ_DIR_OUTGOING)
 				avdtp_l2cap = &avdtp_hci->ongoing.outgoing_stream;
 			else
@@ -288,25 +339,33 @@ static void scsc_bt_avdtp_detect_connection_conn_resp_handling(uint16_t hci_conn
 	/* Only consider RSP on expected connection handle */
 	if (avdtp_hci && avdtp_l2cap) {
 		if (HCI_L2CAP_CON_RSP_RESULT(data) == HCI_L2CAP_CON_RSP_RESULT_SUCCESS) {
-			if (IS_VALID_CID_CONN_RESP(is_tx, avdtp_l2cap, data) &&
-				avdtp_l2cap->state == BT_AVDTP_STATE_PENDING_SIGNALING) {
-
-				/* If we were waiting to complete an AVDTP signal detection - store the dst_cid or src_cid depending
-				 * on the transmit direction */
+			if (!avdtp_hci->opened &&
+				(scsc_avdtp_detect_is_valid_cid_conn_resp(is_tx, &avdtp_hci->ongoing.incoming_signal, data) ||
+				 scsc_avdtp_detect_is_valid_cid_conn_resp(is_tx, &avdtp_hci->ongoing.outgoing_signal, data))) {
+				/* It is an L2CAP connection response for an AVDTP signal channel - store the
+				 * dst_cid or src_cid depending on the transmit direction */
 				STORE_DETECTED_CID_CONN_RESP(is_tx, avdtp_l2cap, data);
 				avdtp_l2cap->state = BT_AVDTP_STATE_COMPLETE_SIGNALING;
 
-				/* Switch to use "signal" and delete "ongoing" since the AVDTP signaling has now been
-				 * detected */
-				avdtp_hci->signal = *avdtp_l2cap;
-				scsc_avdtp_detect_reset(avdtp_hci, false, true, false, false, false, false);
+				if (avdtp_hci->signal.state != BT_AVDTP_STATE_COMPLETE_SIGNALING) {
+					/* This is the first signal connection. Assign it to connection signal */
+					avdtp_hci->signal = *avdtp_l2cap;
+					reset_signal_conn(avdtp_l2cap);
+				} else {
+					/* Crossing signal connection has been established */
+					avdtp_hci->crossing_signal_conns = true;
+					SCSC_TAG_INFO(BT_H4, "Crossing signal connection has been established. dst_CID=0x%04X src_CID=0x%04X 2nd_dst_CID=0x%04X 2nd_src_CID=0x%04X",
+								  avdtp_hci->signal.dst_cid, avdtp_hci->signal.src_cid,
+								  avdtp_l2cap->dst_cid, avdtp_l2cap->src_cid);
+				}
+
 				SCSC_TAG_DEBUG(BT_H4, "Signaling dst CID: 0x%04X, src CID: 0x%04X, aclid: 0x%04X (tx=%u)\n",
 							   avdtp_hci->signal.dst_cid,
 							   avdtp_hci->signal.src_cid,
 							   avdtp_hci->hci_connection_handle,
 							   is_tx);
 
-			} else if (IS_VALID_CID_CONN_RESP(is_tx, avdtp_l2cap, data) &&
+			} else if (scsc_avdtp_detect_is_valid_cid_conn_resp(is_tx, avdtp_l2cap, data) &&
 					   avdtp_l2cap->state == BT_AVDTP_STATE_PENDING_STREAMING) {
 
 				/* If we were waiting to complete an AVDTP stream detection - store the dst_cid or src_cid depending
@@ -328,19 +387,15 @@ static void scsc_bt_avdtp_detect_connection_conn_resp_handling(uint16_t hci_conn
 		} else if (HCI_L2CAP_CON_RSP_RESULT(data) >= HCI_L2CAP_CON_RSP_RESULT_REFUSED) {
 			/* In case of a CONN_REFUSED the existing CIDs must be cleaned up such that the detection is ready
 			 * for a new connection request */
-			if (IS_VALID_CID_CONN_RESP(is_tx, avdtp_l2cap, data) &&
+			if (scsc_avdtp_detect_is_valid_cid_conn_resp(is_tx, avdtp_l2cap, data) &&
 				avdtp_l2cap->state == BT_AVDTP_STATE_PENDING_SIGNALING) {
-				avdtp_l2cap->dst_cid = avdtp_l2cap->src_cid = 0;
-				avdtp_l2cap->state = BT_AVDTP_STATE_IDLE_SIGNALING;
-
-			} else if (IS_VALID_CID_CONN_RESP(is_tx, avdtp_l2cap, data) &&
+				reset_signal_conn(avdtp_l2cap);
+			} else if (scsc_avdtp_detect_is_valid_cid_conn_resp(is_tx, avdtp_l2cap, data) &&
 					   avdtp_l2cap->state == BT_AVDTP_STATE_PENDING_STREAMING) {
 
 				/* Connection refused on streaming connect request. Reset dst_cid and src_cid, and
 				 * reset the state to IDLE such that new connection requests can be detected */
-				avdtp_l2cap->dst_cid = avdtp_l2cap->src_cid = 0;
-				avdtp_l2cap->state = BT_AVDTP_STATE_IDLE_STREAMING;
-
+				reset_stream_conn(avdtp_l2cap);
 			}
 		}
 	}
@@ -354,38 +409,67 @@ static bool scsc_bt_avdtp_detect_connection_disconnect_req_handling(uint16_t hci
 																	uint16_t length,
 																	bool is_tx)
 {
-	bool result = false;
-	struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci =
-		scsc_avdtp_detect_find_or_create_hci_connection(hci_connection_handle, false);
+    bool result = false;
+    struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci =
+        scsc_avdtp_detect_find_or_create_hci_connection(hci_connection_handle, false);
 
-	if (avdtp_hci) {
-		if (avdtp_hci->signal.state == BT_AVDTP_STATE_COMPLETE_SIGNALING &&
-			IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->signal, data)) {
+    if (avdtp_hci == NULL) {
+        return result;
+    }
+    /* Disconnect of crossing signal */
+    if (avdtp_hci->crossing_signal_conns) {
+        /* When we have crossing signal connections, we need to resolve which one is being
+         * disconnected and ensure that we leave hci connection "signal" pointing to the remaining
+         * connected signal connection */
+        avdtp_hci->crossing_signal_conns = false;
 
-			/* Disconnect the current registered signaling and streaming AVDTP connection */
-			scsc_avdtp_detect_reset(avdtp_hci, true, true, true, true, true, true);
+        if (IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->signal, data)) {
+            /* Disconnect and find replacement */
+            if (avdtp_hci->ongoing.incoming_signal.state == BT_AVDTP_STATE_COMPLETE_SIGNALING) {
+                avdtp_hci->signal = avdtp_hci->ongoing.incoming_signal;
+                reset_signal_conn(&avdtp_hci->ongoing.incoming_signal);
+                SCSC_TAG_DEBUG(BT_H4, "Replace signal to ongoing-incoming signal");
+            } else if (avdtp_hci->ongoing.outgoing_signal.state == BT_AVDTP_STATE_COMPLETE_SIGNALING) {
+                avdtp_hci->signal = avdtp_hci->ongoing.outgoing_signal;
+                reset_signal_conn(&avdtp_hci->ongoing.outgoing_signal);
+                SCSC_TAG_DEBUG(BT_H4, " Replace signal to ongoing-outgoing signal");
+            }
+        } else if (IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->ongoing.incoming_signal, data)) {
+            /* Disconnect */
+            reset_signal_conn(&avdtp_hci->ongoing.incoming_signal);
+        } else if (IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->ongoing.outgoing_signal, data)) {
+            /* Disconnect */
+            reset_signal_conn(&avdtp_hci->ongoing.outgoing_signal);
+        } else {
+            /* Could not resolve disconnect rsp to signal connection */
+            avdtp_hci->crossing_signal_conns = true;
+        }
 
-			/* The detection was removed and it can therefore not be unlocked */
-			avdtp_hci = NULL;
+        if (!avdtp_hci->crossing_signal_conns) {
+            SCSC_TAG_DEBUG(BT_H4, "Crossing has been resolved aclid=0x%04X / direction[%s]",
+                          hci_connection_handle, (is_tx ? "OUTGOING":"INCOMING"));
+        }
 
-			SCSC_TAG_DEBUG(BT_H4, "Signaling src CID disconnected (aclid: 0x%04X) (TX=%u)\n",
-						   hci_connection_handle,
-						   is_tx);
-		} else if (avdtp_hci->stream.state == BT_AVDTP_STATE_COMPLETE_STREAMING &&
-				   IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->stream, data)) {
+    } else if (avdtp_hci->signal.state == BT_AVDTP_STATE_COMPLETE_SIGNALING &&
+               IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->signal, data)) {
+        /* Remove the HCI connection entirely */
+        scsc_avdtp_detect_reset(avdtp_hci, true, true, true, true, true, true);
+        avdtp_hci = NULL;
 
-			/* Disconnect the current registered streaming AVDTP connection */
-			scsc_avdtp_detect_reset(avdtp_hci, false, false, true, true, false, false);
+        SCSC_TAG_DEBUG(BT_H4, "event=signal_and_stream_disconnect aclid=0x%04X dir=%d", hci_connection_handle, is_tx);
+    } else if (avdtp_hci->stream.state == BT_AVDTP_STATE_COMPLETE_STREAMING &&
+               IS_VALID_CID_DISCONNECT_REQ(is_tx, avdtp_hci->stream, data)) {
+        /* Disconnect the current registered stream AVDTP connection */
+        scsc_avdtp_detect_reset(avdtp_hci, false, false, true, true, false, false);
 
-			SCSC_TAG_DEBUG(BT_H4, "Streaming src CID disconnected (aclid: 0x%04X) (TX=%u)\n",
-						   hci_connection_handle,
-						   is_tx);
-			result = true;
-		}
-		if (avdtp_hci)
-			spin_unlock(&avdtp_hci->lock);
-	}
-	return result;
+        SCSC_TAG_DEBUG(BT_H4, "event=stream_disconnect aclid=0x%04X dir=%d", hci_connection_handle, is_tx);
+        result = true;
+    }
+
+    if (avdtp_hci)
+        spin_unlock(&avdtp_hci->lock);
+
+    return result;
 }
 
 /* Detects if there is any of the L2CAP codes of interrest, and returns true of the FW should be signalled a change */
@@ -527,9 +611,10 @@ static uint8_t scsc_avdtp_detect_signaling_rxtx(uint16_t hci_connection_handle,
 	if (message_type == AVDTP_MESSAGE_TYPE_RSP_ACCEPT) {
 		if (signal_id == AVDTP_SIGNAL_ID_START)
 			return AVDTP_DETECT_SIGNALING_ACTIVE;
-		else if (signal_id == AVDTP_SIGNAL_ID_OPEN)
+		else if (signal_id == AVDTP_SIGNAL_ID_OPEN) {
+			avdtp_hci->opened = true;
 			return AVDTP_DETECT_SIGNALING_OPEN;
-		else if (is_tx && (signal_id == AVDTP_SIGNAL_ID_CLOSE || signal_id == AVDTP_SIGNAL_ID_SUSPEND ||
+		} else if (is_tx && (signal_id == AVDTP_SIGNAL_ID_CLOSE || signal_id == AVDTP_SIGNAL_ID_SUSPEND ||
 				signal_id == AVDTP_SIGNAL_ID_ABORT))
 			return AVDTP_DETECT_SIGNALING_INACTIVE;
 		else if (signal_id == AVDTP_SIGNAL_ID_DISCOVER) {
@@ -588,8 +673,11 @@ void scsc_avdtp_detect_rxtx(u16 hci_connection_handle, const unsigned char *data
 				false);
 
 			if (avdtp_hci) {
-				cid_to_fw = avdtp_hci->stream.dst_cid;
 				is_sink = avdtp_hci->tsep_detect.tsep == BT_AVDTP_TSEP_SNK;
+				if (is_sink)
+					cid_to_fw = avdtp_hci->stream.src_cid;
+				else
+					cid_to_fw = avdtp_hci->stream.dst_cid;
 			}
 		}
 	} else {
@@ -611,11 +699,15 @@ void scsc_avdtp_detect_rxtx(u16 hci_connection_handle, const unsigned char *data
 
 				if (result != AVDTP_DETECT_SIGNALING_IGNORE) {
 					avdtp_gen_bg_int = true;
-					if (result != AVDTP_DETECT_SIGNALING_INACTIVE)
-						cid_to_fw = avdtp_hci->stream.dst_cid;
+					is_sink = avdtp_hci->tsep_detect.tsep == BT_AVDTP_TSEP_SNK;
+					if (result != AVDTP_DETECT_SIGNALING_INACTIVE) {
+						if (is_sink)
+							cid_to_fw = avdtp_hci->stream.src_cid;
+						else
+							cid_to_fw = avdtp_hci->stream.dst_cid;
+					}
 					if (result == AVDTP_DETECT_SIGNALING_OPEN)
 						avdtp_open = true;
-					is_sink = avdtp_hci->tsep_detect.tsep == BT_AVDTP_TSEP_SNK;
 				}
 
 			}
@@ -626,7 +718,8 @@ void scsc_avdtp_detect_rxtx(u16 hci_connection_handle, const unsigned char *data
 		spin_unlock(&avdtp_hci->lock);
 
 	if (avdtp_gen_bg_int) {
-		if (bt_service.bsmhcp_protocol->header.firmware_features & BSMHCP_FEATURE_AVDTP_TRANSFER_RING) {
+		struct scsc_bt_service *bt_svc = get_bt_service();
+		if (bt_svc->bsmhcp_protocol->header.firmware_features & BSMHCP_FEATURE_AVDTP_TRANSFER_RING) {
 			uint32_t flags = 0;
 
 			if (avdtp_hci && avdtp_hci->tsep_detect.tsep == BT_AVDTP_TSEP_SNK)
@@ -639,34 +732,50 @@ void scsc_avdtp_detect_rxtx(u16 hci_connection_handle, const unsigned char *data
 			 * the implementation is kept for backward compability
 			 */
 			u8 msg_counter = AVDTP_GET_MESSAGE_COUNT(
-				bt_service.bsmhcp_protocol->header.avdtp_detect_stream_id);
+				bt_svc->bsmhcp_protocol->header.avdtp_detect_stream_id);
 			msg_counter++;
 			msg_counter &= 0x3;
 
-			bt_service.bsmhcp_protocol->header.avdtp_detect_stream_id = cid_to_fw |
+			bt_svc->bsmhcp_protocol->header.avdtp_detect_stream_id = cid_to_fw |
 				(hci_connection_handle << 16) |
 				(msg_counter << 28);
-			bt_service.bsmhcp_protocol->header.avdtp_detect_stream_id |= AVDTP_SIGNAL_FLAG_MASK;
+			bt_svc->bsmhcp_protocol->header.avdtp_detect_stream_id |= AVDTP_SIGNAL_FLAG_MASK;
 			if (is_sink)
-				bt_service.bsmhcp_protocol->header.avdtp_detect_stream_id |= AVDTP_SNK_FLAG_MASK;
+				bt_svc->bsmhcp_protocol->header.avdtp_detect_stream_id |= AVDTP_SNK_FLAG_MASK;
 			SCSC_TAG_DEBUG(
 				BT_H4,
 				"Found AVDTP signal. msgid: 0x%02X, aclid: 0x%04X, cid: 0x%04X, streamid: 0x%08X\n",
 				msg_counter,
 				hci_connection_handle,
 				cid_to_fw,
-				bt_service.bsmhcp_protocol->header.avdtp_detect_stream_id);
+				bt_svc->bsmhcp_protocol->header.avdtp_detect_stream_id);
 			wmb();
-			scsc_service_mifintrbit_bit_set(bt_service.service,
-										bt_service.bsmhcp_protocol->header.ap_to_bg_int_src,
+			scsc_service_mifintrbit_bit_set(bt_svc->service,
+										bt_svc->bsmhcp_protocol->header.ap_to_bg_int_src,
 										SCSC_MIFINTR_TARGET_WPAN);
 		}
 	}
 }
 
-/* Used to reset the different AVDTP detections */
+/**
+ * Reset the different AVDTP detections of a given HCI connection.
+ *
+ * Used to reset the different AVDTP detections of a given HCI connection or to remove the HCI
+ * connection entirely from AVDTP detection.
+ *
+ * @param avdtp_hci Pointer to the HCI connection to reset detections on.
+ * @param remove_connection Indicates if the HCI connection should be removed from detection
+ * entirely.
+ * @param reset_signal_ongoing Indicate if ongoing outgoing and incoming signal detection should be
+ * reset for the HCI connection.
+ * @param reset_stream Indicate if stream detection should be reset for the HCI connection.
+ * @param reset_stream_ongoing Indicate if ongoing outgoing and incoming stream detection should be
+ * reset for the HCI connection.
+ * @param reset_local_seids Indicate if local seids should be removed from the the HCI connection.
+ * @param reset_remote_seids Indicate if remote seids should be removed from the the HCI connection.
+ */
 void scsc_avdtp_detect_reset(struct scsc_bt_avdtp_detect_hci_connection *avdtp_hci,
-							 bool reset_signal,
+							 bool remove_connection,
 							 bool reset_signal_ongoing,
 							 bool reset_stream,
 							 bool reset_stream_ongoing,
@@ -674,25 +783,15 @@ void scsc_avdtp_detect_reset(struct scsc_bt_avdtp_detect_hci_connection *avdtp_h
 							 bool reset_remote_seids)
 {
 	if (reset_signal_ongoing) {
-		avdtp_hci->ongoing.outgoing_signal.state = BT_AVDTP_STATE_IDLE_SIGNALING;
-		avdtp_hci->ongoing.outgoing_signal.src_cid = 0;
-		avdtp_hci->ongoing.outgoing_signal.dst_cid = 0;
-		avdtp_hci->ongoing.incoming_signal.state = BT_AVDTP_STATE_IDLE_SIGNALING;
-		avdtp_hci->ongoing.incoming_signal.src_cid = 0;
-		avdtp_hci->ongoing.incoming_signal.dst_cid = 0;
+		reset_signal_conn(&avdtp_hci->ongoing.outgoing_signal);
+		reset_signal_conn(&avdtp_hci->ongoing.incoming_signal);
 	}
 	if (reset_stream) {
-		avdtp_hci->stream.state = BT_AVDTP_STATE_IDLE_STREAMING;
-		avdtp_hci->stream.src_cid = 0;
-		avdtp_hci->stream.dst_cid = 0;
+		reset_stream_conn(&avdtp_hci->stream);
 	}
 	if (reset_stream_ongoing) {
-		avdtp_hci->ongoing.outgoing_stream.state = BT_AVDTP_STATE_IDLE_STREAMING;
-		avdtp_hci->ongoing.outgoing_stream.src_cid = 0;
-		avdtp_hci->ongoing.outgoing_stream.dst_cid = 0;
-		avdtp_hci->ongoing.incoming_stream.state = BT_AVDTP_STATE_IDLE_STREAMING;
-		avdtp_hci->ongoing.incoming_stream.src_cid = 0;
-		avdtp_hci->ongoing.incoming_stream.dst_cid = 0;
+		reset_stream_conn(&avdtp_hci->ongoing.outgoing_stream);
+		reset_stream_conn(&avdtp_hci->ongoing.incoming_stream);
 	}
 	if (reset_local_seids) {
 		struct scsc_bt_avdtp_detect_snk_seid *seid = avdtp_hci->tsep_detect.local_snk_seids;
@@ -721,18 +820,19 @@ void scsc_avdtp_detect_reset(struct scsc_bt_avdtp_detect_hci_connection *avdtp_h
 	if (reset_local_seids && reset_remote_seids)
 		avdtp_hci->tsep_detect.tsep = BT_AVDTP_TSEP_SRC;
 
-	if (reset_signal) {
+	if (remove_connection) {
+		struct scsc_bt_service *bt_svc = get_bt_service();
 		struct scsc_bt_avdtp_detect_hci_connection *prev;
 		/* Unlock the mutex to keep the order of lock/unlock between the connection list
 		 * and the individual elements
 		 */
 		spin_unlock(&avdtp_hci->lock);
-		spin_lock(&bt_service.avdtp_detect.lock);
+		spin_lock(&bt_svc->avdtp_detect.lock);
 		/* The element could have been deleted at this point by another thread before the mutext
 		 * on the list was taken. Therefore re-check.
 		 */
 		if (avdtp_hci) {
-			prev = bt_service.avdtp_detect.connections;
+			prev = bt_svc->avdtp_detect.connections;
 
 			if (prev && prev != avdtp_hci) {
 				/* The element was not the head of the list. Search for the previous element */
@@ -745,18 +845,18 @@ void scsc_avdtp_detect_reset(struct scsc_bt_avdtp_detect_hci_connection *avdtp_h
 					prev = prev->next;
 				}
 			} else {
-				bt_service.avdtp_detect.connections = avdtp_hci->next;
+				bt_svc->avdtp_detect.connections = avdtp_hci->next;
 			}
 			/* Lock to make sure that no-one reads from it. Since it has been removed from the list
 			 * unlocking it again will not make another thread read it since it cannot be found
 			 */
 			spin_lock(&avdtp_hci->lock);
-			spin_unlock(&bt_service.avdtp_detect.lock);
+			spin_unlock(&bt_svc->avdtp_detect.lock);
 			spin_unlock(&avdtp_hci->lock);
 			kfree(avdtp_hci);
 			avdtp_hci = NULL;
 		} else
-			spin_unlock(&bt_service.avdtp_detect.lock);
+			spin_unlock(&bt_svc->avdtp_detect.lock);
 	}
 }
 
@@ -779,11 +879,12 @@ bool scsc_avdtp_detect_reset_connection_handle(uint16_t hci_connection_handle)
 
 void scsc_avdtp_detect_exit(void)
 {
+	struct scsc_bt_service *bt_svc = get_bt_service();
 	struct scsc_bt_avdtp_detect_hci_connection *head;
 
 	/* Lock the detection list and find the head */
-	spin_lock(&bt_service.avdtp_detect.lock);
-	head = bt_service.avdtp_detect.connections;
+	spin_lock(&bt_svc->avdtp_detect.lock);
+	head = bt_svc->avdtp_detect.connections;
 
 	while (head) {
 		spin_lock(&head->lock);
@@ -791,9 +892,9 @@ void scsc_avdtp_detect_exit(void)
 		scsc_avdtp_detect_reset(head, false, false, false, false, true, true);
 
 		/* Update the head to bypass the current element */
-		bt_service.avdtp_detect.connections = head->next;
+		bt_svc->avdtp_detect.connections = head->next;
 
-		spin_unlock(&bt_service.avdtp_detect.lock);
+		spin_unlock(&bt_svc->avdtp_detect.lock);
 
 		/* Free the used memory */
 		spin_unlock(&head->lock);
@@ -801,11 +902,11 @@ void scsc_avdtp_detect_exit(void)
 		head = NULL;
 
 		/* Update the head variable */
-		spin_lock(&bt_service.avdtp_detect.lock);
-		head = bt_service.avdtp_detect.connections;
+		spin_lock(&bt_svc->avdtp_detect.lock);
+		head = bt_svc->avdtp_detect.connections;
 	}
 
-	spin_unlock(&bt_service.avdtp_detect.lock);
+	spin_unlock(&bt_svc->avdtp_detect.lock);
 
 	/* The avdtp_detect has now been restored and doesn't contain other information
 	 * than its two locks

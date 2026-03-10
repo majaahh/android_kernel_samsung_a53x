@@ -295,7 +295,7 @@ static int mx_dbg_sampler_allocate_resources(struct scsc_service *service, struc
 	mem = (struct debug_sampler_align *)scsc_mx_service_mif_addr_to_ptr(service, ref);
 
 	/* Allocate interrupt */
-	ret = scsc_service_mifintrbit_register_tohost(service, mx_dbg_sampler_irq_handler, mx_dev, SCSC_MIFINTR_TARGET_WLAN);
+	ret = scsc_service_mifintrbit_register_tohost(service, mx_dbg_sampler_irq_handler, mx_dev, SCSC_MIFINTR_TARGET_WLAN, MX_DBG_SAMPLER_TYPE);
 	if (ret < 0) {
 		SCSC_TAG_ERR(MX_SAMPLER, "Error allocating interrupt\n");
 		scsc_mx_service_mifram_free(service, ref);

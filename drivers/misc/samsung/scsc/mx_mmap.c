@@ -20,31 +20,46 @@
 #include <linux/kdev_t.h>
 #include <asm/page.h>
 #include <linux/cdev.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/uaccess.h>
 #include <scsc/scsc_logring.h>
 #include <scsc/scsc_mx.h>
-#include "scsc_mif_abs.h"
 #include "scsc_mx_impl.h"
+#include "scsc_mif_abs.h"
 #include "gdb_transport.h"
+#if defined(CONFIG_SCSC_PCIE_CHIP) || defined(CONFIG_WLBT_SPLIT_RECOVERY)
+#include "mxman.h"
+#endif
 
-#define DRV_NAME                "mx_mmap"
-#define DEVICE_NAME             "maxwell_mmap"
+#define DRV_NAME					"mx_mmap"
+#define DEVICE_NAME					"maxwell_mmap"
+#define MAXWELL_MMAP_DRIVER 		"Maxwell mmap Driver"
+
+#define SCSC_MMAP_NODE		1
+#define SCSC_GDB_NODE		1
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+#define MAXWELL_MMAP_RAMRP_DRIVER		"Maxwell ramrp Driver"
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	#define SCSC_MAX_INTERFACES (11 * (SCSC_MMAP_NODE + SCSC_GDB_NODE))
+#else
+	#define SCSC_MAX_INTERFACES (7 * (SCSC_MMAP_NODE + SCSC_GDB_NODE))
+#endif
+#else
+#define SCSC_MAX_INTERFACES     (6 * (SCSC_MMAP_NODE + SCSC_GDB_NODE))
+#endif
 
 #ifndef VM_RESERVED
 #define VM_RESERVED (VM_DONTEXPAND | VM_DONTDUMP)
 #endif
 
+#define MAX_MEMORY              (8 * 1024 * 1024UL) /* maximum memory: this should match MX_DRAM_SIZE_SECTION_1 */
+
 #define VER_MAJOR               0
 #define VER_MINOR               0
 
-#define SCSC_MMAP_NODE		1
-#define SCSC_GDB_NODE		1
 #define SCSC_GDB_DEF_BUF_SZ	64
 
-#define SCSC_MAX_INTERFACES     (5 * (SCSC_MMAP_NODE + SCSC_GDB_NODE))
-
-#define MAX_MEMORY              (8 * 1024 * 1024UL) /* maximum memory: this should match MX_DRAM_SIZE_SECTION_1 */
 
 static DECLARE_BITMAP(bitmap_minor, SCSC_MAX_INTERFACES);
 
@@ -69,7 +84,14 @@ struct mx_mmap_dev {
 	wait_queue_head_t    read_wait;
 	/* User count */
 	volatile unsigned long lock;
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	char name[20];
+#endif
 };
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mx_mmap.c"
+#endif
 
 /**
  * SCSC User Space mmap interface (singleton)
@@ -110,6 +132,9 @@ int mx_mmap_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 	mx_dev = filp->private_data;
 
+	SCSC_TAG_INFO(MX_MMAP, "Setting pgprot_noncached, pgprot_writecombine\n");
+	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+
 	/* Get the memory */
 	mx_dev->mem = mx_dev->mif_abs->get_mifram_ptr(mx_dev->mif_abs, 0);
 
@@ -125,7 +150,6 @@ int mx_mmap_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	return err;
 }
-
 
 
 int mx_mmap_release(struct inode *inode, struct file *filp)
@@ -147,10 +171,17 @@ int mx_gdb_open(struct inode *inode, struct file *filp)
 {
 	struct mx_mmap_dev *mx_dev;
 	int                ret;
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+	struct mxman *mxman;
+#endif
 
 	mx_dev = container_of(inode->i_cdev, struct mx_mmap_dev, cdev);
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	SCSC_TAG_INFO(MX_MMAP, "open %s\n", mx_dev->name);
+#else
 	SCSC_TAG_INFO(MX_MMAP, "open %p\n", filp);
+#endif
 
 	if (!mx_dev->gdb_transport) {
 		SCSC_TAG_ERR(MX_MMAP, "no transport %p\n", filp);
@@ -161,14 +192,37 @@ int mx_gdb_open(struct inode *inode, struct file *filp)
 		SCSC_TAG_ERR(MX_MMAP, "already open %p\n", filp);
 		return -EBUSY;
 	}
-
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+	/* Filter the request to create gdb channel un-related to paniced subsystem */
+	mxman = scsc_mx_get_mxman(mx_dev->gdb_transport->mx);
+	if (mxman_if_warm_reset_in_progress()) {
+		if ((mxman->scsc_panic_sub == SCSC_SUBSYSTEM_WLAN && mx_dev->gdb_transport->target == SCSC_MIF_ABS_TARGET_WPAN)
+			|| (mxman->scsc_panic_sub== SCSC_SUBSYSTEM_WPAN && mx_dev->gdb_transport->target == SCSC_MIF_ABS_TARGET_WLAN)) {
+			SCSC_TAG_ERR(MX_MMAP, "This gdb transport cannot open because %s normally operates.\n",
+					mx_dev->gdb_transport->target == SCSC_MIF_ABS_TARGET_WPAN ? "WPAN" : "WLAN");
+			clear_bit_unlock(0, &mx_dev->lock);
+			return -EINVAL;
+		}
+	}
+#endif
 	/* Prevent channel teardown while client has open */
 	mutex_lock(&mx_dev->gdb_transport->channel_open_mutex);
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	if (scsc_mx_service_claim(MX_GDB)) {
+		SCSC_TAG_INFO(MXMAN, "Error claiming link\n");
+		mutex_unlock(&mx_dev->gdb_transport->channel_open_mutex);
+		clear_bit_unlock(0, &mx_dev->lock);
+		return -EFAULT;
+	}
+#endif
 
 	filp->private_data = mx_dev;
 	mx_dev->filp = filp;
 	ret = kfifo_alloc(&mx_dev->fifo, GDB_TRANSPORT_BUF_LENGTH, GFP_KERNEL);
 	if (ret) {
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		scsc_mx_service_release(MX_GDB);
+#endif
 		mutex_unlock(&mx_dev->gdb_transport->channel_open_mutex);
 		clear_bit_unlock(0, &mx_dev->lock);
 		return -ENOMEM;
@@ -239,7 +293,10 @@ static ssize_t mx_gdb_read(struct file *filp, char __user *buf, size_t len, loff
 	return ret;
 }
 
-void gdb_read_callback(const void *message, size_t length, void *data)
+/* Callback when data available on gdb interrupt channel,
+ * returns 0 when data consumed, -EINVAL to halt the source
+ */
+int gdb_read_callback(const void *message, size_t length, void *data)
 {
 	struct mx_mmap_dev *mx_dev = (struct mx_mmap_dev *)data;
 	int                ret;
@@ -249,18 +306,26 @@ void gdb_read_callback(const void *message, size_t length, void *data)
 			ret = kfifo_in(&mx_dev->fifo, message, length);
 			if (ret != length) {
 				SCSC_TAG_ERR(MX_MMAP, "Unable to push into Kfifo Buffer\n");
-				return;
+				return 0;
 			}
 			SCSC_TAG_DEBUG(MX_MMAP, "Buffered %zu bytes\n", length);
 		} else {
 			SCSC_TAG_ERR(MX_MMAP, "Kfifo Buffer Overflow\n");
-			return;
+			return 0;
 		}
 
 		wake_up_interruptible(&mx_dev->read_wait);
-	} else
-		SCSC_TAG_ERR(MX_MMAP, "Device is closed. Dropping %zu octets\n",
-			     length);
+	} else {
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		SCSC_TAG_ERR(MX_MMAP, "Device %p '%s' is closed. Dropping %zu octets\n",
+			     mx_dev, mx_dev->name, length);
+#else
+		SCSC_TAG_ERR(MX_MMAP, "Device %p is closed. Dropping %zu octets\n",
+			     mx_dev, length);
+#endif
+		return -EINVAL; /* Stop the source interrupt, to prevent potential interrupt storm */
+	}
+	return 0;
 }
 
 static unsigned int mx_gdb_poll(struct file *filp, poll_table *wait)
@@ -283,7 +348,11 @@ int mx_gdb_release(struct inode *inode, struct file *filp)
 
 	mx_dev = container_of(inode->i_cdev, struct mx_mmap_dev, cdev);
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	SCSC_TAG_INFO(MX_MMAP, "close %s\n", mx_dev->name);
+#else
 	SCSC_TAG_INFO(MX_MMAP, "close %p\n", filp);
+#endif
 
 	if (mx_dev->filp == NULL) {
 		SCSC_TAG_ERR(MX_MMAP, "Device already closed\n");
@@ -301,7 +370,9 @@ int mx_gdb_release(struct inode *inode, struct file *filp)
 	filp->private_data = NULL;
 	mx_dev->filp = NULL;
 	kfifo_free(&mx_dev->fifo);
-
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	scsc_mx_service_release(MX_GDB);
+#endif
 	mutex_unlock(&mx_dev->gdb_transport->channel_open_mutex);
 
 	return 0;
@@ -335,7 +406,7 @@ void client_gdb_probe(struct gdb_transport_client *gdb_client, struct gdb_transp
 	minor = find_first_zero_bit(bitmap_minor, SCSC_MAX_INTERFACES);
 
 	if (minor >= SCSC_MAX_INTERFACES) {
-		SCSC_TAG_ERR(MX_MMAP, "minor %d > SCSC_TTY_MINORS\n", minor);
+		SCSC_TAG_ERR(MX_MMAP, "minor %d >= SCSC_TTY_MINORS\n", minor);
 		return;
 	}
 
@@ -346,7 +417,7 @@ void client_gdb_probe(struct gdb_transport_client *gdb_client, struct gdb_transp
 
 	devn = MKDEV(MAJOR(mx_mmap.device), MINOR(minor));
 
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	if (gdb_transport->type == GDB_TRANSPORT_FXM_1)
 		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "fxm_1_gdb");
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
@@ -355,6 +426,28 @@ void client_gdb_probe(struct gdb_transport_client *gdb_client, struct gdb_transp
 #endif
 	else if (gdb_transport->type == GDB_TRANSPORT_WPAN)
 		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wpan_gdb");
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	else if (gdb_transport->type == GDB_TRANSPORT_PMU)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "pmu_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_FXM_3)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "fxm_3_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_2)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_2_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_3)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_3_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_4)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_4_gdb");
+#endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_5)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_5_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_6)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_6_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_7)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_7_gdb");
+	else if (gdb_transport->type == GDB_TRANSPORT_WLAN_8)
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_8_gdb");
+#endif
 	else
 		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "wlan_gdb");
 #else /* CONFIG_SCSC_INDEPENDENT_SUBSYSTEM */
@@ -386,7 +479,9 @@ void client_gdb_probe(struct gdb_transport_client *gdb_client, struct gdb_transp
 		cdev_del(&mx_mmap.devs[minor].cdev);
 		return;
 	}
-
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	memcpy(mx_mmap.devs[minor].name, dev_name, 20);
+#endif
 	mx_dev = &mx_mmap.devs[minor];
 	mx_mmap.devs[minor].gdb_transport = gdb_transport;
 
@@ -410,6 +505,119 @@ void client_gdb_remove(struct gdb_transport_client *gdb_client, struct gdb_trans
 			clear_bit(i, bitmap_minor);
 		}
 }
+
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+static inline int read_ramrp(struct mx_mmap_dev* mx_dev, int count, loff_t f_pos)
+{
+	int bytes = 0;
+	if(mx_dev->mif_abs->get_ramrp_buff == NULL)
+		return -EINVAL;
+	bytes = mx_dev->mif_abs->get_ramrp_buff(mx_dev->mif_abs, &(mx_dev->mem), count, f_pos);
+	return bytes;
+}
+
+int mx_ramrp_open(struct inode *inode, struct file *filp)
+{
+	struct mx_mmap_dev *dev;
+
+	dev = container_of(inode->i_cdev, struct mx_mmap_dev, cdev);
+
+	if (scsc_mx_service_claim(MX_RAMRP)) {
+		SCSC_TAG_INFO(MXMAN, "Error claiming link\n");
+		return -EFAULT;
+	}
+	SCSC_TAG_INFO(MX_MMAP, "open %p\n", filp);
+
+	filp->private_data = dev;
+
+	return 0;
+}
+
+int mx_ramrp_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	int                err;
+	struct mx_mmap_dev *mx_dev;
+	struct page *page = NULL;
+	int bytes = 0;
+
+	mx_dev = filp->private_data;
+
+	SCSC_TAG_INFO(MX_MMAP, "mxman state is %d %d\n", mxman_is_failed(), mxman_is_frozen());
+
+	bytes = read_ramrp(mx_dev, vma->vm_end - vma->vm_start, 0);
+	if(bytes < 0)
+		return bytes;
+
+	/* remap kernel memory to userspace */
+	page = virt_to_page((uintptr_t)(mx_dev->mem) + (vma->vm_pgoff << PAGE_SHIFT));
+
+	err = remap_pfn_range(vma, vma->vm_start, page_to_pfn(page), vma->vm_end - vma->vm_start, vma->vm_page_prot);
+
+	return err;
+}
+
+
+ssize_t mx_ramrp_read(struct file *filp, char __user *buff, size_t count, loff_t *f_pos)
+{
+	int bytes = 0;
+	struct mx_mmap_dev *mx_dev;
+	int buff_offset = 0;
+	mx_dev = filp->private_data;
+
+	bytes = read_ramrp(mx_dev, count, *f_pos);
+	if (bytes < 0)
+		return bytes;
+
+	if (bytes > count) {
+		/* We have read more than what was requested due to the memory alignment */
+		/* The offset needs to be adjusted if it is not aligned to read the correct data of the buff*/
+		if ((*f_pos % 4))
+			buff_offset = *f_pos - (((*f_pos/4) - 1) * 4);
+	}
+	else {
+		count = bytes;
+	}
+	/*copy to user */
+	if(copy_to_user(buff, (u8*)(mx_dev->mem) + buff_offset, count)){
+		return -EFAULT;
+	}
+	/*update the current file postion */
+	*f_pos += count;
+	/*Return number of bytes which have been successfully read */
+	return count;
+}
+
+
+int mx_ramrp_release(struct inode *inode, struct file *filp)
+{
+	SCSC_TAG_INFO(MX_MMAP, "close %p\n", filp);
+	scsc_mx_service_release(MX_RAMRP);
+	return 0;
+}
+
+void scsc_mx_ramrp_module_remove(struct scsc_mif_abs *mif_abs)
+{
+	int i = SCSC_MAX_INTERFACES;
+
+	while (i--)
+		if (mx_mmap.devs[i].mif_abs == mif_abs) {
+			device_destroy(mx_mmap.class_mx_mmap, mx_mmap.devs[i].cdev.dev);
+			cdev_del(&mx_mmap.devs[i].cdev);
+			memset(&mx_mmap.devs[i].cdev, 0, sizeof(struct cdev));
+			mx_mmap.devs[i].mif_abs = NULL;
+			clear_bit(i, bitmap_minor);
+		}
+}
+
+static const struct file_operations mx_ramrp_fops = {
+	.owner          = THIS_MODULE,
+	.open           = mx_ramrp_open,
+	.mmap           = mx_ramrp_mmap,
+	.release        = mx_ramrp_release,
+	.read			= mx_ramrp_read,
+};
+
+#endif
 
 /* Test client driver registration */
 static struct gdb_transport_client client_gdb_driver = {
@@ -443,11 +651,27 @@ void scsc_mx_mmap_module_probe(struct scsc_mif_mmap_driver *abs_driver, struct s
 		uid = 0;
 
 	devn = MKDEV(MAJOR(mx_mmap.device), MINOR(minor));
-	snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "mmap");
 
-	cdev_init(&mx_mmap.devs[minor].cdev, &mx_mmap_fops);
+	if (!strcmp(abs_driver->name, MAXWELL_MMAP_DRIVER)) {
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "mmap");
+		cdev_init(&mx_mmap.devs[minor].cdev, &mx_mmap_fops);
+		mx_mmap.devs[minor].cdev.ops = &mx_mmap_fops;
+		mx_mmap.devs[minor].mem = mif_abs->get_mifram_ptr(mif_abs, 0);
+	}
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	else if (!strcmp(abs_driver->name, MAXWELL_MMAP_RAMRP_DRIVER)) {
+		snprintf(dev_name, sizeof(dev_name), "%s_%d_%s", "mx", (int)uid, "ramrp");
+		cdev_init(&mx_mmap.devs[minor].cdev, &mx_ramrp_fops);
+		mx_mmap.devs[minor].cdev.ops = &mx_ramrp_fops;
+		mx_mmap.devs[minor].mem = NULL;
+	}
+#endif
+	else {
+		SCSC_TAG_ERR(MX_MMAP, "scsc_mx_mmap_module_probe failed: received wrong name of driver r=%s\n", abs_driver->name);
+		/* ERROR */
+		return;
+	}
 	mx_mmap.devs[minor].cdev.owner = THIS_MODULE;
-	mx_mmap.devs[minor].cdev.ops = &mx_mmap_fops;
 
 	ret = cdev_add(&mx_mmap.devs[minor].cdev, devn, 1);
 	if (ret) {
@@ -465,8 +689,6 @@ void scsc_mx_mmap_module_probe(struct scsc_mif_mmap_driver *abs_driver, struct s
 	}
 
 	mx_mmap.devs[minor].mif_abs = mif_abs;
-
-	mx_mmap.devs[minor].mem = mif_abs->get_mifram_ptr(mif_abs, 0);
 
 	/* Update bit mask */
 	set_bit(minor, bitmap_minor);
@@ -487,11 +709,20 @@ void scsc_mx_mmap_module_remove(struct scsc_mif_abs *mif_abs)
 		}
 }
 
+
 static struct scsc_mif_mmap_driver mx_module_mmap_if = {
-	.name = "Maxwell mmap Driver",
+	.name = MAXWELL_MMAP_DRIVER,
 	.probe = scsc_mx_mmap_module_probe,
 	.remove = scsc_mx_mmap_module_remove,
 };
+
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+static struct scsc_mif_mmap_driver mx_module_ramrp_mmap_if = {
+	.name = MAXWELL_MMAP_RAMRP_DRIVER,
+	.probe = scsc_mx_mmap_module_probe,
+	.remove = scsc_mx_ramrp_module_remove,
+};
+#endif
 
 static int __init mx_mmap_init(void)
 {
@@ -512,10 +743,12 @@ static int __init mx_mmap_init(void)
 
 	scsc_mif_mmap_register(&mx_module_mmap_if);
 
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	scsc_mif_mmap_register(&mx_module_ramrp_mmap_if);
+#endif
 	ret = gdb_transport_register_client(&client_gdb_driver);
 	if (ret)
 		SCSC_TAG_ERR(MX_MMAP, "scsc_mx_module_register_client_module failed: r=%d\n", ret);
-
 
 	return 0;
 
@@ -543,6 +776,9 @@ static void __exit mx_mmap_cleanup(void)
 	gdb_transport_unregister_client(&client_gdb_driver);
 	/* Notify lower layers that we are unloading */
 	scsc_mif_mmap_unregister(&mx_module_mmap_if);
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	scsc_mif_mmap_unregister(&mx_module_ramrp_mmap_if);
+#endif
 }
 
 module_init(mx_mmap_init);

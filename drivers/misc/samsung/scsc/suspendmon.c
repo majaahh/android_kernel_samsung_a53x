@@ -10,6 +10,10 @@
 #include "scsc_mif_abs.h"
 #include "mxman.h"
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_suspendmon.c"
+#endif
+
 static int suspendmon_suspend(struct scsc_mif_abs *mif, void *data)
 {
 	struct suspendmon *suspendmon = (struct suspendmon *)data;

@@ -21,6 +21,8 @@
 #include "tx_api.h"
 #endif
 
+#include <scsc/scsc_warn.h>
+
 #define SUPPORTED_OLD_VERSION   0
 
 static int sap_mlme_version_supported(u16 version);
@@ -43,6 +45,11 @@ static int sap_mlme_notifier(struct slsi_dev *sdev, unsigned long event)
 	int level;
 	struct netdev_vif *ndev_vif;
 	bool is_recovery = false;
+#ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
+	struct net_device *nan_mgmt_dev = NULL;
+	struct netdev_vif *ndev_vif_mgmt = NULL;
+#endif
+
 
 	SLSI_INFO_NODEV("Notifier event received: %lu\n", event);
 	if (event >= SCSC_MAX_NOTIFIER)
@@ -54,6 +61,10 @@ static int sap_mlme_notifier(struct slsi_dev *sdev, unsigned long event)
 		sdev->mlme_blocked = true;
 		sdev->detect_vif_active = false;
 		/* cleanup all the VIFs and scan data */
+#ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
+		nan_mgmt_dev = slsi_get_netdev(sdev, SLSI_NET_INDEX_NAN);
+		ndev_vif_mgmt = netdev_priv(nan_mgmt_dev);
+#endif
 		SLSI_MUTEX_LOCK(sdev->netdev_add_remove_mutex);
 		level = atomic_read(&sdev->cm_if.reset_level);
 		SLSI_INFO_NODEV("MLME BLOCKED system error level:%d\n", level);
@@ -73,6 +84,10 @@ static int sap_mlme_notifier(struct slsi_dev *sdev, unsigned long event)
 				if (level < SLSI_WIFI_CM_IF_SYSTEM_ERROR_PANIC && ndev_vif->vif_type == FAPI_VIFTYPE_AP)
 					vif_type_ap = true;
 				sdev->require_vif_delete[ndev_vif->ifnum] = false;
+#ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
+				if (ndev_vif->ifnum >= SLSI_NAN_DATA_IFINDEX_START)
+					SLSI_MUTEX_LOCK(ndev_vif_mgmt->vif_mutex);
+#endif
 				SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
 				slsi_vif_cleanup(sdev, sdev->netdev[i], 0, is_recovery);
 				if (level < SLSI_WIFI_CM_IF_SYSTEM_ERROR_PANIC && vif_type_ap)
@@ -83,6 +98,10 @@ static int sap_mlme_notifier(struct slsi_dev *sdev, unsigned long event)
 				atomic_set(&ndev_vif->arp_tx_count, 0);
 #endif
 				SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+#ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
+				if (ndev_vif->ifnum >= SLSI_NAN_DATA_IFINDEX_START)
+					SLSI_MUTEX_UNLOCK(ndev_vif_mgmt->vif_mutex);
+#endif
 			}
 #if !defined(CONFIG_SCSC_WLAN_TX_API) && defined(CONFIG_SCSC_WLAN_ARP_FLOW_CONTROL)
 		if (atomic_read(&sdev->arp_tx_count) && atomic_read(&sdev->ctrl_pause_state))
@@ -284,11 +303,9 @@ static int slsi_rx_netdev_mlme(struct slsi_dev *sdev, struct net_device *dev, st
 		slsi_rx_nan_range_ind(sdev, dev, skb);
 		break;
 #endif
-#ifdef CONFIG_SCSC_WLAN_SAE_CONFIG
 	case MLME_SYNCHRONISED_IND:
 		slsi_rx_synchronised_ind(sdev, dev, skb);
 		break;
-#endif
 #if defined(CONFIG_SLSI_WLAN_STA_FWD_BEACON) && (defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 10)
 	case MLME_BEACON_REPORTING_EVENT_IND:
 		slsi_rx_beacon_reporting_event_ind(sdev, dev, skb);
@@ -304,7 +321,7 @@ static int slsi_rx_netdev_mlme(struct slsi_dev *sdev, struct net_device *dev, st
 	case MLME_SEND_FRAME_CFM:
 #if defined(CONFIG_SCSC_WLAN_TX_API)
 		slsi_tx_mlme_cfm(sdev, dev, skb);
-		kfree(skb);
+		consume_skb(skb);
 #else
 		slsi_rx_send_frame_cfm_async(sdev, dev, skb);
 #endif
@@ -316,6 +333,35 @@ static int slsi_rx_netdev_mlme(struct slsi_dev *sdev, struct net_device *dev, st
 	case SAP_DRV_MA_TO_MLME_DELBA_REQ:
 		slsi_rx_ma_to_mlme_delba_req(sdev, dev, skb);
 		break;
+	case MLME_TWT_SETUP_IND:
+		slsi_rx_twt_setup_info_event(sdev, dev, skb);
+		break;
+	case MLME_TWT_TEARDOWN_IND:
+		slsi_rx_twt_teardown_indication(sdev, dev, skb);
+		break;
+	case MLME_TWT_NOTIFY_IND:
+		slsi_rx_twt_notification_indication(sdev, dev, skb);
+		break;
+	case MLME_SCHEDULED_PM_TEARDOWN_IND:
+		slsi_rx_scheduled_pm_teardown_indication(sdev, dev, skb);
+		break;
+	case MLME_SCHEDULED_PM_LEAKY_AP_DETECT_IND:
+		slsi_rx_scheduled_pm_leaky_ap_detect_indication(sdev, dev, skb);
+		break;
+	case MLME_DELAYED_WAKEUP_IND:
+		slsi_rx_delayed_wakeup_indication(sdev, dev, skb);
+		break;
+	case MLME_SPATIAL_REUSE_PARAMETERS_IND:
+		slsi_rx_sr_params_changed_indication(sdev, dev, skb);
+		break;
+#if defined(CONFIG_SCSC_WLAN_TAS)
+	case MLME_SAR_IND:
+		slsi_tas_notify_sar_ind(sdev, dev, skb);
+		break;
+	case MLME_SAR_LIMIT_UPPER_IND:
+		slsi_tas_notify_sar_limit_upper(sdev, dev, skb);
+		break;
+#endif
 	default:
 		kfree_skb(skb);
 		SLSI_NET_ERR(dev, "Unhandled Ind/Cfm: 0x%.4x\n", id);
@@ -341,7 +387,7 @@ void slsi_rx_netdev_mlme_work(struct work_struct *work)
 		BUG_ON(1);
 	}
 #endif
-	if (WARN_ON(!dev))
+	if (WLBT_WARN_ON(!dev))
 		return;
 	skb = slsi_skb_work_dequeue(w);
 
@@ -366,6 +412,7 @@ int slsi_rx_enqueue_netdev_mlme(struct slsi_dev *sdev, struct sk_buff *skb, u16 
 {
 	struct net_device *dev;
 	struct netdev_vif *ndev_vif;
+
 #ifdef CONFIG_SCSC_WLAN_DEBUG_MLME_WORK_STRUCT
 	struct slsi_dev *org_sdev = slsi_get_sdev();
 
@@ -416,7 +463,7 @@ static int slsi_rx_action_enqueue_netdev_mlme(struct slsi_dev *sdev, struct sk_b
 
 	rcu_read_lock();
 	dev = slsi_get_netdev_rcu(sdev, vif);
-	if (WARN_ON(!dev)) {
+	if (WLBT_WARN_ON(!dev)) {
 		rcu_read_unlock();
 		return -ENODEV;
 	}
@@ -434,7 +481,7 @@ static int slsi_rx_action_enqueue_netdev_mlme(struct slsi_dev *sdev, struct sk_b
 		if (memcmp(mgmt->da, dev->dev_addr, ETH_ALEN) != 0) {
 			struct net_device *p2pdev = slsi_get_netdev_rcu(sdev, SLSI_NET_INDEX_P2P);
 
-			if (WARN_ON(!p2pdev)) {
+			if (WLBT_WARN_ON(!p2pdev)) {
 				rcu_read_unlock();
 				return -ENODEV;
 			}
@@ -517,7 +564,10 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 #endif
 #ifdef CONFIG_SCSC_WLAN_ENHANCED_LOGGING
 		case MLME_EVENT_LOG_IND:
-			return slsi_rx_enqueue_netdev_mlme(sdev, skb, SLSI_NET_INDEX_WLAN);
+			if (vif == 0)
+				return slsi_rx_enqueue_netdev_mlme(sdev, skb, SLSI_NET_INDEX_WLAN);
+			else
+				return slsi_rx_enqueue_netdev_mlme(sdev, skb, vif);
 #endif
 		case MLME_START_DETECT_IND:
 			return slsi_rx_enqueue_netdev_mlme(sdev, skb, SLSI_NET_INDEX_WLAN);
@@ -531,7 +581,7 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 
 				rcu_read_lock();
 				dev = slsi_get_netdev_rcu(sdev, vif);
-				if (WARN_ON(!dev)) {
+				if (WLBT_WARN_ON(!dev)) {
 					rcu_read_unlock();
 					return -ENODEV;
 				}
@@ -547,6 +597,11 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 				rcu_read_unlock();
 				return slsi_rx_enqueue_netdev_mlme(sdev, skb, vif);
 			}
+#if defined(CONFIG_SCSC_WLAN_TAS)
+		case MLME_SAR_IND:
+		case MLME_SAR_LIMIT_UPPER_IND:
+			return slsi_rx_enqueue_netdev_mlme(sdev, skb, SLSI_NET_INDEX_WLAN);
+#endif
 		default:
 			if (vif == 0) {
 				SLSI_WARN(sdev, "Received signal 0x%04x on VIF 0, return error\n", fapi_get_sigid(skb));
@@ -566,7 +621,7 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 		return 0;
 	}
 
-	if (WARN_ON(fapi_is_req(skb)))
+	if (WLBT_WARN_ON(fapi_is_req(skb)))
 		goto err;
 
 	if (slsi_is_test_mode_enabled()) {
@@ -574,7 +629,7 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 		return 0;
 	}
 
-	WARN_ON(1);
+	WLBT_WARN_ON(1);
 
 err:
 	return -EINVAL;

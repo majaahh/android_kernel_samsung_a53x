@@ -11,8 +11,13 @@
 #include <scsc/scsc_logring.h>
 #include "scsc_mif_abs.h"
 #include "scsc_mx_impl.h"
+#include "wlbt_ramsd.h"
 #ifdef CONFIG_SCSC_WLBTD
 #include "scsc_wlbtd.h"
+#endif
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_scsc_mx_module.c"
 #endif
 
 #define SCSC_MX_CORE_MODDESC "mx140 Core Driver"
@@ -108,8 +113,8 @@ static int __init scsc_mx_module_init(void)
 		SCSC_RELEASE_CANDIDATE,
 		SCSC_RELEASE_POINT,
 		SCSC_RELEASE_CUSTOMER);
-
 	scsc_mif_abs_register(&mx_module_mif_if);
+	wlbt_ramsd_create();
 	return 0;
 }
 
@@ -124,6 +129,7 @@ static void __exit scsc_mx_module_exit(void)
 		kfree(mx_node);
 	}
 
+	wlbt_ramsd_destroy();
 	scsc_mif_abs_unregister(&mx_module_mif_if);
 
 	SCSC_TAG_INFO(MXMAN, SCSC_MX_CORE_MODDESC " unloaded\n");
@@ -135,6 +141,27 @@ static void __exit scsc_mx_module_exit(void)
  * where the chip has been reset as part of the recovery and the service drivers
  * has to do the same.
  */
+
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+int scsc_mx_module_reset(enum scsc_module_client_reason reason)
+{
+	struct clients_node *clients_node;
+	struct mx_node      *mx_node, *next_mx;
+
+	/* Traverse Linked List and call registered removed callbacks */
+	list_for_each_entry_safe(mx_node, next_mx, &mx_module.mx_list, list)
+		list_for_each_entry(clients_node, &mx_module.clients_list, list)
+			clients_node->module_client->remove(clients_node->module_client, mx_node->mx, reason);
+
+	/* Traverse Linked List and call registered probed callbacks */
+	list_for_each_entry_safe(mx_node, next_mx, &mx_module.mx_list, list)
+		list_for_each_entry(clients_node, &mx_module.clients_list, list)
+			clients_node->module_client->probe(clients_node->module_client, mx_node->mx, reason);
+
+	return 0;
+}
+EXPORT_SYMBOL(scsc_mx_module_reset);
+#else
 int scsc_mx_module_reset(void)
 {
 	struct clients_node *clients_node;
@@ -153,6 +180,7 @@ int scsc_mx_module_reset(void)
 	return 0;
 }
 EXPORT_SYMBOL(scsc_mx_module_reset);
+#endif
 
 int scsc_mx_module_register_client_module(struct scsc_mx_module_client *module_client)
 {

@@ -6,7 +6,6 @@
 #ifndef _MAXWELL_IF_H
 #define _MAXWELL_IF_H
 #include <scsc/scsc_mx.h>
-#include "mxman_if.h"
 
 struct mxman;
 
@@ -16,7 +15,6 @@ enum mxman_state {
 	MXMAN_STATE_STARTED_WPAN,
 	MXMAN_STATE_STARTED_WLAN,
 	MXMAN_STATE_STARTED_WLAN_WPAN,
-	MXMAN_STATE_STARTED,
 	MXMAN_STATE_FAILED_PMU,
 	MXMAN_STATE_FAILED_WLAN,
 	MXMAN_STATE_FAILED_WPAN,
@@ -27,6 +25,7 @@ enum mxman_state {
 /*
  * Mxman interface
  */
+void mxman_if_control_suspend_gpio(struct mxman *mxman, u8 value);
 
 /* Open subsystem. Returns 0 if success otherwise fail */
 int mxman_if_open(struct mxman *mxman, enum scsc_subsystem sub, void *data, size_t data_sz);
@@ -81,4 +80,17 @@ int mxman_if_wait_for_completion_timeout(struct mxman *mxman, u32 ms);
 /* Check if subsystem is active */
 bool mxman_if_subsys_active(struct mxman *mxman, enum scsc_subsystem sub);
 
+/* Check if any users are active */
+bool mxman_if_users_active(struct mxman *mxman);
+
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+/* Check if recovery operation is in progress */
+bool mxman_if_warm_reset_in_progress(void);
+#endif
+
+#ifdef CONFIG_HDM_WLBT_SUPPORT
+/* hdm_wlan/bt_support for test */
+int mxman_if_get_hdm_wlan_support(void);
+int mxman_if_get_hdm_bt_support(void);
+#endif
 #endif

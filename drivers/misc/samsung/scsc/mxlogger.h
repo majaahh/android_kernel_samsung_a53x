@@ -39,6 +39,10 @@
 #define	MM_MXLOGGER_STARTED_EVT			(5)
 #define	MM_MXLOGGER_STOPPED_EVT			(6)
 #define	MM_MXLOGGER_COLLECTION_FW_REQ_EVT	(7)
+#if defined(CONFIG_CHIPLOGGER_V_2_0)
+#define MM_MXLOGGER_DUMP_BUFFER_RT_CMD		(8)
+#define MM_MXLOGGER_DUMP_BUFFER_RT_FLUSHED_EVT  (9)
+#endif
 /* ARG - LOGGER */
 #define MM_MXLOGGER_LOGGER_ENABLE		(0)
 #define MM_MXLOGGER_LOGGER_DISABLE		(1)
@@ -63,7 +67,11 @@
 
 #elif defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 #define MXL_INTERNAL_RSV		(24 * 1024)
+#ifdef CONFIG_SCSC_64KB_ALLIGNED_MEMLOG
+#define MX_DRAM_SIZE_SECTION_LOG	(8 * 1024 * 1024 + 64 * 1024)
+#else
 #define MX_DRAM_SIZE_SECTION_LOG	(8 * 1024 * 1024)
+#endif
 #define MX_DRAM_SIZE_SECTION_WLAN	(6 * 1024 * 1024)
 #define MX_DRAM_SIZE_SECTION_WPAN	(2 * 1024 * 1024)
 #define MXL_POOL_SZ			(MX_DRAM_SIZE_SECTION_LOG - MXL_INTERNAL_RSV)
@@ -87,8 +95,15 @@
 
 #define MXLOGGER_SYNC_SIZE		(10 * 1024)
 #define MXLOGGER_IMP_SIZE		(102 * 1024)
-#define MXLOGGER_TOTAL_FIX_BUF		(MXLOGGER_SYNC_SIZE + MXLOGGER_IMP_SIZE + \
-					MXLOGGER_RSV_COMMON_SZ + MXLOGGER_RSV_BT_SZ + \
+#if defined(CONFIG_CHIPLOGGER_V_2_0)
+#define MXLOGGER_IMPD12_SIZE		(768 * 1024)
+#define MXLOGGER_LINK_SIZE              (256 * 1024)
+#else
+#define MXLOGGER_IMPD12_SIZE		(0)
+#define MXLOGGER_LINK_SIZE              (0)
+#endif
+#define MXLOGGER_TOTAL_FIX_BUF		(MXLOGGER_SYNC_SIZE + MXLOGGER_IMP_SIZE + MXLOGGER_IMPD12_SIZE + \
+					MXLOGGER_LINK_SIZE + MXLOGGER_RSV_COMMON_SZ + MXLOGGER_RSV_BT_SZ + \
 					MXLOGGER_RSV_WLAN_SZ + MXLOGGER_RSV_RADIO_SZ)
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 #define MXLOGGER_TOTAL_FIX_BUF_WPAN	(MXLOGGER_SYNC_SIZE + MXLOGGER_IMP_SIZE + \
@@ -127,10 +142,14 @@
  * |    Reserved WL          |
  * |-------------------------|
  * |    Reserved RADIO       |
- * |-------------------------| Not fixed size buffers
- * |         MXLOG           |
  * |-------------------------|
+ * |         MXLOG           |<--------------------|
+ * |-------------------------| Variable size buffers
  * |         UDI             |
+ * |-------------------------| Fixed size buffers  |
+ * |   IMPORTANT D12 LOGS    |<--------------------|
+ * |-------------------------|			   |
+ * |       LINK STATS        |<--------------------|
  * |-------------------------|
  * |  Future buffers (TBD)   |
  * |-------------------------|
@@ -145,11 +164,15 @@ enum mxlogger_buffers {
 	MXLOGGER_RESERVED_BT,
 	MXLOGGER_RESERVED_WLAN,
 	MXLOGGER_RESERVED_RADIO,
-	MXLOGGER_LAST_FIXED_SZ = MXLOGGER_RESERVED_RADIO,
 	MXLOGGER_MXLOG,
 	MXLOGGER_UDI,
+#if defined(CONFIG_CHIPLOGGER_V_2_0)
+	MXLOGGER_IMPD12,
+	MXLOGGER_LINK,
+#endif
 	MXLOGGER_NUM_BUFFERS
 };
+
 enum mxlogger_sync_event {
 	MXLOGGER_SYN_SUSPEND,
 	MXLOGGER_SYN_RESUME,
@@ -157,6 +180,7 @@ enum mxlogger_sync_event {
 	MXLOGGER_SYN_TORAM,
 	MXLOGGER_SYN_LOGCOLLECTION,
 };
+
 struct mxlogger_sync_record {
 	u64 tv_sec; /* struct timeval.tv_sec */
 	u64 tv_usec; /* struct timeval.tv_usec */
@@ -166,12 +190,14 @@ struct mxlogger_sync_record {
 	u32 fw_wrap;
 	u8  reserved[4];
 } __packed;
+
 struct buffer_desc {
 	u32 location;			/* Buffer location */
 	u32 size;			/* Buffer sz (in bytes) */
 	u32 status;			/* buffer status */
 	u32 info;			/* buffer info */
 } __packed;
+
 struct mxlogger_config {
 	u32			magic_number;   /* 0xcaba0401 */
 	u32			config_major;	/* Version Major */
@@ -179,20 +205,33 @@ struct mxlogger_config {
 	u32			num_buffers;	/* configured buffers */
 	scsc_mifram_ref		bfds_ref;
 } __packed;
+
 struct mxlogger_config_area {
 	struct mxlogger_config	config;
 	struct buffer_desc	bfds[MXLOGGER_NUM_BUFFERS];
 	uint8_t	*buffers_start;
 } __packed;
+
 struct log_msg_packet {
 	uint8_t		msg;		/* cmd or event id */
 	uint8_t		arg;
 	uint8_t		payload[MM_MXLOGGER_PAYLOAD_SZ];
 } __packed;
+
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 #define MXLOGGER_CHANNELS		2
 #define MXLOGGER_CHANNEL_WLAN		0
 #define MXLOGGER_CHANNEL_WPAN		1
+
+#if IS_ENABLED(CONFIG_BT_FWSNOOP_LOGGING)
+#define MXLOGGER_CLASS_REALTIME		(0)
+#define MXLOGGER_CLASS_RELAXED		(1)
+#define MXLOGGER_CLASS_REGISTERED	(2)
+
+#define MXLOGGER_BITPOS_REALTIME	(4) /* For the number of observer w/ REALTIME class */
+#define MXLOGGER_BITPOS_RELAXED		(0)	/* For the number of observer w/ RELAXED class. */
+#endif
+
 struct mxlogger_channel {
 	void				*mem;
 	void				*mem_sync_buf;
@@ -207,6 +246,7 @@ struct mxlogger_channel {
 	struct mxlogger			*mxlogger;
 	bool				re_enable;
 };
+
 struct mxlogger {
 	bool				initialized;
 	bool				configured;
@@ -216,6 +256,10 @@ struct mxlogger {
 	struct mutex			lock;
 	struct mutex			chan_lock;
 	u8				observers;
+#if IS_ENABLED(CONFIG_BT_FWSNOOP_LOGGING)
+	/* Number of observers with different classes in each bit region. */
+	uint8_t			registered_class;
+#endif
 };
 #else
 struct mxlogger {
@@ -235,6 +279,7 @@ struct mxlogger {
 	bool				re_enable;
 	struct completion		rings_serialized_ops;
 };
+
 #endif
 int mxlogger_generate_sync_record(struct mxlogger *mxlogger, enum mxlogger_sync_event event);
 int mxlogger_dump_shared_memory_to_file(struct mxlogger *mxlogger);
@@ -255,12 +300,21 @@ int mxlogger_register_observer(struct mxlogger *mxlogger, char *name);
 int mxlogger_unregister_observer(struct mxlogger *mxlogger, char *name);
 int mxlogger_register_global_observer(char *name);
 int mxlogger_unregister_global_observer(char *name);
+#if IS_ENABLED(CONFIG_BT_FWSNOOP_LOGGING)
+int mxlogger_register_observer_class(struct mxlogger *mxlogger, char *name, uint8_t class);
+int mxlogger_unregister_observer_class(struct mxlogger *mxlogger, char *name, uint8_t class);
+int mxlogger_register_global_observer_class(char *name, uint8_t class);
+int mxlogger_unregister_global_observer_class(char *name, uint8_t class);
+#endif
 bool mxlogger_set_enabled_status(bool enable);
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 size_t mxlogger_dump_fw_buf(struct mxlogger *mxlogger, enum scsc_log_chunk_type fw_buffer, void *buf, size_t size,
 			      enum scsc_mif_abs_target target);
 size_t mxlogger_get_fw_buf_size(struct mxlogger *mxlogger, enum scsc_log_chunk_type fw_buffer,
 				enum scsc_mif_abs_target target);
+#endif
+#if defined(CONFIG_SCSC_WLAN_LPC)
+void* mxlogger_get_fw_buf_for_wlan_lpc(struct mxlogger *mxlogger);
 #endif
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 #define MEM_LAYOUT_CHECK()	\

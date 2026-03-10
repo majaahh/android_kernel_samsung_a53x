@@ -18,9 +18,7 @@ void slsi_rx_beacon_reporting_event_ind(struct slsi_dev *sdev, struct net_device
 #endif
 void slsi_rx_scan_done_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_channel_switched_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
-#ifdef CONFIG_SCSC_WLAN_SAE_CONFIG
 void slsi_rx_synchronised_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
-#endif
 void slsi_rx_blacklisted_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_connect_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_connected_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
@@ -40,5 +38,12 @@ void slsi_rx_ma_to_mlme_delba_req(struct slsi_dev *sdev, struct net_device *dev,
 void slsi_rx_start_detect_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_rcl_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_get_fapi_version_string(char *res);
-
+void slsi_rx_twt_setup_info_event(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_rx_twt_teardown_indication(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_rx_twt_notification_indication(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_rx_scheduled_pm_teardown_indication(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_rx_scheduled_pm_leaky_ap_detect_indication(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+void slsi_rx_delayed_wakeup_indication(struct slsi_dev *sdev, struct net_device *dev,
+				       struct sk_buff *skb);
+void slsi_rx_sr_params_changed_indication(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 #endif

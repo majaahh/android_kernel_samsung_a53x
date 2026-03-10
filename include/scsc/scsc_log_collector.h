@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2019 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 
@@ -9,11 +9,19 @@
 
 /* High nibble is Major, Low nibble is Minor */
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
-#define SCSC_LOG_HEADER_VERSION_MAJOR	0x04
+#define SCSC_LOG_HEADER_VERSION_MAJOR    0x04
+
+#if defined(CONFIG_CHIPLOGGER_V_2_0)
+#define SCSC_LOG_HEADER_VERSION_MINOR    0x02
 #else
-#define SCSC_LOG_HEADER_VERSION_MAJOR	0x03
+#define SCSC_LOG_HEADER_VERSION_MINOR    0x01
 #endif
-#define SCSC_LOG_HEADER_VERSION_MINOR	0x00
+
+#else
+#define SCSC_LOG_HEADER_VERSION_MAJOR    0x03
+#define SCSC_LOG_HEADER_VERSION_MINOR    0x01
+#endif
+
 /* Magic string. 4 bytes "SCSC"*/
 /* Header version. 1 byte */
 /* Num chunks. 1 byte */
@@ -47,6 +55,7 @@ enum scsc_log_reason {
 	SCSC_LOG_HOST_BT,
 	SCSC_LOG_HOST_COMMON,
 	SCSC_LOG_SYS_ERR,
+	SCSC_LOG_CHIPSET,
 	/* Add others */
 };
 
@@ -59,6 +68,7 @@ extern const char *scsc_loc_reason_str[];
 /* CHUNKS WILL COLLECTED ON THIS ORDER -
  * SYNC SHOULD BE THE FIRST CHUNK
  * LOGRING SHOULD BE THE LAST ONE SO IT COULD CAPTURE COLLECTION ERRORS
+ * Note: Use a previously unused chunk ID when adding new chunks
  */
 enum scsc_log_chunk_type {
 	SCSC_LOG_CHUNK_SYNC, /* SYNC should be the first chunk to collect */
@@ -74,6 +84,10 @@ enum scsc_log_chunk_type {
 	SCSC_LOG_RESERVED_BT,
 	SCSC_LOG_RESERVED_WLAN,
 	SCSC_LOG_RESERVED_RADIO,
+#if defined(CONFIG_CHIPLOGGER_V_2_0)
+	SCSC_LOG_CHUNK_IMPD12,
+	SCSC_LOG_CHUNK_LINK,
+#endif
 	/* Add other chunks */
 #if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	SCSC_LOG_CHUNK_SYNC_WPAN = 150,
@@ -84,6 +98,7 @@ enum scsc_log_chunk_type {
 	SCSC_LOG_RESERVED_BT_WPAN,
 	SCSC_LOG_RESERVED_WLAN_WPAN,
 	SCSC_LOG_RESERVED_RADIO_WPAN,
+	SCSC_LOG_MINIMOREDUMP_WPAN,
 #endif
 	SCSC_LOG_CHUNK_LOGRING = 254,
 	SCSC_LOG_CHUNK_INVALID = 255,
@@ -99,6 +114,7 @@ enum scsc_log_chunk_type {
 /* Reason codes for SCSC_LOG_DUMPSTATE */
 #define SCSC_LOG_DUMPSTATE_REASON			0x0000
 #define SCSC_LOG_DUMPSTATE_REASON_DRIVERDEBUGDUMP	0x0001
+#define SCSC_LOG_CHIPSET_REASON				0x0000
 /* Reason codes for SCSC_LOG_HOST_WLAN */
 #define SCSC_LOG_HOST_WLAN_REASON_DISCONNECT		0x0000
 #define SCSC_LOG_HOST_WLAN_REASON_DISCONNECT_IND	0x0001
@@ -171,5 +187,8 @@ struct scsc_log_collector_mx_cb {
 
 int scsc_log_collector_register_mx_cb(struct scsc_log_collector_mx_cb *mx_cb);
 int scsc_log_collector_unregister_mx_cb(struct scsc_log_collector_mx_cb *mx_cb);
-
+void scsc_service_collect_buffer_writer_start(unsigned char *chip_buff, enum scsc_log_reason reason,
+					      u16 reason_code, u32 size);
+void scsc_log_collector_prepare_chunk(char type, u32 chunk_size, unsigned char *temp,
+				      enum scsc_log_reason reason);
 #endif /* __SCSC_LOG_COLLECTOR_H__ */

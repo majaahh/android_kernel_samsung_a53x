@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2022 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 #include <scsc/scsc_logring.h>
@@ -33,7 +33,11 @@
 #endif
 
 #if IS_ENABLED(CONFIG_SCSC_MEMLOG)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#include <soc/samsung/exynos/memlogger.h>
+#else
 #include <soc/samsung/memlogger.h>
+#endif
 #endif
 
 /* MIF resources - USES */
@@ -53,8 +57,13 @@
 #ifdef CONFIG_SCSC_QOS
 #include "mifqos.h"
 #endif
+
 #ifdef CONFIG_SCSC_LAST_PANIC_IN_DRAM
 #include "scsc_log_in_dram.h"
+#endif
+
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_mxman_res.c"
 #endif
 
 /* This values should be defined in the DTS.. so we may need to
@@ -67,6 +76,13 @@ module_param(firmware_startup_flags, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(firmware_startup_flags,
 		 "0 = Proceed as normal (default); Bit 0 = 1 - spin at start of CRT0; Other bits reserved = 0");
 
+#if IS_ENABLED(CONFIG_SOC_S5E5515) || IS_ENABLED(CONFIG_SCSC_PCIE_CHIP)
+static uint firmware_startup_flags_pmu;
+module_param(firmware_startup_flags_pmu, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(firmware_startup_flags_pmu,
+		 "PMU startup flags (check documentation). 0 default");
+#endif
+
 static bool allow_unidentified_firmware;
 module_param(allow_unidentified_firmware, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(allow_unidentified_firmware, "Allow unidentified firmware");
@@ -75,7 +91,7 @@ static bool skip_header;
 module_param(skip_header, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(skip_header, "Skip header, assuming unidentified firmware");
 
-extern bool is_bug_on_enabled(struct scsc_mx *mx);
+extern bool is_bug_on_enabled(void);
 
 int mxman_res_mem_map(struct mxman *mxman, void **start_dram, size_t *size_dram)
 {
@@ -106,7 +122,35 @@ int mxman_res_mem_unmap(struct mxman *mxman, void *start_dram)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_SCSC_MXLOGGER)
 #if IS_ENABLED(CONFIG_SCSC_MEMLOG)
+
+#ifdef CONFIG_SCSC_64KB_ALLIGNED_MEMLOG
+static dma_addr_t mxman_res_memlog_get_adjusted_paddr(struct memlog_obj *obj)
+{
+	if (obj->paddr & 0x0000FFFF) {
+		return (obj->paddr + 0x00010000) & 0xFFFFFFFFFFFF0000;
+	}
+	return obj->paddr;
+}
+
+static void *mxman_res_memlog_get_adjusted_vaddr(struct memlog_obj *obj)
+{
+	dma_addr_t adjusted_paddr = mxman_res_memlog_get_adjusted_paddr(obj);
+	return obj->vaddr + (adjusted_paddr - obj->paddr);
+}
+#else
+static dma_addr_t mxman_res_memlog_get_adjusted_paddr(struct memlog_obj *obj)
+{
+	return obj->paddr;
+}
+
+static void *mxman_res_memlog_get_adjusted_vaddr(struct memlog_obj *obj)
+{
+	return obj->vaddr;
+}
+#endif
+
 struct memlog_obj *mxman_res_get_memlog_obj(struct scsc_mif_abs *mif, const char *desc_name, size_t len)
 {
 	struct device *dev = mif->get_mif_device(mif);
@@ -134,7 +178,6 @@ struct memlog_obj *mxman_res_get_memlog_obj(struct scsc_mif_abs *mif, const char
 	return obj;
 }
 
-#if IS_ENABLED(CONFIG_SCSC_MXLOGGER)
 static void mxman_res_set_memlog_version(struct scsc_mif_abs *mif)
 {
 	struct memlog *desc = memlog_get_desc("WB_LOG");
@@ -189,12 +232,12 @@ int mxman_res_mappings_logger_init(struct mxman *mxman, void *start_dram)
 	}
 	mxman_res_set_memlog_version(mif);
 	/* assing memory regions for memory mappings */
-	mif->set_mem_region2(mif, obj->vaddr, MX_DRAM_SIZE_SECTION_LOG);
-	mif->set_memlog_paddr(mif, obj->paddr);
-	start_dram_section2 = (char *)obj->vaddr;
+	mif->set_mem_region2(mif, mxman_res_memlog_get_adjusted_vaddr(obj), MX_DRAM_SIZE_SECTION_LOG);
+	memset(mxman_res_memlog_get_adjusted_vaddr(obj), 0, MX_DRAM_SIZE_SECTION_LOG);
+	mif->set_memlog_paddr(mif, mxman_res_memlog_get_adjusted_paddr(obj));
+	start_dram_section2 = (char *)mxman_res_memlog_get_adjusted_vaddr(obj);
 #else
 	struct scsc_mif_abs *mif;
-	//scsc_mifram_ref mifram_ref;
 
 	mif = scsc_mx_get_mif_abs(mxman->mx);
 	start_dram_section2 = (char *)start_dram + MX_DRAM_SIZE_SECTION_1;
@@ -378,6 +421,8 @@ int mxman_res_fw_init(struct mxman *mxman, struct fwhdr_if **fw_wlan, struct fwh
 	uint32_t bt_fw_runtime_size_val;
 	uint32_t bt_fw_offset_val;
 
+	*fw_wlan = *fw_wpan = NULL;
+
 	whdr_if = whdr_create();
 	if (!whdr_if) {
 		SCSC_TAG_ERR(MXMAN, "fwhdr_create() failed\n");
@@ -411,6 +456,7 @@ int mxman_res_fw_init(struct mxman *mxman, struct fwhdr_if **fw_wlan, struct fwh
 		mx140_release_file(mxman->mx, firm);
 		return -EINVAL;
 	}
+	SCSC_TAG_INFO(MXMAN, "lookup tag FHDR_TAG_WLAN_FW success,size %u\n", wlan_length);
 
 	r = whdr_if->init(whdr_if, (char *)wlan_fw, wlan_length, skip_header);
 	if (r) {
@@ -438,9 +484,12 @@ int mxman_res_fw_init(struct mxman *mxman, struct fwhdr_if **fw_wlan, struct fwh
 		goto cont_no_bt;
 	}
 
+	SCSC_TAG_INFO(MXMAN, "lookup tag FHDR_TAG_WPAN_FW success,size %u\n", bt_length);
+
 	r = bhdr_if->init(bhdr_if, (char *)bt_fw, bt_length, skip_header);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "bwhdr_init() failed\n");
+		mx140_release_file(mxman->mx, firm);
 		return -EINVAL;
 	}
 
@@ -488,7 +537,7 @@ cont_no_bt:
 		goto found;
 
 	SCSC_TAG_ERR(MXMAN, "Search PMU in WLAN blob\n");
-#if defined(CONFIG_SOC_S5E8825)
+#if defined(CONFIG_SOC_S5E8825) || defined(CONFIG_SOC_S5E8535)
 	pmu = (struct pmu_firmware_header *)fw_obj_index_lookup_tag(wlan_fw, PMU_8051_INIT, &pmu_length);
 #else
 	pmu = (struct pmu_firmware_header *)fw_obj_index_lookup_tag(wlan_fw, PMU_CM0_INIT, &pmu_length);
@@ -502,8 +551,15 @@ found:
 	SCSC_TAG_INFO(MXMAN, "PMU hdr_version %u size %u\n", pmu->hdr_version, pmu->hdr_size);
 	SCSC_TAG_INFO(MXMAN, "PMU fw_offset %u fw_size %u\n", pmu->fw_offset, pmu->fw_size);
 	SCSC_TAG_INFO(MXMAN, "PMU fw_patch version 0x%x\n", pmu->fw_patch_ver);
+#if IS_ENABLED(CONFIG_SOC_S5E5515) || IS_ENABLED(CONFIG_SCSC_PCIE_CHIP)
+	SCSC_TAG_INFO(MXMAN, "PMU flags 0x%x set at KARAM start\n", firmware_startup_flags_pmu);
+	/* Load the FW extracted in PMU image and copy to platform driver */
+	mifpmuman_load_fw(scsc_mx_get_mifpmuman(mxman->mx), (int *)((uintptr_t)pmu + pmu->fw_offset), pmu->fw_size,
+						firmware_startup_flags_pmu);
+#else
 	/* Load the FW extracted in PMU image and copy to platform driver */
 	mifpmuman_load_fw(scsc_mx_get_mifpmuman(mxman->mx), (int *)((uintptr_t)pmu + pmu->fw_offset), pmu->fw_size);
+#endif
 
 not_found:
 	SCSC_TAG_INFO(MXMAN, "Releasing firm file\n");
@@ -553,7 +609,11 @@ not_found:
 
 	return 0;
 }
-#ifdef CONFIG_SOC_S5E8825
+
+#if IS_ENABLED(CONFIG_SOC_S5E8825) || IS_ENABLED(CONFIG_SOC_S5E5515) \
+	|| IS_ENABLED(CONFIG_SOC_S5E8535) || IS_ENABLED(CONFIG_SOC_S5E8835) \
+	|| IS_ENABLED(CONFIG_SCSC_PCIE_CHIP) || IS_ENABLED(CONFIG_SOC_S5E8845) \
+	|| IS_ENABLED(CONFIG_SOC_S5E5535)
 int mxman_res_pmu_init(struct mxman *mxman, mifpmuisr_handler handler)
 #else
 int mxman_res_pmu_init(struct mxman *mxman)
@@ -562,7 +622,10 @@ int mxman_res_pmu_init(struct mxman *mxman)
 	struct scsc_mif_abs *mif;
 	mif = scsc_mx_get_mif_abs(mxman->mx);
 
-#ifdef CONFIG_SOC_S5E8825
+#if IS_ENABLED(CONFIG_SOC_S5E8825) || IS_ENABLED(CONFIG_SOC_S5E5515) \
+	|| IS_ENABLED(CONFIG_SOC_S5E8535) || IS_ENABLED(CONFIG_SOC_S5E8835) \
+	|| IS_ENABLED(CONFIG_SCSC_PCIE_CHIP) || IS_ENABLED(CONFIG_SOC_S5E8845) \
+	|| IS_ENABLED(CONFIG_SOC_S5E5535)
 	mifpmuman_init(scsc_mx_get_mifpmuman(mxman->mx), mif, handler, mxman);
 #else
 	mifpmuman_init(scsc_mx_get_mifpmuman(mxman->mx), mif, NULL, NULL);
@@ -573,18 +636,56 @@ int mxman_res_pmu_init(struct mxman *mxman)
 
 int mxman_res_pmu_deinit(struct mxman *mxman)
 {
+#if IS_ENABLED(CONFIG_WLBT_PMU2AP_MBOX)
+	struct scsc_mif_abs *mif = scsc_mx_get_mif_abs(mxman->mx);
+	/* For Quartz, disable PMU Mailbox interrupt after shutting down all subsystems */
+	mif->irq_pmu_bit_mask(mif);
+#endif
 	mifpmuman_deinit(scsc_mx_get_mifpmuman(mxman->mx));
 	return 0;
 }
 
-int mxman_res_pmu_boot(struct mxman *mxman, enum scsc_subsystem sub)
+#ifdef CONFIG_SCSC_XO_CDAC_CON
+int mxman_res_dcxo_config_update(struct mxman *mxman)
 {
 	int r;
-#ifdef CONFIG_SOC_S5E8825
+	SCSC_TAG_INFO(MXMAN, "Update dcxo config before wlan/wpan boot\n");
+        r = mifpmuman_send_rfic_dcxo_config(scsc_mx_get_mifpmuman(mxman->mx));
+        if (r) {
+                SCSC_TAG_INFO(MXMAN, "PMU error\n");
+                return r;
+        }
+	mxman->is_dcxo_set = true;
+
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+int mxman_res_pmu_boot(struct mxman *mxman, enum scsc_subsystem sub, bool recovery_enable)
+#else
+int mxman_res_pmu_boot(struct mxman *mxman, enum scsc_subsystem sub)
+#endif
+{
+	int r;
+#if IS_ENABLED(CONFIG_SOC_S5E8825) || IS_ENABLED(CONFIG_SOC_S5E5515) \
+	|| IS_ENABLED(CONFIG_SOC_S5E8535) || IS_ENABLED(CONFIG_SOC_S5E8835) \
+	|| IS_ENABLED(CONFIG_SCSC_PCIE_CHIP) || IS_ENABLED(CONFIG_SOC_S5E8845) \
+	|| IS_ENABLED(CONFIG_SOC_S5E5535)
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+	r = mifpmuman_recovery_mode_subsystem(scsc_mx_get_mifpmuman(mxman->mx), recovery_enable);
+	if (r) {
+		SCSC_TAG_INFO(MXMAN, "PMU error\n");
+		goto exit;
+	}
+#endif
 	/* This should be a blocking call, mifpmu should do the waitqueue */
 	r = mifpmuman_start_subsystem(scsc_mx_get_mifpmuman(mxman->mx), sub);
 	if (r)
 		SCSC_TAG_INFO(MXMAN, "PMU error\n");
+#if defined(CONFIG_WLBT_SPLIT_RECOVERY)
+exit:
+#endif
 	return r;
 #else
         enum pmu_msg msg;
@@ -613,7 +714,10 @@ int mxman_res_pmu_boot(struct mxman *mxman, enum scsc_subsystem sub)
 #endif
 }
 
-#ifdef CONFIG_SOC_S5E8825
+#if IS_ENABLED(CONFIG_SOC_S5E8825) || IS_ENABLED(CONFIG_SOC_S5E5515) \
+	|| IS_ENABLED(CONFIG_SOC_S5E8535) || IS_ENABLED(CONFIG_SOC_S5E8835) \
+	|| IS_ENABLED(CONFIG_SCSC_PCIE_CHIP) || IS_ENABLED(CONFIG_SOC_S5E8845) \
+	|| IS_ENABLED(CONFIG_SOC_S5E5535)
 int mxman_res_pmu_reset(struct mxman *mxman, enum scsc_subsystem sub)
 {
 	int r;
@@ -654,13 +758,27 @@ int mxman_res_pmu_reset(struct mxman *mxman, enum scsc_subsystem sub)
 }
 #endif
 
-#ifdef CONFIG_SOC_S5E8825
+#if IS_ENABLED(CONFIG_SOC_S5E8825) || IS_ENABLED(CONFIG_SOC_S5E5515) \
+	|| IS_ENABLED(CONFIG_SOC_S5E8535) || IS_ENABLED(CONFIG_SOC_S5E8835) \
+	|| IS_ENABLED(CONFIG_SCSC_PCIE_CHIP) || IS_ENABLED(CONFIG_SOC_S5E8845) \
+	|| IS_ENABLED(CONFIG_SOC_S5E5535)
 int mxman_res_pmu_monitor(struct mxman *mxman, enum scsc_subsystem sub)
 {
 	int r;
 
 	/* This should be a blocking call, mifpmu should do the waitqueue */
 	r = mifpmuman_force_monitor_mode_subsystem(scsc_mx_get_mifpmuman(mxman->mx), sub);
+	if (r)
+		SCSC_TAG_INFO(MXMAN, "PMU error\n");
+	return r;
+}
+
+int mxman_res_pmu_scan2mem(struct mxman *mxman, bool dump)
+{
+	int r;
+
+	/* This should be a blocking call, mifpmu should do the waitqueue */
+	r = mifpmuman_trigger_scan2mem(scsc_mx_get_mifpmuman(mxman->mx), dump);
 	if (r)
 		SCSC_TAG_INFO(MXMAN, "PMU error\n");
 	return r;
@@ -676,6 +794,19 @@ static int mxman_res_transports_deinit_wlan(struct mxman *mxman)
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
 	gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mxman->mx));
 #endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_8(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_7(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_6(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_5(mxman->mx));
+#endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mxman->mx));
+#endif
+
 	if (mxman->data_mxconf){
 		miframman_free(scsc_mx_get_ramman(mxman->mx), mxman->data_mxconf);
 		mxman->data_mxconf = NULL;
@@ -693,6 +824,7 @@ static int mxman_res_transports_deinit_wpan(struct mxman *mxman)
 	mxlog_transport_release(scsc_mx_get_mxlog_transport_wpan(mxman->mx));
 	mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport_wpan(mxman->mx));
 	gdb_transport_release(scsc_mx_get_gdb_transport_wpan(mxman->mx));
+
 	if (mxman->data_mxconf_wpan){
 		miframman_free(scsc_mx_get_ramman_wpan(mxman->mx), mxman->data_mxconf_wpan);
 		mxman->data_mxconf_wpan = NULL;
@@ -707,7 +839,7 @@ static int mxman_res_transports_deinit_wpan(struct mxman *mxman)
 
 int mxman_res_deinit_subsystem(struct mxman *mxman, enum scsc_subsystem sub)
 {
-	SCSC_TAG_INFO(MXMAN, "Deinit %s subsystem\n", sub ? "WPAN" : "WLAN");
+	SCSC_TAG_INFO(MXMAN, "Deinit %s subsystem\n", (sub == SCSC_SUBSYSTEM_WPAN)? "WPAN" : "WLAN");
 
 	switch (sub) {
 	case SCSC_SUBSYSTEM_WLAN:
@@ -739,7 +871,7 @@ int mxman_res_deinit_subsystem(struct mxman *mxman, enum scsc_subsystem sub)
 	return 0;
 }
 
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !defined(CONFIG_SCSC_PCIE_CHIP)
 static void mxman_res_mbox_init_wlan(struct mxman *mxman, u32 firmware_entry_point)
 {
 	u32 *mbox0;
@@ -780,7 +912,7 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 	int r;
 	struct scsc_mif_abs *mif = scsc_mx_get_mif_abs(mxman->mx);
 	struct scsc_mx *mx = mxman->mx;
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !defined(CONFIG_SCSC_PCIE_CHIP)
 	struct fwhdr_if *whdr_if = mxman->fw_wlan;
 #endif
 
@@ -797,7 +929,6 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 		/* Ignore return value */
 	}
 #endif
-	/* Initialise gdb transport for cortex-R4 */
 	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan(mx), mx, GDB_TRANSPORT_WLAN);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
@@ -805,7 +936,6 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 		return r;
 	}
 
-	/* Initialise gdb transport for cortex-M4 */
 	r = gdb_transport_init(scsc_mx_get_gdb_transport_fxm_1(mx), mx, GDB_TRANSPORT_FXM_1);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
@@ -814,10 +944,120 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 		return r;
 	}
 #ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
-	/* Initialise gdb transport for cortex-M4 */
 	r = gdb_transport_init(scsc_mx_get_gdb_transport_fxm_2(mx), mx, GDB_TRANSPORT_FXM_2);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+#endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_fxm_3(mx), mx, GDB_TRANSPORT_FXM_3);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_2(mx), mx, GDB_TRANSPORT_WLAN_2);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_3(mx), mx, GDB_TRANSPORT_WLAN_3);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_4(mx), mx, GDB_TRANSPORT_WLAN_4);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+#endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_5(mx), mx, GDB_TRANSPORT_WLAN_5);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_6(mx), mx, GDB_TRANSPORT_WLAN_6);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_5(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_7(mx), mx, GDB_TRANSPORT_WLAN_7);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_6(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_5(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_wlan_8(mx), mx, GDB_TRANSPORT_WLAN_8);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_7(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_6(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_5(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_1(mx));
 		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
 		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
 		return r;
@@ -834,6 +1074,18 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 #endif
 		gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
 		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_8(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_7(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_6(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_5(mx));
+#endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mx));
+		gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mx));
+#endif
 		return r;
 	}
 
@@ -894,6 +1146,18 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 	/* serialise Cortex-M4 gdb transport */
 	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_fxm_2(mx), &mxconf->monitor_c2_trans_conf);
 #endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_fxm_3(mx),  &mxconf->monitor_c4_trans_conf);
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_2(mx), &mxconf->monitor_c5_trans_conf);
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_3(mx), &mxconf->monitor_c6_trans_conf);
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_4(mx), &mxconf->monitor_c7_trans_conf);
+#endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_5(mx), &mxconf->monitor_c8_trans_conf);
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_6(mx), &mxconf->monitor_c9_trans_conf);
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_7(mx),  &mxconf->monitor_c10_trans_conf);
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_wlan_8(mx),  &mxconf->monitor_c11_trans_conf);
+#endif
 	/* serialise mxlog transport */
 	mxlog_transport_config_serialise(scsc_mx_get_mxlog_transport(mx), &mxconf->mxlogconf);
 	SCSC_TAG_DEBUG(
@@ -922,12 +1186,13 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 	SCSC_TAG_INFO(MXMAN, "mxlogger_area_offset  0x%x mxlogger_area_length 0x%x\n", mxconf->mxlogger_area_offset,
 		     mxconf->mxlogger_area_length);
 
+	mxconf->firmware_startup_flags = firmware_startup_flags;
 #ifdef CONFIG_SCSC_COMMON_HCF
 	/* Load Common Config HCF */
 	mxfwconfig_load(mxman->mx, &mxconf->fwconfig);
 #endif
 
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !defined(CONFIG_SCSC_PCIE_CHIP)
 	mxman_res_mbox_init_wlan(mxman, whdr_if->get_entry_point(whdr_if));
 #endif
 
@@ -944,6 +1209,18 @@ error_alloc:
 	gdb_transport_release(scsc_mx_get_gdb_transport_fxm_2(mx));
 #endif
 	gdb_transport_release(scsc_mx_get_gdb_transport_wlan(mx));
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	gdb_transport_release(scsc_mx_get_gdb_transport_fxm_3(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_2(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_3(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_4(mxman->mx));
+#endif
+#if defined(CONFIG_SCSC_BB_REDWOOD)
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_5(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_6(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_7(mxman->mx));
+	gdb_transport_release(scsc_mx_get_gdb_transport_wlan_8(mxman->mx));
+#endif
 	mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
 	mxlog_transport_release(scsc_mx_get_mxlog_transport(mx));
 	return -ENOMEM;
@@ -1054,6 +1331,7 @@ static int mxman_res_transports_init_wpan(struct mxman *mxman, void *data, size_
 #endif
 	SCSC_TAG_INFO(MXMAN, "mxlogger_area_offset  0x%x mxlogger_area_length 0x%x\n", mxconf_wpan->mxlogger_area_offset,
 		     mxconf_wpan->mxlogger_area_length);
+	mxconf_wpan->firmware_startup_flags = firmware_startup_flags;
 
 	SCSC_TAG_INFO(MXMAN, "mxconfig in DRAM\n");
 
@@ -1091,10 +1369,21 @@ int mxman_res_init_common(struct mxman *mxman)
 		return ret;
 #endif
 #ifdef CONFIG_SCSC_LAST_PANIC_IN_DRAM
-	if(is_bug_on_enabled(mxman->mx))
+	if(is_bug_on_enabled())
 		ret = scsc_log_in_dram_mmap_create();
 	if(ret)
 		return ret;
+#endif
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	/* initialize pmu gdb transport here (abstracted out of subsystem specific transports) as it's common
+	 * between WLAN/BT subsystems */
+	ret = gdb_transport_init(scsc_mx_get_gdb_transport_pmu(mxman->mx), mxman->mx, GDB_TRANSPORT_PMU);
+	if (ret) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() for PMU failed %d\n", ret);
+		return ret;
+	}
+
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_pmu(mxman->mx), &mxman->mxconf->monitor_c3_trans_conf);
 #endif
 	return ret;
 }
@@ -1105,6 +1394,11 @@ int mxman_res_deinit_common(struct mxman *mxman)
 	int ret = 0;
 
 	SCSC_TAG_INFO(MXMAN, "Deinit common components\n");
+
+#if defined(CONFIG_SCSC_PCIE_CHIP)
+	/* release pmu gdb transport here abstracted out of sub-system specific transports */
+	gdb_transport_release(scsc_mx_get_gdb_transport_pmu(mxman->mx));
+#endif
 #ifdef CONFIG_SCSC_SMAPPER
 	ret = mifsmapper_deinit(scsc_mx_get_smapper(mxman->mx));
 	if(ret)
@@ -1116,7 +1410,7 @@ int mxman_res_deinit_common(struct mxman *mxman)
 		return ret;
 #endif
 #ifdef CONFIG_SCSC_LAST_PANIC_IN_DRAM
-	if(is_bug_on_enabled(mxman->mx))
+	if(is_bug_on_enabled())
 		ret = scsc_log_in_dram_mmap_destroy();
 	if(ret)
 		return ret;
@@ -1161,6 +1455,16 @@ int mxman_res_init_subsystem(struct mxman *mxman, enum scsc_subsystem sub, void 
 	return r;
 }
 
+void mxman_res_control_suspend_gpio(struct mxman *mxman, u8 value)
+{
+	struct scsc_mif_abs *mif;
+
+	mif = scsc_mx_get_mif_abs(mxman->mx);
+#ifdef CONFIG_SCSC_BB_REDWOOD
+	mif->control_suspend_gpio(mif,value);
+#endif
+}
+
 int mxman_res_reset(struct mxman *mxman, bool reset)
 {
 	int r;
@@ -1190,7 +1494,7 @@ int mxman_res_post_init_subsystem(struct mxman *mxman, enum scsc_subsystem sub)
 #if IS_ENABLED(CONFIG_SCSC_MXLOGGER)
 		r = mxlogger_start_channel(scsc_mx_get_mxlogger(mxman->mx), SCSC_MIF_ABS_TARGET_WLAN);
 		if (r) {
-			mxlogger_deinit_channel(scsc_mx_get_mxlogger(mxman->mx), SCSC_MIF_ABS_TARGET_WPAN);
+			mxlogger_deinit_channel(scsc_mx_get_mxlogger(mxman->mx), SCSC_MIF_ABS_TARGET_WLAN);
 		}
 #endif
 		break;

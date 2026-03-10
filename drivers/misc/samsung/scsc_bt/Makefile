@@ -10,11 +10,11 @@ scsc_bt-$(CONFIG_SCSC_QOS) += scsc_bt_qos.o
 scsc_bt-$(CONFIG_SCSC_BT_BLUEZ) += scsc_bluez.o
 scsc_bt-$(CONFIG_SCSC_ANT) += scsc_ant.o
 
-ifeq ($(CONFIG_SCSC_LOG_COLLECTION), m)
+ifneq ($(filter $(CONFIG_SCSC_LOG_COLLECTION), y m),)
 ccflags-y += -DCONFIG_SCSC_LOG_COLLECTION
 endif
 
-ifeq ($(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM), m)
+ifneq ($(filter $(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM), y m),)
 ccflags-y += -DCONFIG_SCSC_INDEPENDENT_SUBSYSTEM
 endif
 
@@ -39,15 +39,6 @@ else
 ccflags-$(CONFIG_SCSC_ANT) += -DCONFIG_SCSC_ANT
 endif
 
-# Android Platform version
-ifneq ($(ANDROID_VERSION),)
-ANDROID_PLATFORM_VERSION=$(shell expr $(ANDROID_VERSION) / 10000)
-ccflags-y += -DSCSC_SEP_VERSION=$(ANDROID_PLATFORM_VERSION)
-$(info ANDROID_VERSION is $(ANDROID_VERSION))
-else
-ifneq ($(PLATFORM_VERSION),)
-ANDROID_PLATFORM_VERSION := $(basename $(PLATFORM_VERSION))
-ccflags-y += -DSCSC_SEP_VERSION=$(ANDROID_PLATFORM_VERSION)
-$(info PLATFORM_VERSION is $(PLATFORM_VERSION))
-endif
+ifneq ($(CONFIG_SCSC_SEP_VERSION),0)
+ccflags-y += -DSCSC_SEP_VERSION=$(CONFIG_SCSC_SEP_VERSION)
 endif

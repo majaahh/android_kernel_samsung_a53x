@@ -1,11 +1,14 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2021 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 #ifndef _PMU_CAL_H_
 #define _PMU_CAL_H_
 
+#if defined(CONFIG_WLBT_REFACTORY)
+#include "platform_mif.h"
+#else
 #ifdef CONFIG_SOC_S5E5515
 #include "platform_mif_s5e5515.h"
 #include "mif_reg_S5E5515.h"
@@ -14,10 +17,20 @@
 #include "platform_mif_s5e8825.h"
 #include "mif_reg_S5E8825.h"
 #endif
+#ifdef CONFIG_SOC_S5E8535
+#include "platform_mif_s5e8535.h"
+#include "mif_reg_S5E8535.h"
+#endif
+#ifdef CONFIG_SOC_S5E8835
+#include "platform_mif_s5e8835.h"
+#include "mif_reg_S5E8835.h"
+#endif
+#endif
+
 #include "linux/regmap.h"
 
 #define MAX_NAME_SIZE 20
-
+struct platform_mif;
 struct pmucal {
 	struct pmucal_data *init;
 	struct pmucal_data *reset_assert;
@@ -35,12 +48,12 @@ struct pmucal_data {
 	int value;
 };
 
-enum PMUCAL_ACCESS_TYPE {
-	PMUCAL_WRITE,
-	PMUCAL_DELAY,
-	PMUCAL_READ,
-	PMUCAL_ATOMIC,
-	PMUCAL_CLEAR,
+enum WLBT_PMUCAL_ACCESS_TYPE {
+	WLBT_PMUCAL_WRITE,
+	WLBT_PMUCAL_DELAY,
+	WLBT_PMUCAL_READ,
+	WLBT_PMUCAL_ATOMIC,
+	WLBT_PMUCAL_CLEAR,
 };
 
 extern struct pmucal pmucal_wlbt;

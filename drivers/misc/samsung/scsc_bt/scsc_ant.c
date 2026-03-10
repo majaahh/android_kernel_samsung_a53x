@@ -80,7 +80,7 @@ static int scsc_ant_shm_init_interrupt(void)
 
 	/* To-host f/w IRQ allocations and ISR registrations */
 	irq_ret = scsc_service_mifintrbit_register_tohost(
-	    ant_service.service, scsc_ant_shm_irq_handler, NULL, SCSC_MIFINTR_TARGET_WPAN);
+	    ant_service.service, scsc_ant_shm_irq_handler, NULL, SCSC_MIFINTR_TARGET_WPAN, SCSC_ANT_SHM_IRQ_TYPE);
 	if (irq_ret < 0)
 		return irq_ret;
 

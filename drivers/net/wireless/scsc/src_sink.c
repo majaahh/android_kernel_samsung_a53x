@@ -10,6 +10,7 @@
 #include "fapi.h"
 #include "mlme.h"
 #include "mgt.h"
+#include <scsc/scsc_warn.h>
 
 static int slsi_src_sink_fake_sta_start(struct slsi_dev *sdev, struct net_device *dev)
 {
@@ -20,24 +21,32 @@ static int slsi_src_sink_fake_sta_start(struct slsi_dev *sdev, struct net_device
 
 	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
 
+	if (ndev_vif->activated) {
+		SLSI_NET_INFO(dev, "VIF already activated (vif:%d)\n", ndev_vif->ifnum);
+		SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+		return 0;
+	}
+
 	ndev_vif->iftype = NL80211_IFTYPE_STATION;
 	dev->ieee80211_ptr->iftype = NL80211_IFTYPE_STATION;
 	ndev_vif->vif_type = FAPI_VIFTYPE_STATION;
 
-	if (WARN(slsi_mlme_add_vif(sdev, dev, dev->dev_addr, device_address) != 0, "add VIF failed")) {
+	if (WLBT_WARN(slsi_mlme_add_vif(sdev, dev, dev->dev_addr, device_address) != 0, "add VIF failed")) {
 		SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 		return -EFAULT;
 	}
 
-	if (WARN(slsi_vif_activated(sdev, dev) != 0, "activate VIF failed")) {
+	if (WLBT_WARN(slsi_vif_activated(sdev, dev) != 0, "activate VIF failed")) {
 		if (slsi_mlme_del_vif(sdev, dev) != 0)
 			SLSI_NET_ERR(dev, "slsi_mlme_del_vif failed\n");
 		SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 		return -EFAULT;
 	}
 
+	slsi_spinlock_lock(&ndev_vif->peer_lock);
 	peer = slsi_peer_add(sdev, dev, fake_peer_mac, SLSI_STA_PEER_QUEUESET + 1);
-	if (WARN(!peer, "add fake peer failed")) {
+	if (WLBT_WARN(!peer, "add fake peer failed")) {
+		slsi_spinlock_unlock(&ndev_vif->peer_lock);
 		slsi_vif_deactivated(sdev, dev);
 		if (slsi_mlme_del_vif(sdev, dev) != 0)
 			SLSI_NET_ERR(dev, "slsi_mlme_del_vif failed\n");
@@ -46,6 +55,7 @@ static int slsi_src_sink_fake_sta_start(struct slsi_dev *sdev, struct net_device
 	}
 	peer->qos_enabled = true;
 	slsi_ps_port_control(sdev, dev, peer, SLSI_STA_CONN_STATE_CONNECTED);
+	slsi_spinlock_unlock(&ndev_vif->peer_lock);
 	netif_carrier_on(dev);
 	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 	return 0;
@@ -60,7 +70,7 @@ static void slsi_src_sink_fake_sta_stop(struct slsi_dev *sdev, struct net_device
 
 	SLSI_NET_DBG1(dev, SLSI_SRC_SINK, "station stop(vif:%d)\n", ndev_vif->ifnum);
 
-	if (WARN(!ndev_vif->activated, "not activated")) {
+	if (WLBT_WARN(!ndev_vif->activated, "not activated")) {
 		SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 		return;
 	}
@@ -71,9 +81,9 @@ static void slsi_src_sink_fake_sta_stop(struct slsi_dev *sdev, struct net_device
 		slsi_peer_remove(sdev, dev, peer);
 		slsi_spinlock_unlock(&ndev_vif->peer_lock);
 	}
-	slsi_vif_deactivated(sdev, dev);
 	if (slsi_mlme_del_vif(sdev, dev) != 0)
 			SLSI_NET_ERR(dev, "slsi_mlme_del_vif failed\n");
+	slsi_vif_deactivated(sdev, dev);
 	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 }
 
@@ -85,7 +95,7 @@ static int slsi_src_sink_loopback_start(struct slsi_dev *sdev)
 
 	for (i = SLSI_NET_INDEX_WLAN; i <= SLSI_NET_INDEX_P2P; i++) {
 		dev = slsi_get_netdev_locked(sdev, i);
-		if (WARN(!dev, "no netdev (index:%d)", i))
+		if (WLBT_WARN(!dev, "no netdev (index:%d)", i))
 			return -EFAULT;
 
 		ndev_vif = netdev_priv(dev);
@@ -114,7 +124,7 @@ static int slsi_src_sink_loopback_start(struct slsi_dev *sdev)
 			}
 		}
 		SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
-		if (WARN(slsi_src_sink_fake_sta_start(sdev, dev) != 0, "fake STA setup failed (vif:%d)\n", i))
+		if (WLBT_WARN(slsi_src_sink_fake_sta_start(sdev, dev) != 0, "fake STA setup failed (vif:%d)\n", i))
 			return -EFAULT;
 	}
 	return 0;
@@ -128,7 +138,7 @@ static void slsi_src_sink_loopback_stop(struct slsi_dev *sdev)
 
 	for (i = SLSI_NET_INDEX_WLAN; i <= SLSI_NET_INDEX_P2P; i++) {
 		dev = slsi_get_netdev_locked(sdev, i);
-		if (WARN(!dev, "no netdev (index:%d)", i))
+		if (WLBT_WARN(!dev, "no netdev (index:%d)", i))
 			return;
 
 		slsi_src_sink_fake_sta_stop(sdev, dev);
@@ -170,7 +180,7 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 
 	SLSI_MUTEX_LOCK(sdev->netdev_add_remove_mutex);
 	dev = slsi_get_netdev_locked(sdev, src_sink_arg.common.vif);
-	if (WARN_ON(!dev)) {
+	if (WLBT_WARN_ON(!dev)) {
 		SLSI_ERR(sdev, "netdev for input vif:%d is NULL\n", src_sink_arg.common.vif);
 		r = -ENODEV;
 		goto out_locked;
@@ -179,12 +189,12 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 
 	switch (src_sink_arg.common.action) {
 	case SRC_SINK_ACTION_SINK_START:
-		if (WARN(slsi_src_sink_fake_sta_start(sdev, dev) != 0, "fake STA setup failed\n")) {
+		if (WLBT_WARN(slsi_src_sink_fake_sta_start(sdev, dev) != 0, "fake STA setup failed\n")) {
 			r = -EFAULT;
 			goto out_locked;
 		}
 		req = fapi_alloc(debug_pkt_sink_start_req, DEBUG_PKT_SINK_START_REQ, src_sink_arg.common.vif, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -197,7 +207,7 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		break;
 	case SRC_SINK_ACTION_SINK_STOP:
 		req = fapi_alloc(debug_pkt_sink_stop_req, DEBUG_PKT_SINK_STOP_REQ, src_sink_arg.common.vif, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -208,12 +218,12 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		slsi_src_sink_fake_sta_stop(sdev, dev);
 		break;
 	case SRC_SINK_ACTION_GEN_START:
-		if (WARN(slsi_src_sink_fake_sta_start(sdev, dev) != 0, "fake STA setup failed\n")) {
+		if (WLBT_WARN(slsi_src_sink_fake_sta_start(sdev, dev) != 0, "fake STA setup failed\n")) {
 			r = -EFAULT;
 			goto out_locked;
 		}
 		req = fapi_alloc(debug_pkt_gen_start_req, DEBUG_PKT_GEN_START_REQ, src_sink_arg.common.vif, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -240,7 +250,7 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		break;
 	case SRC_SINK_ACTION_GEN_STOP:
 		req = fapi_alloc(debug_pkt_gen_stop_req, DEBUG_PKT_GEN_STOP_REQ, src_sink_arg.common.vif, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -251,12 +261,12 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		slsi_src_sink_fake_sta_stop(sdev, dev);
 		break;
 	case SRC_SINK_ACTION_LOOPBACK_START:
-		if (WARN(slsi_src_sink_loopback_start(sdev) != 0, "loopback setup failed\n")) {
+		if (WLBT_WARN(slsi_src_sink_loopback_start(sdev) != 0, "loopback setup failed\n")) {
 			r = -EFAULT;
 			goto out_locked;
 		}
 		req = fapi_alloc(debug_pkt_sink_start_req, DEBUG_PKT_SINK_START_REQ, 1, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -269,7 +279,7 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		break;
 	case SRC_SINK_ACTION_LOOPBACK_STOP:
 		req = fapi_alloc(debug_pkt_sink_stop_req, DEBUG_PKT_SINK_STOP_REQ, 1, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -281,7 +291,7 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		break;
 	case SRC_SINK_ACTION_SINK_REPORT:
 		req = fapi_alloc(debug_pkt_sink_report_req, DEBUG_PKT_SINK_REPORT_REQ, src_sink_arg.common.vif, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}
@@ -315,7 +325,7 @@ long slsi_src_sink_cdev_ioctl_cfg(struct slsi_dev *sdev, unsigned long arg)
 		break;
 	case SRC_SINK_ACTION_GEN_REPORT:
 		req = fapi_alloc(debug_pkt_gen_report_req, DEBUG_PKT_GEN_REPORT_REQ, src_sink_arg.common.vif, 0);
-		if (WARN_ON(!req)) {
+		if (WLBT_WARN_ON(!req)) {
 			r = -ENODEV;
 			goto out_locked;
 		}

@@ -7,7 +7,7 @@
 #ifndef _SRVMAN_H
 #define _SRVMAN_H
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #include <scsc/scsc_wakelock.h>
 #else
@@ -38,9 +38,16 @@ void srvman_set_error_complete(struct srvman *srvman, enum error_status s);
 void srvman_set_error(struct srvman *srvman, enum error_status s);
 bool srvman_in_error_safe(struct srvman *srvman);
 bool srvman_in_error(struct srvman *srvman);
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+void srvman_set_error_subsystem_complete(struct srvman *srvman, enum scsc_subsystem sub, enum error_status s);
+#endif
 void srvman_clear_error(struct srvman *srvman);
 bool srvman_allow_close(struct srvman *srvman);
 void srvman_deinit(struct srvman *srvman);
+
+/* BT FW log to btsnoop (fwsnoop) */
+void srvman_forward_bt_fw_log(struct srvman *srvman, size_t length, u32 level, const void *message);
+void srvman_wake_up_mxlog_thread_for_fwsnoop(void *data);
 
 struct srvman {
 	struct scsc_mx   *mx;
@@ -49,14 +56,14 @@ struct srvman {
 	struct mutex     api_access_mutex;
 	struct mutex     error_state_mutex;
 	enum error_status error;
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_SCSC_COMMON_ANDROID
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 	struct scsc_wake_lock sm_wake_lock;
 #else
 	struct wake_lock sm_wake_lock;
 #endif
 #endif
-#if IS_ENABLED(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
+#if defined(CONFIG_SCSC_INDEPENDENT_SUBSYSTEM)
 	bool notify;
 #endif
 };

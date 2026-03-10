@@ -114,6 +114,10 @@ struct bhdr {
 
 #define bhdr_from_fwhdr_if(FWHDR_IF_PTR) container_of(FWHDR_IF_PTR, struct bhdr, fw_if)
 
+#ifdef CONFIG_WLBT_KUNIT
+#include "./kunit/kunit_bhdr.c"
+#endif
+
 /** Return the next item after a given item and decrement the remaining length */
 static const struct bhdr_tag_length *bhdr_next_item(const struct bhdr_tag_length *item, uint32_t *bhdr_length)
 {
@@ -181,12 +185,20 @@ static int bhdr_copy_fw(struct fwhdr_if *interface, char *fw_data, size_t fw_siz
 	return 0;
 }
 
+static void bhdr_init_value(struct bhdr *bhdr)
+{
+	bhdr->bt_fw_offset_val = 0;
+	bhdr->bt_fw_runtime_size_val = 0;
+	bhdr->bt_panic_record_offset = 0;
+}
+
 static int bhdr_init(struct fwhdr_if *interface, char *fw_data, size_t fw_len, bool skip_header)
 {
 	const void *bt_fw;
 	const void *bt_res;
 	struct bhdr *bhdr = bhdr_from_fwhdr_if(interface);
 
+	bhdr_init_value(bhdr);
 	bt_fw = (const void *)((uintptr_t)fw_data);
 	bt_res = bhdr_lookup_tag(bt_fw, BHDR_TAG_FW_OFFSET, NULL);
 	if (!bt_res)
@@ -213,6 +225,13 @@ static u32 bhdr_get_fw_rt_len(struct fwhdr_if *interface)
 	struct bhdr *bhdr = bhdr_from_fwhdr_if(interface);
 
 	return bhdr->bt_fw_runtime_size_val;
+}
+
+static u32 bhdr_get_fw_len(struct fwhdr_if *interface)
+{
+	struct bhdr *bhdr = bhdr_from_fwhdr_if(interface);
+
+	return bhdr->fw_size;
 }
 
 static u32 bhdr_get_fw_offset(struct fwhdr_if *interface)
@@ -242,6 +261,7 @@ struct fwhdr_if *bhdr_create(void)
 	fw_if->init = bhdr_init;
 	fw_if->get_panic_record_offset = bhdr_get_panic_record_offset;
 	fw_if->get_fw_rt_len = bhdr_get_fw_rt_len;
+	fw_if->get_fw_len = bhdr_get_fw_len;
 	fw_if->get_fw_offset = bhdr_get_fw_offset;
 	fw_if->copy_fw = bhdr_copy_fw;
 
@@ -251,9 +271,13 @@ struct fwhdr_if *bhdr_create(void)
 /* Implementation destroy */
 void bhdr_destroy(struct fwhdr_if *interface)
 {
-	struct bhdr *bhdr = bhdr_from_fwhdr_if(interface);
+	struct bhdr *bhdr;
 	struct fwhdr_if *fw_if;
 
+	if (!interface)
+		return;
+
+	bhdr = bhdr_from_fwhdr_if(interface);
 	if (!bhdr)
 		return;
 

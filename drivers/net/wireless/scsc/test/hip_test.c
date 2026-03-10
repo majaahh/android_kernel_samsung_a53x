@@ -54,7 +54,7 @@ int slsi_hip_sap_setup(struct slsi_dev *sdev)
 	u16 version = 0;
 
 	if (hip_sap_cont.sap[SAP_MLME]->sap_version_supported) {
-		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip4_inst.hip_control->config_v4, sap_mlme_ver);
+		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip.hip_control->config_v4, sap_mlme_ver);
 		if (hip_sap_cont.sap[SAP_MLME]->sap_version_supported(version))
 			return -ENODEV;
 	} else {
@@ -62,7 +62,7 @@ int slsi_hip_sap_setup(struct slsi_dev *sdev)
 	}
 
 	if (hip_sap_cont.sap[SAP_MA]->sap_version_supported) {
-		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip4_inst.hip_control->config_v4, sap_ma_ver);
+		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip.hip_control->config_v4, sap_ma_ver);
 		if (hip_sap_cont.sap[SAP_MA]->sap_version_supported(version))
 			return -ENODEV;
 	} else {
@@ -70,7 +70,7 @@ int slsi_hip_sap_setup(struct slsi_dev *sdev)
 	}
 
 	if (hip_sap_cont.sap[SAP_DBG]->sap_version_supported) {
-		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip4_inst.hip_control->config_v4, sap_debug_ver);
+		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip.hip_control->config_v4, sap_debug_ver);
 		if (hip_sap_cont.sap[SAP_DBG]->sap_version_supported(version))
 			return -ENODEV;
 	} else {
@@ -78,7 +78,7 @@ int slsi_hip_sap_setup(struct slsi_dev *sdev)
 	}
 
 	if (hip_sap_cont.sap[SAP_TST]->sap_version_supported) {
-		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip4_inst.hip_control->config_v4, sap_test_ver);
+		version = scsc_wifi_get_hip_config_version_4_u16(&sdev->hip.hip_control->config_v4, sap_test_ver);
 		if (hip_sap_cont.sap[SAP_TST]->sap_version_supported(version))
 			return -ENODEV;
 	} else {
@@ -118,7 +118,7 @@ int slsi_hip_rx(struct slsi_dev *sdev, struct sk_buff *skb)
 }
 
 /* value used at all levels in the driver */
-int slsi_hip_init(struct slsi_dev *sdev, struct device *dev)
+int slsi_hip_cm_register(struct slsi_dev *sdev, struct device *dev)
 {
 	SLSI_UNUSED_PARAMETER(dev);
 
@@ -127,11 +127,11 @@ int slsi_hip_init(struct slsi_dev *sdev, struct device *dev)
 	sdev->hip.sdev     = sdev;
 	mutex_init(&sdev->hip.hip_mutex);
 
-	sdev->hip4_inst.hip_control = &test_hip_control;
+	sdev->hip.hip_control = &test_hip_control;
 	return 0;
 }
 
-void slsi_hip_deinit(struct slsi_dev *sdev)
+void slsi_hip_cm_unregister(struct slsi_dev *sdev)
 {
 	mutex_destroy(&sdev->hip.hip_mutex);
 }
@@ -141,14 +141,14 @@ int slsi_hip_stop(struct slsi_dev *sdev)
 	return 0;
 }
 
-int hip4_free_ctrl_slots_count(struct slsi_hip4 *hip)
+int slsi_hip_free_control_slots_count(struct slsi_hip *hip)
 {
 	return HIP4_CTL_SLOTS;
 }
 
-int scsc_wifi_transmit_frame(struct slsi_hip4 *hip, struct sk_buff *skb, bool ctrl_packet, u8 vif_index, u8 peer_index, u8 priority)
+int slsi_hip_transmit_frame(struct slsi_hip *hip, struct sk_buff *skb, bool ctrl_packet, u8 vif_index, u8 peer_index, u8 priority)
 {
-	struct slsi_dev *sdev = container_of(hip, struct slsi_dev, hip4_inst);
+	struct slsi_dev *sdev = container_of(hip, struct slsi_dev, hip);
 
 	slsi_log_clients_log_signal_fast(sdev, &sdev->log_clients, skb, SLSI_LOG_DIRECTION_FROM_HOST);
 

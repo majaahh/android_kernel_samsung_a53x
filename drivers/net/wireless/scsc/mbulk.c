@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2014 - 2017 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2023 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
 #include <linux/string.h>
@@ -9,6 +9,7 @@
 #include "hip4_sampler.h"
 
 #include "debug.h"
+#include <scsc/scsc_warn.h>
 
 /* mbulk descriptor is aligned to 64 bytes considering the host processor's
  * cache line size
@@ -44,6 +45,14 @@ struct mbulk_tracker {
 	mbulk_colour colour;
 };
 
+enum free_list_idx {
+	FIRST,
+	SECOND,
+};
+
+/* To track two recent mbulk free list in preparation for memory pollution */
+struct mbulk *track_free_list[MBULK_POOL_ID_MAX][2];
+
 /* mbulk pool */
 struct mbulk_pool {
 	bool         valid;                   /** is valid */
@@ -72,6 +81,29 @@ static inline struct mbulk *mbulk_pool_get(struct mbulk_pool *pool, enum mbulk_c
 	spin_lock_bh(&mbulk_pool_lock);
 	m = pool->free_list;
 
+	if ((char *)m < pool->base_addr || (char *)m > pool->end_addr) {
+		SLSI_DBG3_NODEV(SLSI_MBULK, "Mbulk address is out of address boundary\n");
+
+		if (!track_free_list[pool->pid][SECOND]) {
+			/* Only one mbulk in the free list */
+			pool->free_list = NULL;
+			track_free_list[pool->pid][FIRST] = NULL;
+			track_free_list[pool->pid][SECOND] = NULL;
+		} else {
+			/* More than one mbulk in the free list */
+			pool->free_list = track_free_list[pool->pid][SECOND];
+			track_free_list[pool->pid][FIRST] = track_free_list[pool->pid][SECOND];
+
+			if (track_free_list[pool->pid][FIRST]->next_offset == 0)
+				track_free_list[pool->pid][SECOND] = NULL;
+			else
+				track_free_list[pool->pid][SECOND] =
+					(struct mbulk *)((uintptr_t)track_free_list[pool->pid][SECOND]
+					+ track_free_list[pool->pid][SECOND]->next_offset);
+		}
+		m = pool->free_list;
+	}
+
 	if (m == NULL || pool->free_cnt <= guard) { /* guard */
 		spin_unlock_bh(&mbulk_pool_lock);
 		return NULL;
@@ -80,12 +112,23 @@ static inline struct mbulk *mbulk_pool_get(struct mbulk_pool *pool, enum mbulk_c
 	pool->free_cnt--;
 	pool->usage[clas]++;
 
-	SCSC_HIP4_SAMPLER_MBULK(pool->minor, (pool->free_cnt & 0x100) >> 8, (pool->free_cnt & 0xff), pool->pid);
+	SCSC_HIP4_SAMPLER_MBULK(pool->minor, (pool->free_cnt & 0x100) >> 8, (pool->free_cnt & 0xff), pool->pid, pool->tot_seg_num);
 
-	if (m->next_offset == 0)
+	if (m->next_offset == 0) {
 		pool->free_list = NULL;
-	else
+		track_free_list[pool->pid][FIRST] = NULL;
+		track_free_list[pool->pid][SECOND] = NULL;
+	} else {
 		pool->free_list = (struct mbulk *)((uintptr_t)pool->free_list + m->next_offset);
+		track_free_list[pool->pid][FIRST] = track_free_list[pool->pid][SECOND];
+
+		if (track_free_list[pool->pid][FIRST]->next_offset == 0)
+			track_free_list[pool->pid][SECOND] = NULL;
+		else
+			track_free_list[pool->pid][SECOND] =
+				(struct mbulk *)((uintptr_t)track_free_list[pool->pid][SECOND]
+				+ track_free_list[pool->pid][SECOND]->next_offset);
+	}
 
 	memset(m, 0, sizeof(*m));
 	m->pid = pool->pid;
@@ -98,6 +141,8 @@ static inline struct mbulk *mbulk_pool_get(struct mbulk_pool *pool, enum mbulk_c
 /* put a segment to a pool */
 static inline void mbulk_pool_put(struct mbulk_pool *pool, struct mbulk *m)
 {
+	struct slsi_dev *sdev = slsi_get_sdev();
+
 	if (m->flag == MBULK_F_FREE)
 		return;
 
@@ -105,16 +150,33 @@ static inline void mbulk_pool_put(struct mbulk_pool *pool, struct mbulk *m)
 		return;
 
 	spin_lock_bh(&mbulk_pool_lock);
+
+	if ((char *)m < pool->base_addr || (char *)m > pool->end_addr) {
+		SLSI_DBG3_NODEV(SLSI_MBULK, "Mbulk address is out of address boundary\n");
+
+		/* Collect sable log for analysis */
+		if (sdev)
+			schedule_work(&sdev->sablelog_logging_work);
+		spin_unlock_bh(&mbulk_pool_lock);
+		return;
+	}
+
 	pool->usage[m->clas]--;
 	pool->free_cnt++;
 
-	SCSC_HIP4_SAMPLER_MBULK(pool->minor, (pool->free_cnt & 0x100) >> 8, (pool->free_cnt & 0xff), pool->pid);
+	SCSC_HIP4_SAMPLER_MBULK(pool->minor, (pool->free_cnt & 0x100) >> 8, (pool->free_cnt & 0xff), pool->pid, pool->tot_seg_num);
 	m->flag = MBULK_F_FREE;
-	if (pool->free_list != NULL)
+	track_free_list[m->pid][FIRST] = m;
+
+	if (pool->free_list != NULL) {
 		m->next_offset = (uintptr_t)pool->free_list - (uintptr_t)m;
-	else
+		track_free_list[m->pid][SECOND] = pool->free_list;
+	} else {
 		m->next_offset = 0;
+		track_free_list[m->pid][SECOND] = NULL;
+	}
 	pool->free_list = m;
+
 	spin_unlock_bh(&mbulk_pool_lock);
 }
 
@@ -179,9 +241,35 @@ int mbulk_pool_get_free_count(u8 pool_id)
 	int num_free;
 
 	if (pool_id >= MBULK_POOL_ID_MAX) {
-		WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
+		WLBT_WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
 		return -EIO;
 	}
+
+	spin_lock_bh(&mbulk_pool_lock);
+	pool = &mbulk_pools[pool_id];
+
+	if (!pool->valid) {
+		WLBT_WARN_ON(!pool->valid);
+		spin_unlock_bh(&mbulk_pool_lock);
+		return -EIO;
+	}
+
+	num_free = pool->free_cnt;
+	spin_unlock_bh(&mbulk_pool_lock);
+
+	return num_free;
+}
+
+#if !defined(CONFIG_SCSC_WLAN_TX_API) && defined(CONFIG_SCSC_WLAN_TPUT_MONITOR)
+int mbulk_pool_get_count(u8 pool_id, enum mbulk_class clas, int *free, int *inuse)
+{
+	struct mbulk_pool *pool;
+
+	if (pool_id >= MBULK_POOL_ID_MAX)
+		return -EIO;
+
+	if (clas >= MBULK_CLASS_MAX || clas < 0)
+		return -EIO;
 
 	spin_lock_bh(&mbulk_pool_lock);
 	pool = &mbulk_pools[pool_id];
@@ -192,11 +280,13 @@ int mbulk_pool_get_free_count(u8 pool_id)
 		return -EIO;
 	}
 
-	num_free = pool->free_cnt;
+	*free = pool->free_cnt;
+	*inuse = pool->usage[clas];
 	spin_unlock_bh(&mbulk_pool_lock);
 
-	return num_free;
+	return 0;
 }
+#endif
 
 /**
  * Allocate a bulk buffer with an in-lined signal buffer
@@ -218,14 +308,14 @@ struct mbulk *mbulk_with_signal_alloc_by_pool(u8 pool_id, mbulk_colour colour,
 	sig_bufsz = MBULK_SIG_BUFSZ_ROUNDUP(sizeof(struct mbulk) + sig_bufsz_req) - sizeof(struct mbulk);
 
 	if (pool_id >= MBULK_POOL_ID_MAX) {
-		WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
+		WLBT_WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
 		return NULL;
 	}
 
 	pool = &mbulk_pools[pool_id];
 
 	if (!pool->valid) {
-		WARN_ON(!pool->valid);
+		WLBT_WARN_ON(!pool->valid);
 		return NULL;
 	}
 
@@ -259,7 +349,7 @@ mbulk_colour mbulk_get_colour(u8 pool_id, struct mbulk *m)
 	pool = &mbulk_pools[pool_id];
 
 	if (!pool->valid) {
-		WARN_ON(1);
+		WLBT_WARN_ON(1);
 		return 0;
 	}
 
@@ -389,17 +479,18 @@ int mbulk_pool_add(u8 pool_id, char *base, char *end, size_t seg_size, u8 guard)
 {
 	struct mbulk_pool *pool;
 	struct mbulk      *next;
+	struct mbulk	  *m;
 	size_t            byte_per_block;
 
 	if (pool_id >= MBULK_POOL_ID_MAX) {
-		WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
+		WLBT_WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
 		return -EIO;
 	}
 
 	pool = &mbulk_pools[pool_id];
 
 	if (!MBULK_IS_ALIGNED(base)) {
-		WARN_ON(!MBULK_IS_ALIGNED(base));
+		WLBT_WARN_ON(!MBULK_IS_ALIGNED(base));
 		return -EIO;
 	}
 
@@ -436,6 +527,14 @@ int mbulk_pool_add(u8 pool_id, char *base, char *end, size_t seg_size, u8 guard)
 		next = (struct mbulk *)((uintptr_t)next + byte_per_block);
 	}
 
+	m = pool->free_list;
+	track_free_list[pool_id][FIRST] = m;
+
+	if (m->next_offset == 0)
+		track_free_list[pool_id][SECOND] = NULL;
+	else
+		track_free_list[pool_id][SECOND] = (struct mbulk *)((uintptr_t)m + m->next_offset);
+
 	pool->valid = (pool->free_cnt) ? true : false;
 #ifdef CONFIG_SCSC_WLAN_DEBUG
 	pool->minor = minor;
@@ -454,7 +553,7 @@ void mbulk_pool_remove(u8 pool_id)
 	struct mbulk_pool *pool;
 
 	if (pool_id >= MBULK_POOL_ID_MAX) {
-		WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
+		WLBT_WARN_ON(pool_id >= MBULK_POOL_ID_MAX);
 		return;
 	}
 
@@ -487,19 +586,23 @@ void mbulk_pool_dump(u8 pool_id, int max_cnt)
  */
 void mbulk_free_virt_host(struct mbulk *m)
 {
-	u8                pool_id;
+	u16               index;
 	struct mbulk_pool *pool;
 
-	if (m == NULL)
+	if (!m)
 		return;
 
-	pool_id = m->pid & 0x1;
-
-	pool = &mbulk_pools[pool_id];
+	pool = &mbulk_pools[MBULK_POOL_ID_DATA];
 
 	if (!pool->valid) {
-		WARN_ON(!pool->valid);
+		WLBT_WARN_ON(!pool->valid);
 		return;
+	}
+
+	index = (((uintptr_t)pool->end_addr - (uintptr_t)m) >> pool->shift) - 1;
+	if (index >= pool->tot_seg_num) {
+		/* not from data pool */
+		pool = &mbulk_pools[MBULK_POOL_ID_CTRL];
 	}
 
 	/* put to the pool */
