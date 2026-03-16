@@ -127,6 +127,17 @@ struct mali_exynos_ioctl_interactive_boost {
 /*** Legacy IOCTLs for backward compatibility ***/
 
 /*
+ * struct mali_exynos_ioctl_slsi_buffer_alloc_type - Update the status of buffer_alloc_type
+ * @flags: Flags for future expansion
+*/
+struct mali_exynos_ioctl_slsi_buffer_alloc_type {
+         __u32 type;
+ };
+
+ #define MALI_EXYNOS_IOCTL_SLSI_BUFFER_ALLOC_TYPE \
+         _IOR(KBASE_IOCTL_EXTRA_TYPE, 7, struct mali_exynos_ioctl_slsi_buffer_alloc_type)
+
+/*
  * struct kbase_ioctl_slsi_singlebuffer_boost_flags - Update the status of singlebuffer boost flag
  * @flags: Flags for future expansion
  */
