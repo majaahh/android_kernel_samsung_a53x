@@ -4159,6 +4159,8 @@ CONFIG_MALI_HW_ERRATA_1485982_NOT_AFFECTED=y
 #
 # Workarounds
 #
+# CONFIG_MALI_SEC_JOB_STATUS_CHECK is not set
+# CONFIG_MALI_SEC_DEPENDENCY_CHECK is not set
 # end of ARM GPU Configuration
 
 # CONFIG_VGA_ARB is not set
