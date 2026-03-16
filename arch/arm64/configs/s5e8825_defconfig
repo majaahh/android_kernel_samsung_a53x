@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.10.247 Kernel Configuration
+# Linux/arm64 5.10.252 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="Android (14488419, +pgo, +bolt, +lto, +mlgo, based on r584948) clang version 22.0.0 (https://android.googlesource.com/toolchain/llvm-project 2d65e4108033380e6fe8e08b1f1826cd2bfb0c99)"
 CONFIG_GCC_VERSION=0
@@ -1859,7 +1859,6 @@ CONFIG_SRAM=y
 # CONFIG_PCI_ENDPOINT_TEST is not set
 # CONFIG_XILINX_SDFEC is not set
 CONFIG_UID_SYS_STATS=y
-# CONFIG_UID_SYS_STATS_DEBUG is not set
 # CONFIG_PVPANIC is not set
 # CONFIG_HISI_HIKEY_USB is not set
 # CONFIG_C2PORT is not set
