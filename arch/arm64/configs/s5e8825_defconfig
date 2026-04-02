@@ -6838,12 +6838,6 @@ CONFIG_TOUCHSCREEN_GOODIX_BRL=m
 # CONFIG_PDIC_SM5714 is not set
 # CONFIG_SM5714_WATER_DETECTION_ENABLE is not set
 # CONFIG_SM5714_SUPPORT_SBU is not set
-
-#
-# KernelSU
-#
-# CONFIG_KSU is not set
-# end of KernelSU
 # end of Device Drivers
 
 #
