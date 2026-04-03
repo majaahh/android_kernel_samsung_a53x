@@ -1708,6 +1708,14 @@
 					esc-clk = <0x14>;
 					cmd_underrun_cnt = <0x4c2f>;
 				};
+
+				1080x2400@60phs {
+					mode-name = "1080x2400@60phs";
+					pmsk = <0x02 0xaa 0x02 0x7627 0x0d 0x04 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00>;
+					hs-clk = <0x454>;
+					esc-clk = <0x14>;
+					cmd_underrun_cnt = <0x83b>;
+				};
 			};
 		};
 	};
@@ -1719,7 +1727,7 @@
 
 			a53x_panel_display_modes {
 				native-mode = <0x2b>;
-				exposed-mode = <0x2b &A53X_PANEL_DISPLAY_MODE_1080X2400_60HS 0x2d>;
+				exposed-mode = <0x2b &A53X_PANEL_DISPLAY_MODE_1080X2400_60HS 0x2d &A53X_PANEL_DISPLAY_MODE_1080X2400_60PHS>;
 				phandle = <0x25>;
 
 				a53x_panel_display_mode_1080x2400_120hs {
@@ -1788,6 +1796,28 @@
 					dsc_slice_h = <0x28>;
 					cmd_lp_ref = <0x4c2f>;
 					phandle = <0x2d>;
+				};
+
+				A53X_PANEL_DISPLAY_MODE_1080X2400_60PHS: a53x_panel_display_mode_1080x2400_60phs {
+					id = "1080x2400_60HS_120HS_TE_HW_SKIP_1";
+					width = <0x438>;
+					height = <0x960>;
+					refresh_rate = <0x3c>;
+					refresh_mode = <0x02>;
+					panel_refresh_rate = <0x78>;
+					panel_refresh_mode = <0x01>;
+					panel_te_st = <0x00>;
+					panel_te_ed = <0x00>;
+					panel_te_sw_skip_count = <0x00>;
+					panel_te_hw_skip_count = <0x01>;
+					panel_h_porch = <0x00 0x00 0x00>;
+					panel_v_porch = <0x10 0x00 0x00>;
+					dsc_en = <0x01>;
+					dsc_cnt = <0x01>;
+					dsc_slice_num = <0x02>;
+					dsc_slice_w = <0x21c>;
+					dsc_slice_h = <0x28>;
+					cmd_lp_ref = <0x83b>;
 				};
 			};
 		};
@@ -4358,7 +4388,7 @@
 				sec,ic_type = <0x02>;
 				sec,max_drv_num = <0x11>;
 				sec,max_sen_num = <0x23>;
-				sec,drv_map = <0x23 0x24 0x25 0x26 0x27 0x28 0x29 0x2a 0x2b &A53X_PANEL_DISPLAY_MODE_1080X2400_60HS 0x2d 0x2e 0x2f 0x30 0x31 0x32 0x33>;
+				sec,drv_map = <0x23 0x24 0x25 0x26 0x27 0x28 0x29 0x2a 0x2b &A53X_PANEL_DISPLAY_MODE_1080X2400_60HS 0x2d &A53X_PANEL_DISPLAY_MODE_1080X2400_60PHS 0x2e 0x2f 0x30 0x31 0x32 0x33>;
 				sec,sen_map = <0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a 0x0b 0x0c 0x0d 0x0e 0x0f 0x10 0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a 0x1b 0x1c 0x1d 0x1e 0x1f 0x20 0x21 0x22>;
 				sec,short_test_time_reg = <0x1479e>;
 				sec,short_test_status_reg = <0x13400>;
@@ -10195,6 +10225,7 @@
 		a53x_panel_display_mode_1080x2400_120hs = "/fragment@panel_display_mode/__overlay__/a53x_panel_display_modes/a53x_panel_display_mode_1080x2400_120hs";
 		a53x_panel_display_mode_1080x2400_60hs = "/fragment@panel_display_mode/__overlay__/a53x_panel_display_modes/a53x_panel_display_mode_1080x2400_60hs";
 		a53x_panel_display_mode_1080x2400_30ns = "/fragment@panel_display_mode/__overlay__/a53x_panel_display_modes/a53x_panel_display_mode_1080x2400_30ns";
+		a53x_panel_display_mode_1080x2400_60phs = "/fragment@panel_display_mode/__overlay__/a53x_panel_display_modes/a53x_panel_display_mode_1080x2400_60phs";
 		sec_debug_next = "/fragment@1/__overlay__/sec_debug_next";
 		sm5451_charger = "/fragment@2/__overlay__/sm5451@63";
 		if_pmic_irq = "/fragment@3/__overlay__/if_pmic_irq";
