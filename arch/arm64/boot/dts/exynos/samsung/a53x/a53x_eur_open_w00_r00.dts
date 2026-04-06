@@ -1704,7 +1704,7 @@
 
 			a53x_panel_display_modes {
 				native-mode = <0x23>;
-				exposed-mode = <0x23 0x24 0x25>;
+				exposed-mode = <0x23 &A53X_PANEL_DISPLAY_MODE_1080X2400_60HS 0x25>;
 				phandle = <0x1d>;
 
 				a53x_panel_display_mode_1080x2400_120hs {
@@ -1730,7 +1730,7 @@
 					phandle = <0x23>;
 				};
 
-				a53x_panel_display_mode_1080x2400_60hs {
+				A53X_PANEL_DISPLAY_MODE_1080X2400_60HS: a53x_panel_display_mode_1080x2400_60hs {
 					id = "1080x2400_60HS";
 					width = <0x438>;
 					height = <0x960>;
@@ -1750,7 +1750,6 @@
 					dsc_slice_w = <0x21c>;
 					dsc_slice_h = <0x28>;
 					cmd_lp_ref = <0x1f37>;
-					phandle = <0x24>;
 				};
 
 				a53x_panel_display_mode_1080x2400_30ns {
