@@ -8,6 +8,7 @@
  */
 
 #include <linux/lockdep.h>
+#include <linux/sec_debug.h>
 
 static void rcu_exp_handler(void *unused);
 static int rcu_print_task_exp_stall(struct rcu_node *rnp);
@@ -526,7 +527,7 @@ static void synchronize_rcu_expedited_wait(void)
 			continue;
 		panic_on_rcu_stall();
 		trace_rcu_stall_warning(rcu_state.name, TPS("ExpeditedStall"));
-		pr_err("INFO: %s detected expedited stalls on CPUs/tasks: {",
+		pr_auto(ASL1, "INFO: %s detected expedited stalls on CPUs/tasks: {",
 		       rcu_state.name);
 		ndetected = 0;
 		rcu_for_each_leaf_node(rnp) {
@@ -860,6 +861,7 @@ void synchronize_rcu_expedited(void)
 		rew.rew_s = s;
 		INIT_WORK_ONSTACK(&rew.rew_work, wait_rcu_exp_gp);
 		queue_work(rcu_gp_wq, &rew.rew_work);
+		secdbg_dtsk_built_set_data(&rew.rew_work);
 	}
 
 	/* Wait for expedited grace period to complete. */
@@ -867,6 +869,8 @@ void synchronize_rcu_expedited(void)
 	wait_event(rnp->exp_wq[rcu_seq_ctr(s) & 0x3],
 		   sync_exp_work_done(s));
 	smp_mb(); /* Workqueue actions happen before return. */
+
+	secdbg_dtsk_built_clear_data();
 
 	/* Let the next expedited grace period start. */
 	mutex_unlock(&rcu_state.exp_mutex);

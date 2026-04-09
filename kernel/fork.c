@@ -1721,13 +1721,28 @@ static inline void init_task_pid_links(struct task_struct *task)
 	}
 }
 
-static inline void
-init_task_pid(struct task_struct *task, enum pid_type type, struct pid *pid)
+static inline void init_task_pid(struct task_struct *task, enum pid_type type, struct pid *pid)
 {
 	if (type == PIDTYPE_PID)
 		task->thread_pid = pid;
 	else
 		task->signal->pids[type] = pid;
+}
+
+static inline int dup_task_integrity(unsigned long clone_flags,
+						struct task_struct *tsk)
+{
+	return 0;
+}
+
+static inline void task_integrity_cleanup(struct task_struct *tsk)
+{
+}
+
+static inline int task_integrity_apply(unsigned long clone_flags,
+						struct task_struct *tsk)
+{
+	return 0;
 }
 
 static inline void rcu_copy_process(struct task_struct *p)

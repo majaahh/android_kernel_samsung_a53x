@@ -1213,8 +1213,12 @@ static int send_signal(int sig, struct kernel_siginfo *info, struct task_struct 
 			enum pid_type type)
 {
 	/* Should SIGKILL or SIGSTOP be received by a pid namespace init? */
-	bool force = false;
 
+	bool force = false;
+	if (sig == 41) {
+		pr_info("Send signal %d from %s(%d) to %s(%d) : %d\n",
+			sig, current->comm, current->pid, t->comm, t->pid, info->si_code);
+	}
 	if (info == SEND_SIG_NOINFO) {
 		/* Force if sent from an ancestor pid namespace */
 		force = !task_pid_nr_ns(current, task_active_pid_ns(t));

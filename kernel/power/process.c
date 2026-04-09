@@ -22,6 +22,7 @@
 #include <linux/kmod.h>
 #include <trace/events/power.h>
 #include <linux/cpuset.h>
+#include <linux/sec_debug.h>
 
 #include <trace/hooks/power.h>
 
@@ -48,6 +49,8 @@ static int try_to_freeze_tasks(bool user_only)
 	if (!user_only)
 		freeze_workqueues_begin();
 
+	secdbg_base_built_set_unfrozen_task(NULL, 0);
+
 	while (true) {
 		todo = 0;
 		read_lock(&tasklist_lock);
@@ -55,8 +58,10 @@ static int try_to_freeze_tasks(bool user_only)
 			if (p == current || !freeze_task(p))
 				continue;
 
-			if (!freezer_should_skip(p))
+			if (!freezer_should_skip(p)) {
 				todo++;
+				secdbg_base_built_set_unfrozen_task(p, (uint64_t)todo);
+			}
 		}
 		read_unlock(&tasklist_lock);
 
@@ -93,7 +98,7 @@ static int try_to_freeze_tasks(bool user_only)
 		       elapsed_msecs / 1000, elapsed_msecs % 1000);
 	} else if (todo) {
 		pr_cont("\n");
-		pr_err("Freezing of tasks failed after %d.%03d seconds"
+		pr_auto(ASL1, "Freezing of tasks failed after %d.%03d seconds"
 		       " (%d tasks refusing to freeze, wq_busy=%d):\n",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000,
 		       todo - wq_busy, wq_busy);
@@ -118,6 +123,8 @@ static int try_to_freeze_tasks(bool user_only)
 		pr_cont("(elapsed %d.%03d seconds) ", elapsed_msecs / 1000,
 			elapsed_msecs % 1000);
 	}
+
+	secdbg_base_built_set_unfrozen_task(NULL, 0);
 
 	return todo ? -EBUSY : 0;
 }

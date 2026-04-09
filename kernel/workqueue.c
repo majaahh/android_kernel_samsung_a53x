@@ -51,6 +51,7 @@
 #include <linux/sched/isolation.h>
 #include <linux/nmi.h>
 #include <linux/kvm_para.h>
+#include <linux/sec_debug.h>
 
 #include "workqueue_internal.h"
 
@@ -2859,7 +2860,9 @@ void flush_workqueue(struct workqueue_struct *wq)
 
 	mutex_unlock(&wq->mutex);
 
+	secdbg_dtsk_built_set_data(wq);
 	wait_for_completion(&this_flusher.done);
+	secdbg_dtsk_built_clear_data();
 
 	/*
 	 * Wake-up-and-cascade phase
@@ -3071,7 +3074,9 @@ static bool __flush_work(struct work_struct *work, bool from_cancel)
 	lock_map_release(&work->lockdep_map);
 
 	if (start_flush_work(work, &barr, from_cancel)) {
+		secdbg_dtsk_built_set_data(work);
 		wait_for_completion(&barr.done);
+		secdbg_dtsk_built_clear_data();
 		destroy_work_on_stack(&barr.work);
 		return true;
 	} else {
@@ -5854,7 +5859,7 @@ static void wq_watchdog_timer_fn(struct timer_list *unused)
 		/* did we stall? */
 		if (time_after(now, ts + thresh)) {
 			lockup_detected = true;
-			pr_emerg("BUG: workqueue lockup - pool");
+			pr_auto(ASL9, "BUG: workqueue lockup - pool");
 			pr_cont_pool_info(pool);
 			pr_cont(" stuck for %us!\n",
 				jiffies_to_msecs(now - pool_ts) / 1000);
