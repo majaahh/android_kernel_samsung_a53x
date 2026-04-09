@@ -55,6 +55,7 @@
 #include <net/ip.h>
 
 #include "nf_internals.h"
+#include <linux/time.h>
 
 __cacheline_aligned_in_smp spinlock_t nf_conntrack_locks[CONNTRACK_LOCKS];
 EXPORT_SYMBOL_GPL(nf_conntrack_locks);
