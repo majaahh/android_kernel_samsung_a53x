@@ -49,14 +49,6 @@ enum {
 	ATGC_INFO,	/* struct atgc_management */
 };
 
-#ifdef CONFIG_F2FS_SEC_BLOCK_OPERATIONS_DEBUG
-const char *sec_blkops_dbg_type_names[NR_F2FS_SEC_DBG_ENTRY] = {
-	"DENTS",
-	"IMETA",
-	"NODES",
-};
-#endif
-
 const char *sec_fua_mode_names[NR_F2FS_SEC_FUA_MODE] = {
 	"NONE",
 	"ROOT",

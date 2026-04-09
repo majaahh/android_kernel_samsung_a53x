@@ -1202,22 +1202,6 @@ static bool __need_flush_quota(struct f2fs_sb_info *sbi)
 	return ret;
 }
 
-/* @fs.sec -- 2ef667bb57e25110542e58d9cc8a0bb5 -- */
-#ifdef CONFIG_F2FS_SEC_BLOCK_OPERATIONS_DEBUG
-#define sec_dbg_inc_cnt(node, type)			\
-	do {						\
-		node.step = F2FS_SEC_DBG_##type; \
-		node.entry[F2FS_SEC_DBG_##type].nr_ops++;	\
-	} while (0)
-#define sec_dbg_add_time(node, type, start) \
-	(node.entry[F2FS_SEC_DBG_##type].cumulative_jiffies +=	\
-					(get_jiffies_64() - start))
-#define sec_dbg_start_jiffies(val) (val = get_jiffies_64())
-#else
-#define sec_dbg_inc_cnt(node, type) (0)
-#define sec_dbg_add_time(node, type, start) (0)
-#define sec_dbg_start_jiffies(val) (0)
-#endif
 /*
  * Freeze all the FS-operations for checkpoint.
  */
@@ -1229,13 +1213,6 @@ static int block_operations(struct f2fs_sb_info *sbi)
 		.for_reclaim = 0,
 	};
 	int err = 0, cnt = 0;
-
-#ifdef CONFIG_F2FS_SEC_BLOCK_OPERATIONS_DEBUG
-	struct f2fs_sec_blkops_dbg dbg_entry = {0, };
-	u64 s_jiffies, elapsed_time;
-
-	dbg_entry.start_time = local_clock();
-#endif
 
 	/*
 	 * Let's flush inline_data in dirty node pages.
@@ -1266,13 +1243,10 @@ retry_flush_quotas:
 retry_flush_dents:
 	/* write all the dirty dentry pages */
 	if (get_pages(sbi, F2FS_DIRTY_DENTS)) {
-		sec_dbg_inc_cnt(dbg_entry, DENTS);
-		sec_dbg_start_jiffies(s_jiffies);
 		f2fs_unlock_all(sbi);
 		err = f2fs_sync_dirty_inodes(sbi, DIR_INODE, true);
 		if (err)
 			goto out;
-		sec_dbg_add_time(dbg_entry, DENTS, s_jiffies);
 		cond_resched();
 		goto retry_flush_quotas;
 	}
@@ -1284,14 +1258,11 @@ retry_flush_dents:
 	f2fs_down_write(&sbi->node_change);
 
 	if (get_pages(sbi, F2FS_DIRTY_IMETA)) {
-		sec_dbg_inc_cnt(dbg_entry, IMETA);
-		sec_dbg_start_jiffies(s_jiffies);
 		f2fs_up_write(&sbi->node_change);
 		f2fs_unlock_all(sbi);
 		err = f2fs_sync_inode_meta(sbi);
 		if (err)
 			goto out;
-		sec_dbg_add_time(dbg_entry, IMETA, s_jiffies);
 		cond_resched();
 		goto retry_flush_quotas;
 	}
@@ -1300,8 +1271,6 @@ retry_flush_nodes:
 	f2fs_down_write(&sbi->node_write);
 
 	if (get_pages(sbi, F2FS_DIRTY_NODES)) {
-		sec_dbg_inc_cnt(dbg_entry, NODES);
-		sec_dbg_start_jiffies(s_jiffies);
 		f2fs_up_write(&sbi->node_write);
 		atomic_inc(&sbi->wb_sync_req[NODE]);
 		err = f2fs_sync_node_pages(sbi, &wbc, false, FS_CP_NODE_IO);
@@ -1311,7 +1280,6 @@ retry_flush_nodes:
 			f2fs_unlock_all(sbi);
 			goto out;
 		}
-		sec_dbg_add_time(dbg_entry, NODES, s_jiffies);
 		cond_resched();
 		goto retry_flush_nodes;
 	}
@@ -1324,25 +1292,6 @@ retry_flush_nodes:
 	f2fs_up_write(&sbi->node_change);
 
 out:
-#ifdef CONFIG_F2FS_SEC_BLOCK_OPERATIONS_DEBUG
-	dbg_entry.end_time = local_clock();
-
-	elapsed_time = dbg_entry.end_time - dbg_entry.start_time;
-	if (elapsed_time > (F2FS_SEC_BLKOPS_LOGGING_THR * NSEC_PER_SEC)) {
-		dbg_entry.ret_val = err;
-		dbg_entry.entry_idx = sbi->s_sec_blkops_total++;
-
-		memcpy(&(sbi->s_sec_dbg_entries[dbg_entry.entry_idx % F2FS_SEC_BLKOPS_ENTRIES]),
-				&dbg_entry, sizeof(struct f2fs_sec_blkops_dbg));
-
-		if (sbi->s_sec_blkops_max_elapsed < elapsed_time) {
-			sbi->s_sec_blkops_max_elapsed = elapsed_time;
-			memcpy(&(sbi->s_sec_dbg_max_entry),
-				&dbg_entry, sizeof(struct f2fs_sec_blkops_dbg));
-		}
-	}
-#endif
-
 	return err;
 }
 
