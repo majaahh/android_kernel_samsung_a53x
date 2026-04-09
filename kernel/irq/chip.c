@@ -421,9 +421,6 @@ static inline void mask_ack_irq(struct irq_desc *desc)
 
 void mask_irq(struct irq_desc *desc)
 {
-	if (irqd_irq_masked(&desc->irq_data))
-		return;
-
 	if (desc->irq_data.chip->irq_mask) {
 		desc->irq_data.chip->irq_mask(&desc->irq_data);
 		irq_state_set_masked(desc);
@@ -432,9 +429,6 @@ void mask_irq(struct irq_desc *desc)
 
 void unmask_irq(struct irq_desc *desc)
 {
-	if (!irqd_irq_masked(&desc->irq_data))
-		return;
-
 	if (desc->irq_data.chip->irq_unmask) {
 		desc->irq_data.chip->irq_unmask(&desc->irq_data);
 		irq_state_clr_masked(desc);
