@@ -207,14 +207,10 @@ int test_run_tests(struct KUNIT_SUITE_T *module);
 extern int register_kunit_notifier(struct notifier_block *nb);
 extern int unregister_kunit_notifier(struct notifier_block *nb);
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-int test_executor_init(void);
-#else
 static inline int test_executor_init(void)
 {
 	return 0;
 }
-#endif
 
 void test_install_initcall(struct test_initcall *initcall);
 

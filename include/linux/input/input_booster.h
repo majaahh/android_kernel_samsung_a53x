@@ -9,15 +9,6 @@
 #include <linux/input.h>
 #include <linux/module.h>
 #include <linux/init.h>
-#if IS_ENABLED(CONFIG_SOC_EXYNOS2100) || \
-	IS_ENABLED(CONFIG_ARCH_LAHAINA) || \
-	IS_ENABLED(CONFIG_ARCH_WAIPIO)
-#include <linux/interconnect.h>
-#endif//CONFIG_SOC_EXYNOS2100 || CONFIG_ARCH_LAHAINA
-
-#if IS_ENABLED(CONFIG_MACH_MT6739)
-#include <linux/slab.h>
-#endif//CONFIG_MACH_MT6739
 
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
