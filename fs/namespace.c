@@ -34,8 +34,13 @@
 #include "pnode.h"
 #include "internal.h"
 
+#define ST_LOG(fmt, ...)
+
 /* Maximum number of mounts in a mount namespace */
 unsigned int sysctl_mount_max __read_mostly = 100000;
+
+/* @fs.sec -- c4d165e8cb5ea1cc14cdedb9eab23efd642d4d5f -- */
+static unsigned int sys_umount_trace_status;
 
 static unsigned int m_hash_mask __read_mostly;
 static unsigned int m_hash_shift __read_mostly;
@@ -102,6 +107,54 @@ static inline struct hlist_head *m_hash(struct vfsmount *mnt, struct dentry *den
 	tmp += ((unsigned long)dentry / L1_CACHE_BYTES);
 	tmp = tmp + (tmp >> m_hash_shift);
 	return &mount_hashtable[tmp & m_hash_mask];
+}
+
+enum {
+	UMOUNT_STATUS_ADD_TASK = 0,
+	UMOUNT_STATUS_REMAIN_NS,
+	UMOUNT_STATUS_REMAIN_MNT_COUNT,
+	UMOUNT_STATUS_ADD_DELAYED_WORK,
+	UMOUNT_STATUS_MAX
+};
+
+static const char *exception_process[] = {
+	"main", "ch_zygote", "usap32", "usap64", NULL,
+};
+
+static inline void sys_umount_trace_set_status(unsigned int status)
+{
+	sys_umount_trace_status = status;
+}
+
+static inline int is_exception(char *comm)
+{
+	unsigned int idx = 0;
+
+	do {
+		if (!strcmp(comm, exception_process[idx]))
+			return 1;
+	} while (exception_process[++idx]);
+
+	return 0;
+}
+
+static inline void sys_umount_trace_print(struct mount *mnt, int flags)
+{
+	struct super_block *sb = mnt->mnt.mnt_sb;
+
+#ifndef SDFAT_SUPER_MAGIC
+#define SDFAT_SUPER_MAGIC       (0x5EC5DFA4UL)
+#endif /* SDFAT_SUPER_MAGIC */
+	/* We don`t want to see what zygote`s umount */
+	if (((sb->s_magic == SDFAT_SUPER_MAGIC) ||
+		(sb->s_magic == MSDOS_SUPER_MAGIC)) &&
+		((current_uid().val == 0) && !is_exception(current->comm))) {
+
+		ST_LOG("[SYS](%s[%d:%d]): "
+			"umount(mf:0x%x, f:0x%x, %s)\n",
+			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), mnt_flags,
+			flags, umount_exit_str[sys_umount_trace_status]);
+	}
 }
 
 static inline struct hlist_head *mp_hash(struct dentry *dentry)
@@ -498,8 +551,9 @@ static int mnt_make_readonly(struct mount *mnt)
 	 */
 	if (mnt_get_writers(mnt) > 0)
 		ret = -EBUSY;
-	else
+	else {
 		mnt->mnt.mnt_flags |= MNT_READONLY;
+	}
 	/*
 	 * MNT_READONLY must become visible before ~MNT_WRITE_HOLD, so writers
 	 * that become unheld will see MNT_READONLY.
@@ -1159,6 +1213,7 @@ static void mntput_no_expire(struct mount *mnt)
 		 */
 		mnt_add_count(mnt, -1);
 		rcu_read_unlock();
+		sys_umount_trace_set_status(UMOUNT_STATUS_REMAIN_NS);
 		return;
 	}
 	lock_mount_hash();
@@ -1173,6 +1228,7 @@ static void mntput_no_expire(struct mount *mnt)
 		WARN_ON(count < 0);
 		rcu_read_unlock();
 		unlock_mount_hash();
+		sys_umount_trace_set_status(UMOUNT_STATUS_REMAIN_MNT_COUNT);
 		return;
 	}
 	if (unlikely(mnt->mnt.mnt_flags & MNT_DOOMED)) {
@@ -1199,11 +1255,15 @@ static void mntput_no_expire(struct mount *mnt)
 		struct task_struct *task = current;
 		if (likely(!(task->flags & PF_KTHREAD))) {
 			init_task_work(&mnt->mnt_rcu, __cleanup_mnt);
-			if (!task_work_add(task, &mnt->mnt_rcu, TWA_RESUME))
+			if (!task_work_add(task, &mnt->mnt_rcu, TWA_RESUME)) {
+				sys_umount_trace_set_status(UMOUNT_STATUS_ADD_TASK);
 				return;
+			}
 		}
-		if (llist_add(&mnt->mnt_llist, &delayed_mntput_list))
+		if (llist_add(&mnt->mnt_llist, &delayed_mntput_list)) {
 			schedule_delayed_work(&delayed_mntput_work, 1);
+			sys_umount_trace_set_status(UMOUNT_STATUS_ADD_DELAYED_WORK);
+		}
 		return;
 	}
 	cleanup_mnt(mnt);
@@ -1750,8 +1810,14 @@ int path_umount(struct path *path, int flags)
 	/* we mustn't call path_put() as that would clear mnt_expiry_mark */
 	dput(path->dentry);
 	mntput_no_expire(mnt);
+	if (!ret)
+		sys_umount_trace_print(mnt, flags);
 	return ret;
 }
+
+#ifdef CONFIG_PAGE_BOOST_RECORDING
+#include <linux/io_record.h>
+#endif
 
 static int ksys_umount(char __user *name, int flags)
 {
@@ -1763,6 +1829,9 @@ static int ksys_umount(char __user *name, int flags)
 	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
 		return -EINVAL;
 
+#ifdef CONFIG_PAGE_BOOST_RECORDING
+	forced_init_record();
+#endif
 	if (!(flags & UMOUNT_NOFOLLOW))
 		lookup_flags |= LOOKUP_FOLLOW;
 	ret = user_path_at(AT_FDCWD, name, lookup_flags, &path);

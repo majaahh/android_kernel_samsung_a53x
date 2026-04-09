@@ -27,6 +27,7 @@
 #include "segment.h"
 #include <trace/events/f2fs.h>
 #include <trace/events/android_fs.h>
+#include <asm/div64.h>
 
 #define NUM_PREALLOC_POST_READ_CTXS	128
 
@@ -343,12 +344,14 @@ static void f2fs_write_end_io(struct bio *bio)
 
 		if (unlikely(bio->bi_status)) {
 			mapping_set_error(page->mapping, -EIO);
-			if (type == F2FS_WB_CP_DATA)
+			if (type == F2FS_WB_CP_DATA) {
 				f2fs_stop_checkpoint(sbi, true,
 						STOP_CP_REASON_WRITE_FAIL);
+				f2fs_bug_on_endio(sbi, 1);
+			}
 		}
 
-		f2fs_bug_on(sbi, page->mapping == NODE_MAPPING(sbi) &&
+		f2fs_bug_on_endio(sbi, page->mapping == NODE_MAPPING(sbi) &&
 					page->index != nid_of_node(page));
 
 		dec_page_count(sbi, type);
@@ -701,6 +704,12 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 		wbc_account_cgroup_owner(fio->io_wbc, fio->page, PAGE_SIZE);
 
 	__attach_io_flag(fio);
+	/* @fs.sec -- 0531f63f3688ffb680b8c83a53641dce37f186da -- */
+	if (fio->op_flags & F2FS_REQ_DEFKEY_BYPASS && is_read_io(fio->op)) {
+		f2fs_warn(fio->sbi, "Set bio bypass to get lower block");
+		bio_set_skip_dm_default_key(bio);
+		fio->op_flags &= ~F2FS_REQ_DEFKEY_BYPASS;
+	}
 	bio_set_op_attrs(bio, fio->op, fio->op_flags);
 
 	inc_page_count(fio->sbi, is_read_io(fio->op) ?
@@ -1255,15 +1264,20 @@ put_err:
 
 struct page *f2fs_find_data_page(struct inode *inode, pgoff_t index)
 {
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	struct address_space *mapping = inode->i_mapping;
 	struct page *page;
+	bool for_write = false;
 
 	page = find_get_page(mapping, index);
 	if (page && PageUptodate(page))
 		return page;
 	f2fs_put_page(page, 0);
 
-	page = f2fs_get_read_data_page(inode, index, 0, false);
+	if (unlikely(f2fs_rwsem_is_locked(&sbi->cp_rwsem)))
+		for_write = true;
+
+	page = f2fs_get_read_data_page(inode, index, 0, for_write);
 	if (IS_ERR(page))
 		return page;
 
@@ -1690,9 +1704,12 @@ skip:
 sync_out:
 
 	/* for hardware encryption, but to avoid potential issue in future */
-	if (flag == F2FS_GET_BLOCK_DIO && map->m_flags & F2FS_MAP_MAPPED)
+	if (flag == F2FS_GET_BLOCK_DIO && map->m_flags & F2FS_MAP_MAPPED) {
 		f2fs_wait_on_block_writeback_range(inode,
 						map->m_pblk, map->m_len);
+		invalidate_mapping_pages(META_MAPPING(sbi),
+						map->m_pblk, map->m_pblk);
+	}
 
 	if (flag == F2FS_GET_BLOCK_PRECACHE) {
 		if (map->m_flags & F2FS_MAP_MAPPED) {
@@ -2661,6 +2678,14 @@ got_it:
 		err = -EFSCORRUPTED;
 		goto out_writepage;
 	}
+
+	if (file_is_hot(inode))
+		F2FS_I_SB(inode)->sec_stat.hot_file_written_blocks++;
+	else if (file_is_cold(inode))
+		F2FS_I_SB(inode)->sec_stat.cold_file_written_blocks++;
+	else
+		F2FS_I_SB(inode)->sec_stat.warm_file_written_blocks++;
+
 	/*
 	 * If current allocation needs SSR,
 	 * it had better in-place writes for updated data.
@@ -2765,6 +2790,8 @@ int f2fs_write_single_data_page(struct page *page, int *submitted,
 	};
 
 	trace_f2fs_writepage(page, DATA);
+
+	f2fs_cond_set_fua(&fio);
 
 	/* we should bypass data pages to proceed the kworker jobs */
 	if (unlikely(f2fs_cp_error(sbi))) {
@@ -3257,7 +3284,8 @@ static int __f2fs_write_data_pages(struct address_space *mapping,
 	return ret;
 
 skip_write:
-	wbc->pages_skipped += get_dirty_pages(inode);
+	if (mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
+		wbc->pages_skipped += get_dirty_pages(inode);
 	trace_f2fs_writepages(mapping->host, wbc, DATA);
 	return 0;
 }
@@ -3266,6 +3294,12 @@ static int f2fs_write_data_pages(struct address_space *mapping,
 			    struct writeback_control *wbc)
 {
 	struct inode *inode = mapping->host;
+
+	/* W/A - prevent panic while shutdown */
+	if (unlikely(ignore_fs_panic)) {
+		//pr_err("%s: Ignore panic\n", __func__);
+		return -EIO;
+	}
 
 	return __f2fs_write_data_pages(mapping, wbc,
 			F2FS_I(inode)->cp_task == current ?
@@ -3849,8 +3883,7 @@ static int f2fs_set_data_page_dirty(struct page *page)
 		return 0;
 	}
 
-	if (!PageDirty(page)) {
-		__set_page_dirty_nobuffers(page);
+	if (__set_page_dirty_nobuffers(page)) {
 		f2fs_update_dirty_page(inode, page);
 		return 1;
 	}
