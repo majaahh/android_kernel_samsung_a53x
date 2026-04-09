@@ -1021,4 +1021,3 @@ source "mm/damon/Kconfig"
 endmenu
 
 source "mm/sec_mm/Kconfig"
-
