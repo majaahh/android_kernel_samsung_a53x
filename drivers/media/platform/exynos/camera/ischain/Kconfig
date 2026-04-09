@@ -1,0 +1,21 @@
+config PABLO_V10_20_0
+	bool "Use PABLO v10.20.0"
+	depends on SOC_S5E8825
+	default y
+	select EXYNOS_DEVICE_MIPI_CSIS_VER4
+	select CSIS_V5_4
+	select CAMERA_CIS_SELECT
+	select CAMERA_ACT_SELECT
+	select CAMERA_FLASH_SELECT
+	select CAMERA_PDP
+	select CAMERA_DVFS_V2
+	select CAMERA_MEM_V2
+	select PDP_V3_1
+	select TAA_V9_20
+	select ORBMCH_V2_1
+	select MCFP_V10_20
+	select DNS_V1_20
+	select ITP_V1_20
+	select MC_SCALER_V10_20
+	help
+	  PABLO ISP version 10.20.0

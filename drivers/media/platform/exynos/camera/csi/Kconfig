@@ -1,0 +1,5 @@
+config CSIS_V5_4
+	bool "Use CSI H/W v5.4"
+	depends on PABLO_V10_20_0
+	help
+	  csi version 5.4

@@ -257,6 +257,14 @@ config DRM_RADEON
 
 source "drivers/gpu/drm/radeon/Kconfig"
 
+config DRM_DUMP
+	bool "Enable GPU dump upon GPU hang"
+	depends on DRM
+	default y
+	help
+	  Choose this option if you want to persist GPU register status
+	  upon GPU hang.
+
 config DRM_AMDGPU
 	tristate "AMD GPU"
 	depends on DRM && PCI && MMU
@@ -302,6 +310,8 @@ config DRM_VKMS
 	  If M is selected the module will be called vkms.
 
 source "drivers/gpu/drm/exynos/Kconfig"
+
+source "drivers/gpu/drm/samsung/dpu/Kconfig"
 
 source "drivers/gpu/drm/rockchip/Kconfig"
 
@@ -482,3 +492,5 @@ config DRM_PANEL_ORIENTATION_QUIRKS
 config DRM_LIB_RANDOM
 	bool
 	default n
+
+MCD_PANEL_PATH := drivers/gpu/drm/samsung/panel

@@ -1,0 +1,4 @@
+config SHUB_LSI
+	tristate "lsi sensorhub"
+	default y
+
