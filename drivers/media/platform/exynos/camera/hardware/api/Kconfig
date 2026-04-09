@@ -1,0 +1,55 @@
+config MC_SCALER_V10_20
+  bool "Use MC-SCALER H/W v10.20"
+	depends on PABLO_V10_20_0
+	default n
+	help
+	  use mc-scaler v10.20
+
+config PDP_V3_1
+  bool "Use PDP H/W v3.1"
+	depends on PABLO_V10_20_0
+  default n
+  help
+    use PDP v3.1
+
+config YUVPP_V2_1
+  bool "Use YUVPP H/W v2.1"
+	depends on PABLO_V10_20_0
+  default n
+	help
+	  use YUVPP v2.1
+
+config TAA_V9_20
+  bool "Use TAA H/W v9.20"
+	depends on PABLO_V10_20_0
+  default n
+  help
+    use 3AA v9.20
+
+config ORBMCH_V2_1
+	bool "Use ORBMCH H/W v2.1"
+	depends on PABLO_V10_20_0
+	default n
+	help
+	  use ORBMCH v2.1
+
+config DNS_V1_20
+  bool "Use DNS H/W v1.20"
+	depends on PABLO_V10_20_0
+  default n
+  help
+    use DNS v1.20
+
+config ITP_V1_20
+  bool "Use ITP H/W v1.20"
+	depends on PABLO_V10_20_0
+  default n
+  help
+    use ITP v1.0
+
+config MCFP_V10_20
+	bool "Use MCFP H/W v10.20"
+	depends on PABLO_V10_20_0
+	default n
+	help
+	  use MCFP v10.20

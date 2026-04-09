@@ -11,6 +11,8 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 
+#define ST_LOG(fmt, ...)
+
 struct mmc_host;
 struct mmc_card;
 struct mmc_request;

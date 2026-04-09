@@ -1,0 +1,8 @@
+config VIBRATOR_VIB_INFO
+	tristate "The module for vibrator information"
+	default n
+	help
+	  This module supports sysfs nodes for vibrator information.
+	  supported functions are served for vibrator hal.
+	  vibrator hal also can get intensities table by this module.
+	  We recommend to use this module for all models.
