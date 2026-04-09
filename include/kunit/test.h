@@ -9,6 +9,8 @@
 #ifndef _KUNIT_TEST_H
 #define _KUNIT_TEST_H
 
+#ifdef CONFIG_KUNIT
+
 #include <kunit/assert.h>
 #include <kunit/try-catch.h>
 #include <linux/kernel.h>
@@ -1742,4 +1744,5 @@ do {									       \
 						fmt,			       \
 						##__VA_ARGS__)
 
+#endif /* CONFIG_KUNIT */
 #endif /* _KUNIT_TEST_H */
