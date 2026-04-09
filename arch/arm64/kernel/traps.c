@@ -27,6 +27,7 @@
 #include <linux/syscalls.h>
 #include <linux/mm_types.h>
 #include <linux/kasan.h>
+#include <linux/sec_debug.h>
 
 #include <asm/atomic.h>
 #include <asm/bug.h>
@@ -397,6 +398,18 @@ void arm64_notify_segfault(unsigned long addr)
 	force_signal_inject(SIGSEGV, code, addr, 0);
 }
 
+#ifdef CONFIG_S3C2410_BUILTIN_WATCHDOG
+extern int s3c2410wdt_builtin_expire_watchdog(void);
+static __always_inline void do_s3c2410wdt_builtin_expire_watchdog(void)
+{
+	s3c2410wdt_builtin_expire_watchdog();
+}
+#else
+static inline void do_s3c2410wdt_builtin_expire_watchdog(void)
+{
+}
+#endif
+
 void do_undefinstr(struct pt_regs *regs)
 {
 	/* check for AArch32 breakpoint instructions */
@@ -419,6 +432,57 @@ void do_bti(struct pt_regs *regs)
 }
 NOKPROBE_SYMBOL(do_bti);
 
+#define show_pac_key_single_kern(k, uk, kk)					\
+do {										\
+	u64 lo, hi;								\
+	lo = read_sysreg_s(SYS_ ## k ## KEYLO_EL1);				\
+	hi = read_sysreg_s(SYS_ ## k ## KEYHI_EL1);				\
+	pr_auto(ASL1, #k "KEY_EL1: REG %016lx::%016lx, USER %016lx::%016lx, KERN %016lx::%016lx\n", \
+		hi, lo, (uk).hi, (uk).lo, (kk).hi, (kk).lo);			\
+} while (0)
+
+#define show_pac_key_single(k, uk)						\
+do {										\
+	u64 lo, hi;								\
+	lo = read_sysreg_s(SYS_ ## k ## KEYLO_EL1);				\
+	hi = read_sysreg_s(SYS_ ## k ## KEYHI_EL1);				\
+	pr_auto(ASL1, #k "KEY_EL1: REG %016lx::%016lx, USER %016lx::%016lx\n",		\
+		hi, lo, (uk).hi, (uk).lo);					\
+} while (0)
+
+#ifdef CONFIG_ARM64_PTR_AUTH
+static void show_pac_keys(struct ptrauth_keys_user *userk, struct ptrauth_keys_kernel *kernk)
+{
+	pr_crit("PtrAuth status: address auth? %d, generic auth? %d\n",
+		system_supports_address_auth(), system_supports_generic_auth());
+
+	if (!system_supports_address_auth() && !system_supports_generic_auth())
+		return;
+
+	if (system_supports_address_auth()) {
+		show_pac_key_single_kern(APIA, userk->apia, kernk->apia);
+		show_pac_key_single(APIB, userk->apib);
+		show_pac_key_single(APDA, userk->apda);
+		show_pac_key_single(APDB, userk->apdb);
+	}
+
+	if (system_supports_generic_auth())
+		show_pac_key_single(APGA, userk->apga);
+}
+#endif
+
+#ifdef CONFIG_S3C2410_BUILTIN_WATCHDOG
+extern int s3c2410wdt_builtin_expire_watchdog(void);
+
+static __always_inline void __call_expire_watchdog(void)
+{
+	s3c2410wdt_builtin_expire_watchdog();
+	mdelay(10000);
+}
+#else
+static inline void __call_expire_watchdog(void) { }
+#endif /* CONFIG_S3C2410_BUILTIN_WATCHDOG */
+
 void do_ptrauth_fault(struct pt_regs *regs, unsigned int esr)
 {
 	/*
@@ -426,8 +490,27 @@ void do_ptrauth_fault(struct pt_regs *regs, unsigned int esr)
 	 * the kernel: kill the task before it does any more harm.
 	 */
 	trace_android_rvh_do_ptrauth_fault(regs, esr, user_mode(regs));
-	BUG_ON(!user_mode(regs));
-	force_signal_inject(SIGILL, ILL_ILLOPN, regs->pc, esr);
+	if (user_mode(regs)) {
+		force_signal_inject(SIGILL, ILL_ILLOPN, regs->pc, esr);
+		return;
+	}
+
+	trace_android_rvh_bad_mode(regs, esr, 0xFA017);
+
+	console_verbose();
+
+	pr_auto(ASL1, "Wrong PAC detected on CPU%d, LR 0x%010lx, code 0x%08x -- %s\n",
+		smp_processor_id(), regs->regs[30], esr, esr_get_class_string(esr));
+#ifdef CONFIG_ARM64_PTR_AUTH
+	show_pac_keys(&current->thread.keys_user, &current->thread.keys_kernel);
+#endif
+
+	__show_regs(regs);
+	local_daif_mask();
+
+	__call_expire_watchdog();
+
+	panic("ptrauth fault");
 }
 NOKPROBE_SYMBOL(do_ptrauth_fault);
 
@@ -765,7 +848,7 @@ asmlinkage void notrace bad_mode(struct pt_regs *regs, int reason, unsigned int 
 
 	console_verbose();
 
-	pr_crit("Bad mode in %s handler detected on CPU%d, code 0x%08x -- %s\n",
+	pr_auto(ASL1, "Bad mode in %s handler detected on CPU%d, code 0x%08x -- %s\n",
 		handler[reason], smp_processor_id(), esr,
 		esr_get_class_string(esr));
 
@@ -803,6 +886,7 @@ asmlinkage void noinstr handle_bad_stack(struct pt_regs *regs)
 	unsigned int esr = read_sysreg(esr_el1);
 	unsigned long far = read_sysreg(far_el1);
 
+	secdbg_base_built_check_handle_bad_stack();
 	arm64_enter_nmi(regs);
 
 	console_verbose();
@@ -834,7 +918,7 @@ void __noreturn arm64_serror_panic(struct pt_regs *regs, u32 esr)
 {
 	console_verbose();
 
-	pr_crit("SError Interrupt on CPU%d, code 0x%08x -- %s\n",
+	pr_auto(ASL1, "SError Interrupt on CPU%d, code 0x%08x -- %s\n",
 		smp_processor_id(), esr, esr_get_class_string(esr));
 
 	trace_android_rvh_arm64_serror_panic(regs, esr);

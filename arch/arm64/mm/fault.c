@@ -290,7 +290,7 @@ static void die_kernel_fault(const char *msg, unsigned long addr,
 {
 	bust_spinlocks(1);
 
-	pr_alert("Unable to handle kernel %s at virtual address %016lx\n", msg,
+	pr_auto(ASL1, "Unable to handle kernel %s at virtual address %016lx\n", msg,
 		 addr);
 
 	trace_android_rvh_die_kernel_fault(regs, esr, addr, msg);
@@ -723,6 +723,10 @@ static int do_bad(unsigned long far, unsigned int esr, struct pt_regs *regs)
 	trace_android_vh_handle_tlb_conf(addr, esr, &ret);
 	return ret;
 }
+
+#define __is_in_kernel_image(addr)					\
+	((unsigned long)(addr) >= (unsigned long)KERNEL_START &&	\
+	 (unsigned long)(addr) <= (unsigned long)KERNEL_END)
 
 static int do_sea(unsigned long far, unsigned int esr, struct pt_regs *regs)
 {
