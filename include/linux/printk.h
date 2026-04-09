@@ -388,6 +388,12 @@ extern int kptr_restrict;
 #define pr_cont(fmt, ...) \
 	printk(KERN_CONT fmt, ##__VA_ARGS__)
 
+/* TODO : retain the original log level */
+#define pr_auto(level, fmt, ...) \
+	printk(KERN_EMERG pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_auto_disable(index) do { } while (0)
+#define pr_auto_once(index) do { } while (0)
+
 /**
  * pr_devel - Print a debug-level message conditionally
  * @fmt: format string
