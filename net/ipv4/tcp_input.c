@@ -5185,10 +5185,6 @@ void tcp_rbtree_insert(struct rb_root *root, struct sk_buff *skb)
 	}
 	rb_link_node(&skb->rbnode, parent, p);
 	rb_insert_color(&skb->rbnode, root);
-
-#ifdef CONFIG_SKB_TRACER
-	skb_tracer_mask(skb, root->mask);
-#endif
 }
 
 /* Collapse contiguous sequence of skbs head..tail with
