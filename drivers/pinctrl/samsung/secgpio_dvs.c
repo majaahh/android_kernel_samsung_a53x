@@ -211,8 +211,6 @@ EXPORT_SYMBOL_GPL(gpio_dvs_check_sleepgpio);
 
 #ifdef CONFIG_OF
 static const struct of_device_id secgpio_dvs_dt_match[] = {
-	{ .compatible = "samsung,s5e9925-secgpio-dvs",
-		.data = (void *)&s5e9925_secgpio_dvs_data },
 	{ .compatible = "samsung,s5e8825-secgpio-dvs",
 		.data = (void *)&s5e8825_secgpio_dvs_data },
 	{ },

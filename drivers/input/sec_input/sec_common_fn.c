@@ -11,10 +11,6 @@
 
 #include "sec_input.h"
 
-#if !IS_ENABLED(CONFIG_SEC_KUNIT)
-#define __visible_for_testing static
-#endif
-
 static char *lcd_id;
 module_param(lcd_id, charp, S_IRUGO);
 
@@ -1750,10 +1746,6 @@ __visible_for_testing ssize_t sec_input_enabled_show(struct device *dev,
 
 	return scnprintf(buf, PAGE_SIZE, "%d\n", pdata->enabled);
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_input_enabled_show);
-#endif
-
 __visible_for_testing ssize_t sec_input_enabled_store(struct device *dev,
 					struct device_attribute *attr,
 					const char *buf, size_t size)
@@ -1784,10 +1776,6 @@ __visible_for_testing ssize_t sec_input_enabled_store(struct device *dev,
 out:
 	return size;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_input_enabled_store);
-#endif
-
 static DEVICE_ATTR(enabled, 0664, sec_input_enabled_show, sec_input_enabled_store);
 
 static struct attribute *sec_input_attrs[] = {

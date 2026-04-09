@@ -1547,14 +1547,6 @@ static const struct of_device_id samsung_pinctrl_dt_match[] = {
 		.data = &exynos5433_of_data },
 	{ .compatible = "samsung,exynos7-pinctrl",
 		.data = &exynos7_of_data },
-	{ .compatible = "samsung,exynos9820-pinctrl",
-		.data = &exynos9820_of_data },
-	{ .compatible = "samsung,exynos2100-pinctrl",
-		.data = &exynos2100_of_data },
-	{ .compatible = "samsung,s5e9925-pinctrl",
-		.data = &s5e9925_of_data },
-	{ .compatible = "samsung,s5e9925_evt0-pinctrl",
-		.data = &s5e9925_evt0_of_data },
 	{ .compatible = "samsung,s5e8825-pinctrl",
 		.data = &s5e8825_of_data },
 #endif
@@ -1888,18 +1880,6 @@ static unsigned int samsung_pinctrl_get_nr_gpio(void)
 {
 	return sum_of_nr_pins;
 }
-
-static struct gpio_dvs_t s5e9925_secgpio_dvs = {
-	.result = &gpiomap_result,
-	.check_gpio_status = check_gpio_status,
-	.skip_grps = "gpf0 gpv0", /* HSI1, DMIC(VTS) */
-};
-
-const struct secgpio_dvs_data s5e9925_secgpio_dvs_data = {
-	.gpio_dvs = &s5e9925_secgpio_dvs,
-	.get_nr_gpio = samsung_pinctrl_get_nr_gpio,
-};
-EXPORT_SYMBOL_GPL(s5e9925_secgpio_dvs_data);
 
 static struct gpio_dvs_t s5e8825_secgpio_dvs = {
 	.result = &gpiomap_result,

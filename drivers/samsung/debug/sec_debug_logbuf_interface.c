@@ -11,7 +11,6 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 #include <linux/sec_debug.h>
-#include <dt-bindings/soc/samsung/exynos2100-debug.h>
 
 #include "sec_debug_internal.h"
 

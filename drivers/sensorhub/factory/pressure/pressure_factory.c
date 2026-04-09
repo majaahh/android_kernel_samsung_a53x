@@ -27,14 +27,8 @@
 #define PR_ABS_MAX 8388607 /* 24 bit 2'compl */
 #define PR_ABS_MIN -8388608
 
-#if defined(CONFIG_SHUB_KUNIT)
-#include <kunit/mock.h>
-#define __mockable __weak
-#define __visible_for_testing
-#else
 #define __mockable
 #define __visible_for_testing static
-#endif
 
 /*************************************************************************/
 /* factory Sysfs                                                         */

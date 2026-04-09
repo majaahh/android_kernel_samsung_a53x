@@ -8,10 +8,6 @@
  * published by the Free Software Foundation.
  */
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-#include <kunit/test.h>
-#include <kunit/mock.h>
-#endif
 #include <asm/unaligned.h>
 #include <linux/completion.h>
 #include <linux/ctype.h>

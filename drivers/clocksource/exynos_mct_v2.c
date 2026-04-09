@@ -516,7 +516,6 @@ static int mct_init_spi(struct device_node *np)
 	return mct_init_dt(np, MCT_INT_SPI);
 }
 
-#ifdef MODULE
 static int exynos_mct_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -524,25 +523,6 @@ static int exynos_mct_probe(struct platform_device *pdev)
 
 	return mct_init_spi(np);
 }
-
-static const struct of_device_id exynos_mct_match_table[] = {
-	{ .compatible = "samsung,s5e9925-mct" },
-	{ }
-};
-MODULE_DEVICE_TABLE(of, exynos_mct_match_table);
-
-static struct platform_driver s5e9925_mct_driver = {
-	.probe		= exynos_mct_probe,
-	.driver		= {
-		.name	= "exynos-mct",
-		.of_match_table = exynos_mct_match_table,
-	},
-};
-module_platform_driver(s5e9925_mct_driver);
-
-#else
-TIMER_OF_DECLARE(s5e9925, "samsung,s5e9925-mct", mct_init_spi);
-#endif
 
 MODULE_DESCRIPTION("Exynos Multi Core Timer v2 driver");
 MODULE_AUTHOR("Donghoon Yu <hoony.yu@samsung.com>");

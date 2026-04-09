@@ -256,53 +256,6 @@ static const struct s3c2410_wdt_variant drv_data_exynos9630_v2 = {
 		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
 };
 
-static const struct s3c2410_wdt_variant drv_data_exynos2100_v1 = {
-	.noncpu_int_en = EXYNOS2100_CLUSTER0_NONCPU_INT_EN,
-	.noncpu_out = EXYNOS2100_CLUSTER0_NONCPU_OUT,
-	.mask_bit = 2,
-	.cnt_en_bit = 9,
-	.rst_stat_reg = EXYNOS5_RST_STAT_REG_OFFSET,
-	.rst_stat_bit = 24,	/* CLUSTER0 WDTRESET */
-	.pmu_reset_func = s3c2410wdt_noncpu_int_en,
-	.pmu_count_en_func = s3c2410wdt_noncpu_out,
-	.quirks = QUIRK_HAS_PMU_CONFIG | QUIRK_HAS_RST_STAT | QUIRK_HAS_WTCLRINT_REG |
-		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
-};
-
-static const struct s3c2410_wdt_variant drv_data_exynos2100_v2 = {
-	.noncpu_int_en = EXYNOS2100_CLUSTER2_NONCPU_INT_EN,
-	.noncpu_out = EXYNOS2100_CLUSTER2_NONCPU_OUT,
-	.mask_bit = 3,
-	.cnt_en_bit = 7,
-	.rst_stat_reg = EXYNOS5_RST_STAT_REG_OFFSET,
-	.rst_stat_bit = 25,	/* CLUSTER2 WDTRESET */
-	.pmu_reset_func = s3c2410wdt_noncpu_int_en,
-	.pmu_count_en_func = s3c2410wdt_noncpu_out,
-	.quirks = QUIRK_HAS_PMU_CONFIG | QUIRK_HAS_RST_STAT | QUIRK_HAS_WTCLRINT_REG |
-		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
-};
-
-static const struct s3c2410_wdt_variant drv_data_s5e9925_v1 = {
-	.noncpu_int_en = S5E9925_CLUSTER0_NONCPU_INT_EN,
-	.mask_bit = 2,
-	.rst_stat_reg = EXYNOS5_RST_STAT_REG_OFFSET,
-	.rst_stat_bit = 24,	/* CLUSTER0 WDTRESET */
-	.pmu_reset_func = s3c2410wdt_noncpu_int_en,
-	.pmu_count_en_func = s3c2410wdt_noncpu_out,
-	.quirks = QUIRK_HAS_PMU_CONFIG | QUIRK_HAS_RST_STAT | QUIRK_HAS_WTCLRINT_REG |
-		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
-};
-
-static const struct s3c2410_wdt_variant drv_data_s5e9925_v2 = {
-	.noncpu_int_en = S5E9925_CLUSTER2_NONCPU_INT_EN,
-	.mask_bit = 3,
-	.rst_stat_reg = EXYNOS5_RST_STAT_REG_OFFSET,
-	.rst_stat_bit = 25,	/* CLUSTER2 WDTRESET */
-	.pmu_reset_func = s3c2410wdt_noncpu_int_en,
-	.pmu_count_en_func = s3c2410wdt_noncpu_out,
-	.quirks = QUIRK_HAS_PMU_CONFIG | QUIRK_HAS_RST_STAT | QUIRK_HAS_WTCLRINT_REG |
-		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
-};
 static const struct s3c2410_wdt_variant drv_data_s5e8825_v1 = {
         .noncpu_int_en = S5E8825_CLUSTER0_NONCPU_INT_EN,
         .mask_bit = 2,
@@ -350,14 +303,6 @@ static const struct of_device_id s3c2410_wdt_match[] = {
 	  .data = &drv_data_exynos9630_v1 },
 	{ .compatible = "samsung,exynos9630-v2-wdt",
 	  .data = &drv_data_exynos9630_v2 },
-	{ .compatible = "samsung,exynos2100-v1-wdt",
-	  .data = &drv_data_exynos2100_v1 },
-	{ .compatible = "samsung,exynos2100-v2-wdt",
-	  .data = &drv_data_exynos2100_v2 },
-	{ .compatible = "samsung,s5e9925-v1-wdt",
-	  .data = &drv_data_s5e9925_v1 },
-	{ .compatible = "samsung,s5e9925-v2-wdt",
-	  .data = &drv_data_s5e9925_v2 },
 	{ .compatible = "samsung,s5e8825-v1-wdt",
 	  .data = &drv_data_s5e8825_v1 },
 	{ .compatible = "samsung,s5e8825-v2-wdt",

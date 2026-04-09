@@ -15,12 +15,7 @@
 
 struct class *tsp_sec_class;
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-__visible_for_testing struct sec_cmd_data *kunit_sec;
-EXPORT_SYMBOL(kunit_sec);
-#else
 #define __visible_for_testing static
-#endif
 
 #if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
 static struct sec_cmd_data *main_sec;
@@ -250,10 +245,6 @@ check_not_support_cmd:
 
 	return count;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_cmd_store);
-#endif
-
 #else	/* defined USE_SEC_CMD_QUEUE */
 static void sec_cmd_store_function(struct sec_cmd_data *data)
 {
@@ -494,9 +485,6 @@ __visible_for_testing ssize_t sec_cmd_store(struct device *dev, struct device_at
 	sec_cmd_execution(data, true);
 	return count;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_cmd_store);
-#endif
 #endif
 
 __visible_for_testing ssize_t sec_cmd_show_status(struct device *dev,
@@ -532,9 +520,6 @@ __visible_for_testing ssize_t sec_cmd_show_status(struct device *dev,
 
 	return snprintf(buf, sizeof(buff), "%s\n", buff);
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_cmd_show_status);
-#endif
 
 static ssize_t sec_cmd_show_status_all(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
@@ -597,9 +582,6 @@ __visible_for_testing ssize_t sec_cmd_show_result(struct device *dev,
 
 	return size;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_cmd_show_result);
-#endif
 
 static ssize_t sec_cmd_show_result_all(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
@@ -1212,7 +1194,7 @@ err:
 EXPORT_SYMBOL(sec_cmd_virtual_tsp_write_cmd_factory_all);
 #endif
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT) && !IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
+#if !IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
 
 static int __init sec_cmd_m_init(void)
 {
@@ -1229,4 +1211,3 @@ module_exit(sec_cmd_m_exit);
 
 MODULE_DESCRIPTION("Samsung input command");
 MODULE_LICENSE("GPL");
-

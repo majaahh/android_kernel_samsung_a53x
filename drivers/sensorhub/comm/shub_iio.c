@@ -30,14 +30,8 @@
 #include "../sensormanager/shub_sensor_manager.h"
 #include "shub_kfifo_buf.h"
 
-#if defined(CONFIG_SHUB_KUNIT)
-#include <kunit/mock.h>
-#define __mockable __weak
-#define __visible_for_testing
-#else
 #define __mockable
 #define __visible_for_testing static
-#endif
 
 #define SCONTEXT_DATA_LEN       56
 #define SCONTEXT_HEADER_LEN     8

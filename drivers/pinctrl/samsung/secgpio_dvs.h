@@ -34,7 +34,6 @@ struct secgpio_dvs_data {
 };
 
 /* list of all exported SoC specific data */
-extern const struct secgpio_dvs_data s5e9925_secgpio_dvs_data;
 extern const struct secgpio_dvs_data s5e8825_secgpio_dvs_data;
 
 #endif /* __SECGPIO_DVS_H */

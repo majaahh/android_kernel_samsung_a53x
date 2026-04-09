@@ -17,13 +17,7 @@
 #include "chub.h"
 #include "ipc_chub.h"
 #include "chub_dbg.h"
-
-#ifdef CONFIG_SOC_S5E8825
 #include "s5e8825.h"
-#endif
-#ifdef CONFIG_SOC_S5E9925
-#include "s5e9925.h"
-#endif
 
 #define REG_CHUB_CPU_DURATION			(0x8)
 #define REG_CHUB_CPU_STATUS_BIT_STANDBYWFI	(28)

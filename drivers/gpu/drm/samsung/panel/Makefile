@@ -39,13 +39,3 @@ mcd-panel-$(CONFIG_SUPPORT_POC_SPI) += panel_poc.o panel_spi.o
 mcd-panel-$(CONFIG_MCD_PANEL_I2C) += panel_i2c.o
 mcd-panel-$(CONFIG_MCD_PANEL_BLIC) += panel_blic.o
 obj-$(CONFIG_MCD_PANEL) += mcd-panel.o
-
-subdir-ccflags-$(CONFIG_SEC_KUNIT) += \
-    -Wframe-larger-than=8192 \
-    -Wunused-variable \
-    -Wunused-function \
-    -Wmissing-braces \
-    -Wno-implicit-fallthrough \
-    -Wformat \
-    -Wformat-security
-

@@ -101,11 +101,7 @@ struct fmp_sg_entry {
 /* 0-14 keylots: keyslot for crypto io, 15: reserved keyslot for FIPS */
 #define UFS_KEYSLOTS	16
 
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-#define FIPS_KEYSLOT	1
-#else
 #define FIPS_KEYSLOT	0
-#endif
 
 #define NUM_KEYSLOTS	(UFS_KEYSLOTS - FIPS_KEYSLOT)
 

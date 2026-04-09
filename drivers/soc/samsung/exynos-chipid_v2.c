@@ -82,12 +82,6 @@ static const char * product_id_to_name(unsigned int product_id)
 	case EXYNOS9830_SOC_ID:
 		soc_name = "EXYNOS9830";
 		break;
-	case EXYNOS2100_SOC_ID:
-		soc_name = "EXYNOS2100";
-		break;
-	case S5E9925_SOC_ID:
-		soc_name = "S5E9925";
-		break;
 	case S5E8825_SOC_ID:
 		soc_name = "S5E8825";
 		break;
@@ -136,22 +130,6 @@ static const struct exynos_chipid_variant drv_data_exynos9830 = {
 	.sub_rev_bit	= 16,
 };
 
-static const struct exynos_chipid_variant drv_data_exynos2100 = {
-	.product_ver	= 1,
-	.unique_id_reg	= 0x04,
-	.rev_reg	= 0x10,
-	.main_rev_bit	= 20,
-	.sub_rev_bit	= 16,
-};
-
-static const struct exynos_chipid_variant drv_data_s5e9925 = {
-	.product_ver	= 1,
-	.unique_id_reg	= 0x04,
-	.rev_reg	= 0x10,
-	.main_rev_bit	= 20,
-	.sub_rev_bit	= 16,
-};
-
 static const struct exynos_chipid_variant drv_data_s5e8825 = {
         .product_ver    = 1,
         .unique_id_reg  = 0x04,
@@ -180,14 +158,6 @@ static const struct of_device_id of_exynos_chipid_ids[] = {
 	{
 		.compatible	= "samsung,exynos9830-chipid",
 		.data		= &drv_data_exynos9830,
-	},
-	{
-		.compatible	= "samsung,exynos2100-chipid",
-		.data		= &drv_data_exynos2100,
-	},
-	{
-		.compatible	= "samsung,s5e9925-chipid",
-		.data		= &drv_data_s5e9925,
 	},
 	{
 		.compatible     = "samsung,s5e8825-chipid",

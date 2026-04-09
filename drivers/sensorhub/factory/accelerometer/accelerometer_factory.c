@@ -22,14 +22,8 @@
 #include "../../utility/shub_file_manager.h"
 #include "../../comm/shub_comm.h"
 
-#if defined(CONFIG_SHUB_KUNIT)
-#include <kunit/mock.h>
-#define __mockable __weak
-#define __visible_for_testing
-#else
 #define __mockable
 #define __visible_for_testing static
-#endif
 
 #include <linux/delay.h>
 #include <linux/slab.h>

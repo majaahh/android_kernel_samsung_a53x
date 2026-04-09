@@ -222,16 +222,6 @@
 #define TSMUX_SHD_RTP_HDR0_ADDR			(0x0824)
 #define TSMUX_SHD_RTP_HDR2_ADDR			(0x082C)
 
-#if defined(CONFIG_SOC_EXYNOS9820)
-#include "cmu_mfc/exynos9820_cmu_mfc.h"
-#elif defined(CONFIG_SOC_EXYNOS9830)
-#include "cmu_mfc/exynos9830_cmu_mfc.h"
-#elif defined(CONFIG_SOC_EXYNOS2100)
-#include "cmu_mfc/exynos2100_cmu_mfc.h"
-#elif defined(CONFIG_SOC_S5E9925)
-#include "cmu_mfc/s5e9925_cmu_mfc.h"
-#endif
-
 #define MAX_OFFSET_CMU_MFC_SFR		0x8000
 #define TSMUX_CMU_MFC_READL(offset)    \
 	(readl(tsmux_dev->regs_base_cmu_mfc + (offset)))

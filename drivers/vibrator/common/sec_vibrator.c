@@ -22,11 +22,7 @@
 #include "../../battery/common/sec_charging_common.h"
 #endif
 #endif
-#if defined(CONFIG_SEC_KUNIT)
-#include "kunit_test/sec_vibrator_test.h"
-#else
 #define __visible_for_testing static
-#endif
 
 static const int  kMaxBufSize = 7;
 static const int kMaxHapticStepSize = 7;

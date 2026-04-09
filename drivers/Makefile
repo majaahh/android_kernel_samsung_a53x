@@ -196,15 +196,9 @@ obj-$(CONFIG_EXYNOS_BTS)        += bts/
 
 # vision drivers
 obj-${CONFIG_VISION_SUPPORT}	+= vision/
-obj-${CONFIG_VISION_SUPPORT3}	+= vision3/
 
 # SPU signature verify
 obj-$(CONFIG_SPU_VERIFY)        += spu_verify/
-
-# uH
-obj-$(CONFIG_UH)		+= uh/
-
-obj-y				+= knox/
 
 include $(srctree)/drivers/Makefile.variant1
 obj-y += regulator/pmic_class/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
@@ -218,7 +212,6 @@ obj-y += muic/common/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += input/input_boost/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += battery/core/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += kq/mesh/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
-obj-y += kperfmon/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += vibrator/common/vib_info/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += input/sec_input/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 obj-y += usb/common/vbus_notifier/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT

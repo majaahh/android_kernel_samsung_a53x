@@ -106,10 +106,4 @@ config USE_OIS_TAMODE_CONTROL
         default n
         help
           Use ois TAMODE control.
-config MCU_S5E9925_EVT0
-	bool "Mcu s5e9925 evt0"
-        depends on CAMERA_VENDER_MCD
-        default n
-        help
-          Mcu s5e9925 evt0.
 
