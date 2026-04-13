@@ -9,6 +9,14 @@ dtbo-$(CONFIG_ARCH_EXYNOS) += \
     device/a25x/a25x_eur_open_w00_r04.dtbo \
     device/a25x/a25x_eur_open_w00_r05.dtbo
 
+# a33x - SM-A336B
+dtbo-$(CONFIG_ARCH_EXYNOS) += \
+    device/a33x/a33x_eur_open_w00_r00.dtbo \
+    device/a33x/a33x_eur_open_w00_r01.dtbo \
+    device/a33x/a33x_eur_open_w00_r02.dtbo \
+    device/a33x/a33x_eur_open_w00_r03.dtbo \
+    device/a33x/a33x_eur_open_w00_r04.dtbo
+
 # a53x - SC-53C
 dtbo-$(CONFIG_ARCH_EXYNOS) += \
     device/a53x/a53x_jpn_dcm_w00_r00.dtbo \
