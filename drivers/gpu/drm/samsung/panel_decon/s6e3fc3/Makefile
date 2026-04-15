@@ -13,6 +13,8 @@ subdir-ccflags-$(CONFIG_SEC_KUNIT) += \
 	-Wno-format
 
 
+ifeq ($(CONFIG_SEC_A33),y)
 mcd-panel-s6e3fc3_a33x-y += s6e3fc3.o s6e3fc3_a33x.o
 mcd-panel-s6e3fc3_a33x-$(CONFIG_EXTEND_LIVE_CLOCK) += s6e3fc3_aod.o
 obj-$(CONFIG_EXYNOS_DECON_LCD_S6E3FC3) += mcd-panel-s6e3fc3_a33x.o
+endif
