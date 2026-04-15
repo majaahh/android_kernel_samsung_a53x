@@ -11,6 +11,38 @@ config SOC_S5E8825
 	help
 	Support Samsung SOC S5E8825.
 
+if SOC_S5E8825
+config SEC_A25
+  bool "Support for Galaxy A25 5G"
+  default n
+  depends on SOC_S5E8825
+
+config SEC_A33
+  bool "Support for Galaxy A33 5G"
+  default n
+  depends on SOC_S5E8825
+
+config SEC_A53
+  bool "Support for Galaxy A53 5G"
+  default n
+  depends on SOC_S5E8825
+
+config SEC_M33
+  bool "Support for Galaxy M33 5G"
+  default n
+  depends on SOC_S5E8825
+
+config SEC_M34
+  bool "Support for Galaxy M34 5G"
+  default n
+  depends on SOC_S5E8825
+
+config SEC_P62
+  bool "Support for Tab S6 Lite 2024"
+  default n
+  depends on SOC_S5E8825
+endif
+
 if SOC_SAMSUNG
 
 # There is no need to enable these drivers for ARMv8
