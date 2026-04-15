@@ -19,5 +19,5 @@ subdir-ccflags-$(CONFIG_SEC_KUNIT) += \
 	-Wno-format
 
 
-mcd-panel-hx83102e_gta4xls_00-y += hx83102e_gta4xls_00.o
+mcd-panel-hx83102e_gta4xls_00-$(CONFIG_SEC_P62) += hx83102e_gta4xls_00.o
 obj-$(CONFIG_USDM_PANEL_HX83102E_GTA4XLS_00) += mcd-panel-hx83102e_gta4xls_00.o
