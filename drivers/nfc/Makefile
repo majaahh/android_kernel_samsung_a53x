@@ -7,13 +7,15 @@ ifneq ($(SEC_BUILD_CONF_USE_ESE_TZ), false)
 endif
 
 ifeq ($(CONFIG_SAMSUNG_NFC),m)
+ifeq ($(or $(CONFIG_SEC_NFC),$(CONFIG_NFC_ST21NFC)),y)
 obj-$(CONFIG_SAMSUNG_NFC)		+= nfc_sec.o
 nfc_sec-$(CONFIG_SEC_NFC)		+= sec_nfc.o
 nfc_sec-$(CONFIG_ESE_P3_LSI)		+= ese_p3.o
 nfc_sec-$(CONFIG_NFC_ST21NFC)		+= st21nfc.o
 nfc_sec-$(CONFIG_NFC_ST54SPI_ESE_SUPPORT)	+= st54spi.o
 nfc_sec-$(CONFIG_SEC_NFC_LOGGER)		+= nfc_logger/nfc_logger.o
-obj-$(CONFIG_SAMSUNG_NFC)		+= nfc_nxp.o
+endif
+obj-$(CONFIG_NXP_NFC)		+= nfc_nxp.o
 nfc_nxp-$(CONFIG_NFC_PN547_ESE_SUPPORT)	+= p61.o
 nfc_nxp-$(CONFIG_NFC_FEATURE_SN100U)	+= cold_reset.o
 nfc_nxp-$(CONFIG_SEC_NFC_LOGGER)		+= nfc_logger/nfc_logger.o

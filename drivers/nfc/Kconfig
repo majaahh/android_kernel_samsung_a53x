@@ -177,6 +177,10 @@ config SEC_NFC_WAKELOCK_METHOD
           1 - wakeup_source_init
           2 - wakeup_source_register
 
+config NXP_NFC
+  bool "Support for NXP NFC"
+  default n
+
 config NFC_PN547
 	bool "NXP PN547 NFC Controller Driver"
 	depends on I2C
