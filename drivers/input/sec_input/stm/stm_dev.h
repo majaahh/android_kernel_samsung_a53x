@@ -74,7 +74,6 @@ extern struct tsp_dump_callbacks dump_callbacks;
 #endif
 
 #include "../sec_input.h"
-#include "../sec_tsp_log.h"
 
 #ifndef I2C_M_DMA_SAFE
 #define I2C_M_DMA_SAFE		0
