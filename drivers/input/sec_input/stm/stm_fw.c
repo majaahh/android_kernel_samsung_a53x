@@ -596,10 +596,10 @@ int stm_ts_fw_update_on_probe(struct stm_ts_data *ts)
 	const struct firmware *fw_entry = NULL;
 	char fw_path[STM_TS_MAX_FW_PATH];
 	const struct stm_ts_header *header;
+	int retry = 3;
 #ifdef TCLM_CONCEPT
 	int ret = 0;
 	bool restore_cal = false;
-	int retry = 3;
 
 	if (ts->tdata->support_tclm_test) {
 		ret = sec_tclm_test_on_probe(ts->tdata);
