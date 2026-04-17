@@ -236,8 +236,8 @@ static void gnss_request_gnss2ap_baaw(void)
 	gnss_dbus_write(0x8, (g_shmem_base >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0xC, 0x80000003);
 
-	gnss_dbus_write(0x10, (g_base_addr_2nd >> MEMBASE_ADDR_SHIFT));
-	gnss_dbus_write(0x14, (g_base_addr_2nd >> MEMBASE_ADDR_SHIFT)
+	gnss_dbus_write(0x10, (MEMBASE_GNSS_ADDR_2ND >> MEMBASE_ADDR_SHIFT));
+	gnss_dbus_write(0x14, (MEMBASE_GNSS_ADDR_2ND >> MEMBASE_ADDR_SHIFT)
 			+ (g_shmem_size >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0x18, (g_shmem_base >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0x1C, 0x80000003);
