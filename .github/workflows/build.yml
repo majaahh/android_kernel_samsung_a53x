@@ -1,0 +1,56 @@
+name: Build UN1CA Kernel
+
+on:
+  workflow_dispatch:
+  #pull_request:
+  #push:
+  #  branches:
+  #    - 'sixteen'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [a25x, a33x, a53x, gta4xls, m33x, m34x]
+
+    steps:
+      - name: Checkout build repository
+        uses: actions/checkout@v6
+        with:
+            repository: 'majaahh/build-kernel'
+
+      - name: Checkout kernel repository
+        uses: actions/checkout@v6
+        with:
+            path: 'out/kernel'
+            submodules: 'true'
+
+      - name: Free disk space
+        uses: rokibhasansagar/slimhub_actions@main
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
+              brotli zip zstd tar lz4 cpio xz-utils flex \
+              bc kmod ccache binutils-aarch64-linux-gnu gh
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Build
+        run: |
+          source env.sh
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              ./scripts/build.sh ${{ matrix.target }}
+              ./scripts/build.sh -k ${{ matrix.target }}
+          else
+              ./scripts/build.sh -u ${{ matrix.target }}
+              ./scripts/build.sh -k -u ${{ matrix.target }}
+          fi
