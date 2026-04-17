@@ -147,7 +147,6 @@ subdir-ccflags-y += $(ccflags-y)
 #
 obj-$(CONFIG_MALI_MIDGARD) += mali_kbase.o
 # obj-$(CONFIG_MALI_ARBITRATION) += arbitration/
-obj-$(CONFIG_MALI_KUTF)    += tests/
 
 mali_kbase-y := \
     mali_kbase_cache_policy.o \
