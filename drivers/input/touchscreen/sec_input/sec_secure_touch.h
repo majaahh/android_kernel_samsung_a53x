@@ -61,9 +61,6 @@ struct sec_secure_touch {
 	void *data;
 	struct platform_device *pdev;
 	struct device *device;
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	struct delayed_work folder_work;
-#endif
 	int hall_ic;
 	struct mutex lock;
 	struct notifier_block nb;

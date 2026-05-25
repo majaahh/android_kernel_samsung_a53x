@@ -777,11 +777,6 @@ int sec_input_device_register(struct device *dev, void *data)
 		return -ENOMEM;
 	}
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	if (pdata->support_dual_foldable == SUB_TOUCH)
-		pdata->input_dev->name = "sec_touchscreen2";
-	else 
-#endif
 		pdata->input_dev->name = "sec_touchscreen";
 
 	sec_input_set_prop(dev, pdata->input_dev, INPUT_PROP_DIRECT, data);
@@ -818,11 +813,6 @@ int sec_input_device_register(struct device *dev, void *data)
 			return -ENOMEM;
 		}
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-		if (pdata->support_dual_foldable == SUB_TOUCH)
-			pdata->input_dev_proximity->name = "sec_touchproximity2";
-		else 
-#endif
 		pdata->input_dev_proximity->name = "sec_touchproximity";
 		sec_input_set_prop_proximity(dev, pdata->input_dev_proximity, data);
 		ret = input_register_device(pdata->input_dev_proximity);

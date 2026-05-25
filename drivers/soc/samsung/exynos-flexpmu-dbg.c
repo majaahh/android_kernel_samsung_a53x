@@ -45,9 +45,6 @@ enum flexpmu_debugfs_id {
 	FID_MIF_ALWAYS_ON,
 	FID_LPM_COUNT,
 	FID_APM_REQ_INFO,
-#if defined(CONFIG_SOC_S5E9925)
-	FID_MID_DVS_EN,
-#endif
 	FID_MAX
 };
 
@@ -60,9 +57,6 @@ char *flexpmu_debugfs_name[FID_MAX] = {
 	"mif_always_on",
 	"lpm_count",
 	"apm_req_info",
-#if defined(CONFIG_SOC_S5E9925)
-	"mid_dvs_en",
-#endif
 };
 
 /* enum for data lines */
@@ -110,17 +104,6 @@ enum data_id {
 	DID_INT_REG09,
 	DID_INT_REG10,
 	DID_INT_REG11,
-#if defined(CONFIG_SOC_S5E9925)
-	DID_MIFAP0,
-	DID_MIFAP1,
-	DID_MIFAUD0,
-	DID_MIFAUD1,
-	DID_MIFVTS0,
-	DID_MIFVTS1,
-	DID_MIFCP0,
-	DID_MIFCP1,
-	DID_MID_DVS_EN,
-#elif defined(CONFIG_SOC_S5E8825)
 	DID_CMGP_REQ,
 	DID_LOCAL01,
 	DID_LOCAL02,
@@ -167,7 +150,6 @@ enum data_id {
 	DID_PWRWLBT2,
 	DID_pENTIME,
 	DID_SICD_PHY,
-#endif
 	DID_MAX
 
 };
@@ -201,16 +183,6 @@ struct flexpmu_apm_req_info {
 void __iomem *rtc_base;
 
 
-#if defined(CONFIG_SOC_S5E9925)
-#define MIF_MASTER_MAX		4
-char *flexpmu_master_name[MIF_MASTER_MAX] = {
-	"MIF_AP",
-	"MIF_AUD",
-	"MIF_VTS",
-	"MIF_CP",
-};
-
-#elif defined(CONFIG_SOC_S5E8825)
 #define MIF_MASTER_MAX		7
 char *flexpmu_master_name[MIF_MASTER_MAX] = {
 	"MIF_AUD",
@@ -221,7 +193,6 @@ char *flexpmu_master_name[MIF_MASTER_MAX] = {
 	"MIF_WLBT",
 	"MIF_AP",
 };
-#endif
 
 struct flexpmu_apm_req_info apm_req[MIF_MASTER_MAX];
 
@@ -482,24 +453,6 @@ static ssize_t exynos_flexpmu_dbg_mif_always_on_read(int fid, char *buf)
 
 	return ret;
 }
-#if defined(CONFIG_SOC_S5E9925)
-static ssize_t exynos_flexpmu_dbg_mid_dvs_en_read(int fid, char *buf)
-{
-	ssize_t ret = 0;
-	int data_count = 0;
-
-	struct flexpmu_dbg_print_arg *print_arg = exynos_flexpmu_dbg_alloc_print_arg(2,
-		"MID DVS states", HEX_PRINT,
-		"MID DVS enable", DEC_PRINT
-	);
-
-	ret = print_dataline_2(DID_MID_DVS_EN, print_arg, ret, buf, &data_count);
-
-	kfree(print_arg);
-
-	return ret;
-}
-#endif 
 static ssize_t exynos_flexpmu_dbg_lpm_count_read(int fid, char *buf)
 {
 	ssize_t ret = 0;
@@ -551,16 +504,6 @@ static ssize_t exynos_flexpmu_dbg_apm_req_info_read(int fid, char *buf)
 			"last_rel_time(us ago)", "total_req_time(us)", "req_count");
 
 	for (i = 0; i < MIF_MASTER_MAX; i++) {
-#if defined(CONFIG_SOC_S5E9925)
-		apm_req[i].active_req_tick = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFAP0 + i * 2)) + DATA_IDX);
-		apm_req[i].last_rel_tick = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFAP0 + i * 2)) + DATA_IDX  + 4);
-		apm_req[i].total_count = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFAP1 + i * 2)) + DATA_IDX);
-		apm_req[i].total_time_tick = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFAP1 + i * 2)) + DATA_IDX  + 4);
-#elif defined(CONFIG_SOC_S5E8825)
 		apm_req[i].active_req_tick = __raw_readl(flexpmu_dbg_base
 				+ (DATA_LINE * (DID_MIFAUD0 + i * 3)) + DATA_IDX);
 		apm_req[i].last_rel_tick = __raw_readl(flexpmu_dbg_base
@@ -569,7 +512,6 @@ static ssize_t exynos_flexpmu_dbg_apm_req_info_read(int fid, char *buf)
 				+ (DATA_LINE * (DID_MIFAUD1 + i * 3)) + DATA_IDX);
 		apm_req[i].total_time_tick = __raw_readl(flexpmu_dbg_base
 				+ (DATA_LINE * (DID_MIFAUD1 + i * 3)) + DATA_IDX  + 4);
-#endif
 		if (apm_req[i].last_rel_tick > 0) {
 			apm_req[i].last_rel_us =
 				(curr_tick - apm_req[i].last_rel_tick) * RTC_TICK_TO_US;
@@ -611,9 +553,6 @@ static ssize_t (*flexpmu_debugfs_read_fptr[FID_MAX])(int, char *) = {
 	FLEXPMU_DBG_FUNC_READ(mif_always_on),
 	FLEXPMU_DBG_FUNC_READ(lpm_count),
 	FLEXPMU_DBG_FUNC_READ(apm_req_info),
-#if defined(CONFIG_SOC_S5E9925)
-	FLEXPMU_DBG_FUNC_READ(mid_dvs_en),
-#endif
 };
 
 static ssize_t exynos_flexpmu_dbg_read(struct file *file, char __user *user_buf,
@@ -658,18 +597,6 @@ static ssize_t exynos_flexpmu_dbg_write(struct file *file, const char __user *us
 					(DATA_LINE * DID_MIF_ALWAYS_ON) + 0xC);
 		}
 		break;
-#if defined(CONFIG_SOC_S5E9925)
-	case FID_MID_DVS_EN:
-		if (buf[0] == '0') {
-			__raw_writel(0, flexpmu_dbg_base +
-					(DATA_LINE * DID_MID_DVS_EN) + 0xC);
-		}
-		if (buf[0] == '1') {
-			__raw_writel(1, flexpmu_dbg_base +
-					(DATA_LINE * DID_MID_DVS_EN) + 0xC);
-		}
-		break;
-#endif
 	default:
 		break;
 	}

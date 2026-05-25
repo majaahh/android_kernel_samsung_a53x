@@ -27,39 +27,6 @@
 #define gnss_pmu_write	exynos_pmu_write
 #define gnss_pmu_update exynos_pmu_update
 
-#if IS_ENABLED(CONFIG_SOC_EXYNOS9630)
-#define BAAW_GNSS_CMGP_ADDR	(0x13FE0000)
-#define BAAW_GNSS_CMGP_SIZE	(SZ_64K)
-
-#define BAAW_GNSS_DBUS_ADDR	(0x13FD0000)
-#define BAAW_GNSS_DBUS_SIZE	(SZ_64K)
-
-#define CMUPMU_ADDR (0x13E43000)
-
-#elif IS_ENABLED(CONFIG_SOC_EXYNOS3830)
-#define BAAW_GNSS_CMGP_ADDR	(0x13FE0000)
-#define BAAW_GNSS_CMGP_SIZE	(SZ_64K)
-
-#define BAAW_GNSS_DBUS_ADDR	(0x13FD0000)
-#define BAAW_GNSS_DBUS_SIZE	(SZ_64K)
-
-#define CMUPMU_ADDR (0x13E43000)
-
-#elif IS_ENABLED(CONFIG_SOC_S5E9815)
-#define BAAW_GNSS_CMGP_ADDR	(0x159E0000)
-#define BAAW_GNSS_CMGP_SIZE	(SZ_64K)
-
-#define BAAW_GNSS_DBUS_ADDR	(0x159D0000)
-#define BAAW_GNSS_DBUS_SIZE	(SZ_64K)
-
-#elif IS_ENABLED(CONFIG_SOC_S5E9925)
-#define BAAW_GNSS_CMGP_ADDR	(0x147E0000)
-#define BAAW_GNSS_CMGP_SIZE	(SZ_64K)
-
-/* Set OFFSET only. ADDR and SIZE are the same with CMGP values. */
-#define BAAW_GNSS_DBUS_OFFSET	(0x20)
-
-#elif IS_ENABLED(CONFIG_SOC_S5E8825)
 #define BAAW_GNSS_CMGP_ADDR	(0x13FE0000)
 #define BAAW_GNSS_CMGP_SIZE	(SZ_64K)
 
@@ -70,7 +37,6 @@
 #define LPP_RA1_HD_ADME_OFFSET	(0x00000314)
 
 static void __iomem *sysreg_alive_reg;
-#endif
 
 static u32 g_shmem_size;
 static u64 g_shmem_base;
@@ -264,91 +230,18 @@ static void gnss_request_gnss2ap_baaw(void)
 
 	gif_info("DRAM Configuration\n");
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
-	gnss_dbus_write(0x0, (g_base_addr >> MEMBASE_ADDR_SHIFT));
-	gnss_dbus_write(0x4, (g_base_addr >> MEMBASE_ADDR_SHIFT)
-			+ (g_shmem_size >> MEMBASE_ADDR_SHIFT));
-#else
 	gnss_dbus_write(0x0, (MEMBASE_GNSS_ADDR >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0x4, (MEMBASE_GNSS_ADDR >> MEMBASE_ADDR_SHIFT)
 			+ (g_shmem_size >> MEMBASE_ADDR_SHIFT));
-#endif
 	gnss_dbus_write(0x8, (g_shmem_base >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0xC, 0x80000003);
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
 	gnss_dbus_write(0x10, (g_base_addr_2nd >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0x14, (g_base_addr_2nd >> MEMBASE_ADDR_SHIFT)
 			+ (g_shmem_size >> MEMBASE_ADDR_SHIFT));
-#else
-	gnss_dbus_write(0x10, (MEMBASE_GNSS_ADDR_2ND >> MEMBASE_ADDR_SHIFT));
-	gnss_dbus_write(0x14, (MEMBASE_GNSS_ADDR_2ND >> MEMBASE_ADDR_SHIFT)
-			+ (g_shmem_size >> MEMBASE_ADDR_SHIFT));
-#endif
 	gnss_dbus_write(0x18, (g_shmem_base >> MEMBASE_ADDR_SHIFT));
 	gnss_dbus_write(0x1C, 0x80000003);
 
-#if IS_ENABLED(CONFIG_SOC_EXYNOS3830)
-	gif_info("MAILBOX CP APM AP CHUB WLBT\n");
-	gnss_cmgp_write(0x00, 0x000B1960);	/* GNSS Start address >> 12bit */
-	gnss_cmgp_write(0x04, 0x000B19B0);	/* GNSS End address >> 12bit */
-	gnss_cmgp_write(0x08, 0x00011960);	/* AP Start address >> 12bit */
-	gnss_cmgp_write(0x0C, 0x80000003);
-
-	gif_info("CHUB_SRAM non cachable\n");
-	gnss_cmgp_write(0x10, 0x000B0E00);
-	gnss_cmgp_write(0x14, 0x000B0E40);
-	gnss_cmgp_write(0x18, 0x00010E00);
-	gnss_cmgp_write(0x1C, 0x80000003);
-
-#elif IS_ENABLED(CONFIG_SOC_EXYNOS9630)
-	gif_info("MAILBOX CP APM AP CHUB WLBT\n");
-	gnss_cmgp_write(0x00, 0x000B0F60);	/* GNSS Start address >> 12bit */
-	gnss_cmgp_write(0x04, 0x000B0FB0);	/* GNSS End address >> 12bit */
-	gnss_cmgp_write(0x08, 0x00010F60);	/* AP Start address >> 12bit */
-	gnss_cmgp_write(0x0C, 0x80000003);
-
-	gif_info("CHUB_SRAM non cachable\n");
-	gnss_cmgp_write(0x10, 0x000B1A00);
-	gnss_cmgp_write(0x14, 0x000B1A68);
-	gnss_cmgp_write(0x18, 0x00011A00);
-	gnss_cmgp_write(0x1C, 0x80000003);
-
-#elif IS_ENABLED(CONFIG_SOC_S5E9815)
-	gif_info("MAILBOX WLBT\n");
-	gnss_cmgp_write(0x00, 0x000B0A10);	/* GNSS Start address >> 12bit */
-	gnss_cmgp_write(0x04, 0x000B0A20);	/* GNSS End address >> 12bit */
-	gnss_cmgp_write(0x08, 0x00010A10);	/* AP Start address >> 12bit */
-	gnss_cmgp_write(0x0C, 0x80000003);
-
-	gif_info("MAILBOX CP APM AP CHUB\n");
-	gnss_cmgp_write(0x00, 0x000B0A50);	/* GNSS Start address >> 12bit */
-	gnss_cmgp_write(0x04, 0x000B0A90);	/* GNSS End address >> 12bit */
-	gnss_cmgp_write(0x08, 0x00010A50);	/* AP Start address >> 12bit */
-	gnss_cmgp_write(0x0C, 0x80000003);
-
-	gif_info("CHUB_SRAM non cachable\n");
-	gnss_cmgp_write(0x10, 0x000B1A00);
-	gnss_cmgp_write(0x14, 0x000B1A40);
-	gnss_cmgp_write(0x18, 0x000113B0);
-	gnss_cmgp_write(0x1C, 0x80000003);
-
-#elif IS_ENABLED(CONFIG_SOC_S5E9925)
-	gif_info("MAILBOX CP APM AP CHUB\n");
-	gnss_cmgp_write(0x00, 0x000B4C50);	/* GNSS Start address >> 12bit */
-	gnss_cmgp_write(0x04, 0x000B4C90);	/* GNSS End address >> 12bit */
-	gnss_cmgp_write(0x08, 0x00014C50);	/* AP Start address >> 12bit */
-	gnss_cmgp_write(0x0C, 0x80000003);
-
-	gif_info("CHUB_SRAM non cachable\n");
-	gnss_cmgp_write(0x10, 0x000B1A0F);
-	gnss_cmgp_write(0x14, 0x000B1A10);
-	gnss_cmgp_write(0x18, 0x0000297F);
-	gnss_cmgp_write(0x1C, 0x80000003);
-
-	/* Modify BAAW_GNSS_DBUS_OFFSET if want to add more */
-
-#elif IS_ENABLED(CONFIG_SOC_S5E8825)
 	gif_info("MAILBOX CP APM AP CHUB WLBT\n");
 	gnss_cmgp_write(0x00, 0x000B1960);	/* GNSS Start address >> 12bit */
 	gnss_cmgp_write(0x04, 0x000B19B0);	/* GNSS End address >> 12bit */
@@ -368,7 +261,6 @@ static void gnss_request_gnss2ap_baaw(void)
 	gif_info("lpp adme val after set: 0x%08x\n", lpp_adme_val);
 
 	__raw_writel(lpp_adme_val, sysreg_alive_reg + LPP_RA1_HD_ADME_OFFSET);
-#endif
 }
 
 static int gnss_pmu_power_on(enum gnss_mode mode)

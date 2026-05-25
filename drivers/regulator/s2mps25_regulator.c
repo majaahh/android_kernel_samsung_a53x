@@ -46,10 +46,6 @@ static struct device_node *acpm_mfd_node;
 #include <linux/sec_pm_debug.h>
 #endif /* CONFIG_SEC_PM_DEBUG */
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-#include <linux/sec_debug.h>
-#endif
-
 #define I2C_BASE_VGPIO	0x00
 #define I2C_BASE_COMMON	0x03
 #define I2C_BASE_RTC	0x04
@@ -730,9 +726,6 @@ static irqreturn_t s2mps25_buck_ocp_irq(int irq, void *data)
 		}
 	}
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-	secdbg_exin_set_main_ocp(s2mps25_buck_ocp_cnt, s2mps25_buck_oi_cnt, S2MPS25_BUCK_MAX);
-#endif
 	mutex_unlock(&s2mps25->lock);
 
 #if IS_ENABLED(CONFIG_SEC_PM_DEBUG)
@@ -763,9 +756,6 @@ static irqreturn_t s2mps25_buck_oi_irq(int irq, void *data)
 		}
 	}
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-	secdbg_exin_set_main_ocp(s2mps25_buck_ocp_cnt, s2mps25_buck_oi_cnt, S2MPS25_BUCK_MAX);
-#endif
 	mutex_unlock(&s2mps25->lock);
 
 #if IS_ENABLED(CONFIG_SEC_PM_DEBUG)

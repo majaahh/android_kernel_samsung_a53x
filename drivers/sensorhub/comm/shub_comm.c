@@ -27,14 +27,8 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 
-#if defined(CONFIG_SHUB_KUNIT)
-#include <kunit/mock.h>
-#define __mockable __weak
-#define __visible_for_testing
-#else
 #define __mockable
 #define __visible_for_testing static
-#endif
 
 #define SHUB2AP_BYPASS_DATA	0x37
 #define SHUB2AP_LIBRARY_DATA	0x01

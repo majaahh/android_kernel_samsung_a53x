@@ -349,7 +349,6 @@ source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 source "fs/unicode/Kconfig"
 
-
 config IO_WQ
 	bool
 

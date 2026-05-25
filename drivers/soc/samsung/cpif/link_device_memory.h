@@ -874,9 +874,6 @@ static inline struct sk_buff *mem_alloc_skb(unsigned int len)
 	if (!skb) {
 		mif_err("ERR! alloc_skb(len:%d + pad:%d, gfp:0x%x) fail\n",
 			len, NET_SKB_PAD, priority);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_MIF_OOM)
-		show_mem(SHOW_MEM_FILTER_NODES);
-#endif
 		return NULL;
 	}
 

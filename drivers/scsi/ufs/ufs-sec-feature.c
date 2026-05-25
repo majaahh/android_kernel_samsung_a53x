@@ -1442,9 +1442,6 @@ static void ufs_sec_sense_err_check(struct ufshcd_lrb *lrbp, struct ufs_sec_cmd_
 	if (sense_key != MEDIUM_ERROR && sense_key != HARDWARE_ERROR)
 		return;
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG)
-	secdbgMode = secdbg_mode_enter_upload();
-#endif
 	asc = lrbp->ucd_rsp_ptr->sr.sense_data[12];
 	ascq = lrbp->ucd_rsp_ptr->sr.sense_data[13];
 

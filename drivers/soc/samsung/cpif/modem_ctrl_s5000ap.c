@@ -45,37 +45,19 @@ static int s5000ap_lcd_notifier(struct notifier_block *notifier,
 /*
  * CP_WDT interrupt handler
  */
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define PMU_CP_INT_IN		0x3940
-#define CP_SCANDUMP_MASK	(0x1 << 7)
-#elif IS_ENABLED(CONFIG_SOC_S5E9925)
-#define PMU_CP_CTRL_NS		0x3910
-#define PMU_CP_CTRL_S		0x3914
-#define PMU_CP_OUT		0x3920
-#define PMU_CP_IN		0x3924
-#define PMU_CP_INT_IN		0x3930
-#define PMU_CP_INT_EN		0x3934
-#define PMU_CP_INT_TYPE		0x3938
-#define PMU_CP_INT_DIR		0x393C
-#define PMU_V_PWREN		0x3EF0
-#define CP_SCANDUMP_MASK	(0x1 << 7)
-#elif IS_ENABLED(CONFIG_SOC_S5E8825)
 #define PMU_CP_INT_IN		0x3540
 #define CP_SCANDUMP_MASK	(0x1 << 7)
-#endif
+
 static irqreturn_t cp_wdt_handler(int irq, void *arg)
 {
 	struct modem_ctl *mc = (struct modem_ctl *)arg;
 	enum modem_state new_state;
 	struct link_device *ld = get_current_link(mc->bootd);
-#if IS_ENABLED(CONFIG_SOC_S5E9925) || IS_ENABLED(CONFIG_SOC_S5E8825)
 	u32	val;
-#endif
 
 	mif_info("%s: CP_WDT occurred\n", mc->name);
 	mif_disable_irq(&mc->irq_cp_wdt);
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925) || IS_ENABLED(CONFIG_SOC_S5E8825)
 	mif_info("enable CP scandump request\n");
 	exynos_pmu_read(PMU_CP_INT_IN, &val);
 	if (val & CP_SCANDUMP_MASK) {
@@ -83,7 +65,6 @@ static irqreturn_t cp_wdt_handler(int irq, void *arg)
 		cpif_try_ap_watchdog_reset();
 		return IRQ_HANDLED;
 	}
-#endif
 
 	if (mc->phone_state == STATE_ONLINE)
 		modem_notify_event(MODEM_EVENT_WATCHDOG, mc);
@@ -410,34 +391,6 @@ exit:
 	return 0;
 }
 
-
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-static void print_cal(void)
-{
-	u32 val = 0;
-
-	mdelay(10);
-	mif_info("Printing PMU registers\n");
-	exynos_pmu_read(PMU_CP_CTRL_NS, &val);
-	mif_info("CP_CTRL_NS: 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_CTRL_S, &val);
-	mif_info("CP_CTRL_S (smc read): 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_OUT, &val);
-	mif_info("CP_OUT: 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_IN, &val);
-	mif_info("CP_IN: 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_INT_IN, &val);
-	mif_info("CP_INT_IN: 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_INT_EN, &val);
-	mif_info("CP_INT_EN: 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_INT_TYPE, &val);
-	mif_info("CP_INT_TYPE: 0x%X\n", val);
-	exynos_pmu_read(PMU_CP_INT_DIR, &val);
-	mif_info("CP_INT_DIR: 0x%X\n", val);
-	exynos_pmu_read(PMU_V_PWREN, &val);
-	mif_info("V_PWREN: 0x%X\n", val);
-}
-#endif
 static int power_reset_cp(struct modem_ctl *mc)
 {
 	struct link_device *ld = get_current_link(mc->iod);
@@ -481,9 +434,6 @@ static int power_reset_cp(struct modem_ctl *mc)
 		ret = cal_cp_reset_release();
 		if (ret) {
 			mif_err("failed to cal cp reset release\n");
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-			print_cal();
-#endif
 			cpif_try_ap_watchdog_reset();
 			return ret;
 		}
@@ -533,9 +483,6 @@ static int power_reset_dump_cp(struct modem_ctl *mc)
 		ret = cal_cp_reset_release();
 		if (ret) {
 			mif_err("failed to cal cp reset release\n");
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-			print_cal();
-#endif
 			cpif_try_ap_watchdog_reset();
 			return ret;
 		}
@@ -733,36 +680,6 @@ EXPORT_SYMBOL(modem_force_crash_exit_ext);
 
 #if IS_ENABLED(CONFIG_CP_UART_NOTI)
 #if IS_ENABLED(CONFIG_PMU_UART_SWITCH)
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
-static void __iomem *uart_addr; /* SEL_TXD_RXD_GPIO_UART_DEBUG */
-void change_to_cp_uart(void)
-{
-	if (uart_addr == NULL) {
-		uart_addr = devm_ioremap(g_mc->dev, 0x11C301C0, SZ_64); /* GPG0_CON */
-		if (uart_addr == NULL) {
-			mif_err("Err: failed to ioremap UART DEBUG!\n");
-			return;
-		}
-	}
-	mif_info("CHANGE TO CP UART\n");
-	__raw_writel(0x4400, uart_addr); /* GPG0[2], GPG0[3] - CP_UART0_TXD_RXD */
-	mif_info("SEL_TXD_RXD_GPIO_UART_DEBUG val: %08X\n", __raw_readl(uart_addr));
-}
-
-void change_to_ap_uart(void)
-{
-	if (uart_addr == NULL) {
-		uart_addr = devm_ioremap(g_mc->dev, 0x11C301C0, SZ_64); /* GPG0_CON */
-		if (uart_addr == NULL) {
-			mif_err("Err: failed to ioremap UART DEBUG!\n");
-			return;
-		}
-	}
-	mif_info("CHANGE TO AP UART\n");
-	__raw_writel(0x3300, uart_addr); /* GPG0[2], GPG0[3] - UART_DBG_TXD_RXD */
-	mif_info("SEL_TXD_RXD_GPIO_UART_DEBUG val: %08X\n", __raw_readl(uart_addr));
-}
-#elif IS_ENABLED(CONFIG_SOC_S5E8825)
 static void __iomem *uart_txd_addr; /* SEL_TXD_GPIO_UART_DEBUG */
 static void __iomem *uart_ap_rxd_addr; /* SEL_RXD_AP_UART */
 static void __iomem *uart_cp_rxd_addr; /* SEL_RXD_CP_UART */
@@ -811,7 +728,6 @@ void change_to_ap_uart(void)
 	__raw_writel(0x1, uart_ap_rxd_addr);
 	mif_info("SEL_RXD_AP_UART val: %08X\n", __raw_readl(uart_ap_rxd_addr));
 }
-#endif /* CONFIG_SOC_EXYNOSxxxx */
 
 void send_uart_noti_to_modem(int val)
 {
@@ -899,9 +815,6 @@ static int start_dump_boot(struct modem_ctl *mc)
 		ret = cal_cp_reset_release();
 		if (ret) {
 			mif_err("failed to cal cp reset release\n");
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-			print_cal();
-#endif
 			cpif_try_ap_watchdog_reset();
 			return ret;
 		}

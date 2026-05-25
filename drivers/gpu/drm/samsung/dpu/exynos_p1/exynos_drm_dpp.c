@@ -34,7 +34,6 @@
 #include <exynos_drm_decon.h>
 #include <exynos_drm_debug.h>
 #include <exynos_drm_modifier.h>
-#include <dt-bindings/soc/samsung/s5e9925-devfreq.h>
 #include <soc/samsung/exynos-devfreq.h>
 
 #include <regs-dpp.h>
@@ -81,10 +80,8 @@ static const uint32_t dpp_gf_formats[] = {
 	DRM_FORMAT_ABGR2101010,
 	DRM_FORMAT_RGBA1010102,
 	DRM_FORMAT_BGRA1010102,
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
 	DRM_FORMAT_ARGB16161616F,
 	DRM_FORMAT_ABGR16161616F,
-#endif
 };
 
 static const uint32_t dpp_vg_formats[] = {
@@ -102,10 +99,8 @@ static const uint32_t dpp_vg_formats[] = {
 	DRM_FORMAT_ABGR2101010,
 	DRM_FORMAT_RGBA1010102,
 	DRM_FORMAT_BGRA1010102,
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
 	DRM_FORMAT_ARGB16161616F,
 	DRM_FORMAT_ABGR16161616F,
-#endif
 	DRM_FORMAT_NV12,
 	DRM_FORMAT_NV21,
 	DRM_FORMAT_P010,

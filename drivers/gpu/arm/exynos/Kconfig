@@ -131,7 +131,7 @@ config MALI_EXYNOS_SECURE_RENDERING_LEGACY
 config MALI_EXYNOS_DEBUG
     bool "Enable Mali Exynos integration debug features"
     depends on MALI_MIDGARD
-    depends on !KUNIT && !SEC_KUNIT
+    depends on !KUNIT
     default y if SOC_EXYNOS9830
     default y if SOC_EXYNOS2100
     default n
@@ -161,7 +161,7 @@ config MALI_EXYNOS_CL_BOOST
 config MALI_NOTIFY_UTILISATION
     bool "Added frag utilisation notifier"
     depends on MALI_MIDGARD
-    depends on !KUNIT && !SEC_KUNIT
+    depends on !KUNIT
     default y if SOC_EXYNOS2100
     default n
     help
@@ -230,12 +230,6 @@ config EXYNOS_SOC_NAME
     string "Third party soc name"
     help
       soc name.
-
-config MALI_EXYNOS_UNIT_TESTS
-    bool "Build unit tests for Mali Unified Driver vendor code"
-    default n
-    help
-      Choose this option to build unit tests for Mali LSI vendor code
 
 config MALI_EXYNOS_DEBUG_FAULT_DUMP
     bool "dump mali trace data on gpu fault"

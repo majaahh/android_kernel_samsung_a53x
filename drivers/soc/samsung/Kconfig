@@ -5,18 +5,6 @@
 menuconfig SOC_SAMSUNG
 	bool "Samsung SoC driver support" if COMPILE_TEST
 
-config SOC_S5E9925
-	bool "Samsung S5E9925"
-	select ARCH_EXYNOS
-	help
-	Support Samsung SOC S5E9925.
-
-config SOC_S5E9925_EVT0
-	bool "Samsung S5E9925 evt0"
-	select ARCH_EXYNOS
-	help
-	Support Samsung SOC S5E9925 evt0.
-
 config SOC_S5E8825
 	bool "Samsung S5E8825"
 	select ARCH_EXYNOS

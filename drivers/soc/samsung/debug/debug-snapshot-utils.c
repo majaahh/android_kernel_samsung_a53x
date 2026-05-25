@@ -41,10 +41,6 @@
 
 static struct cpumask cpu_dss_context_saved_mask;
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-#define SUMMARY_BUF_MAX		64
-#endif
-
 static char *ecc_sel_str[] = {
 	"DSU", "L1", "L2", NULL,
 };
@@ -810,18 +806,6 @@ static void _dbg_snapshot_ecc_dump(bool call_panic)
 	for (i = 0; i < (int)erridr_el1.field.NUM; i++) {
 		char errbuf[SZ_512] = {0, };
 		int n = 0;
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-		const char *msg_overflow = "";
-		const char *msg_er = "";
-		const char *msg_uncorrected = "";
-		const char *msg_deferred = "";
-		const char *msg_corrected = "";
-		const char *msg_delimiter = "";
-		char msg_selstatus[SUMMARY_BUF_MAX] = "";
-		char msg_addr[SUMMARY_BUF_MAX] = "";
-		char msg_misc[SUMMARY_BUF_MAX] = "";
-		char msg_serr[SUMMARY_BUF_MAX] = "";
-#endif
 
 		errselr_el1.reg = read_ERRSELR_EL1();
 		errselr_el1.field.SEL = i;
@@ -835,12 +819,6 @@ static void _dbg_snapshot_ecc_dump(bool call_panic)
 		n = scnprintf(errbuf + n, sizeof(errbuf) - n,
 			"%03s: %08s: [NUM:%d][ERXSTATUS_EL1:%#016x]\n",
 			ecc_sel_str[i] ? ecc_sel_str[i] : "", msg, i, erxstatus_el1.reg);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-		scnprintf(msg_selstatus, sizeof(msg_selstatus),
-			"%3s status:0x%08lx",
-			ecc_sel_str[i] ? ecc_sel_str[i] : "",
-			erxstatus_el1.reg);
-#endif
 
 		if (!erxstatus_el1.field.Valid)
 			goto output_cont;
@@ -849,49 +827,27 @@ static void _dbg_snapshot_ecc_dump(bool call_panic)
 			n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ AV ] Detected(Address Valid): [ERXADDR_EL1:%#llx]\n",
 				read_ERXADDR_EL1());
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			scnprintf(msg_addr, sizeof(msg_addr),
-				"(Addr:0x%llx)",
-				read_ERXADDR_EL1());
-#endif
 		}
 		if (erxstatus_el1.field.OF) {
 			n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ OF ] Detected(Overflow): There was more than one error has occurred\n");
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			msg_overflow = "[Overflow]";
-#endif
 		}
 		if (erxstatus_el1.field.ER) {
 			n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ ER ] Detected(Error Report by external abort)\n");
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			msg_er = "(Reported)";
-#endif
 		}
 		if (erxstatus_el1.field.UE) {
 			n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ UE ] Detected(Uncorrected Error): Not deferred\n");
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			msg_uncorrected = "[Uncorrected]";
-#endif
 		}
 		if (erxstatus_el1.field.DE) {
 			n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ DE ] Detected(Deferred Error)\n");
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			msg_deferred = "[Deferred]";
-#endif
 		}
 		if (erxstatus_el1.field.MV) {
 			n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ MV ] Detected(Miscellaneous Registers Valid): [ERXMISC0_EL1:%#llx][ERXMISC1_EL1:%#llx]\n",
 				read_ERXMISC0_EL1(), read_ERXMISC1_EL1());
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			scnprintf(msg_misc, sizeof(msg_misc),
-				"(MISC0:0x%llx)(MISC1:0x%llx)",
-				read_ERXMISC0_EL1(), read_ERXMISC1_EL1());
-#endif
 		}
 		if (erxstatus_el1.field.CE) {
 			msg = get_correct_ecc_err(erxstatus_el1);
@@ -899,9 +855,6 @@ static void _dbg_snapshot_ecc_dump(bool call_panic)
 				n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [ CE ] Detected(Corrected Error): %s, [CE:%#x]\n",
 				msg, erxstatus_el1.field.CE);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-			msg_corrected = "[Corrected]";
-#endif
 		}
 		if (erxstatus_el1.field.SERR) {
 			msg = get_external_ecc_err(erxstatus_el1);
@@ -909,31 +862,12 @@ static void _dbg_snapshot_ecc_dump(bool call_panic)
 				n += scnprintf(errbuf + n, sizeof(errbuf) - n,
 				"\t [SERR] Detected(External ECC Error): %s, [SERR:%#x]\n",
 				msg, erxstatus_el1.field.SERR);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-				scnprintf(msg_serr, sizeof(msg_serr),
-					"(External Err:%#x)",
-					erxstatus_el1.field.SERR);
-#endif
 				goto output_cont;
 			}
 		}
 		is_capable_identifing_err = true;
 output_cont:
 		pr_emerg("%s", errbuf);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-		if (!erxstatus_el1.field.Valid)
-			continue;
-
-		if (msg_serr[0] || msg_er[0] || msg_addr[0] || msg_misc[0])
-			msg_delimiter = "/";
-
-		pr_auto(ASL6, "ECC CPU%u %s %s%s%s%s%s%s%s%s%s\n",
-				raw_smp_processor_id(),
-				msg_selstatus,
-				msg_overflow, msg_uncorrected, msg_deferred, msg_corrected,
-				msg_delimiter,
-				msg_serr, msg_er, msg_addr, msg_misc);
-#endif
 	}
 
 	if (call_panic && is_capable_identifing_err)

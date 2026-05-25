@@ -111,11 +111,7 @@ static int try_to_freeze_tasks(bool user_only)
 			for_each_process_thread(g, p) {
 				if (p != current && !freezer_should_skip(p)
 				    && freezing(p) && !frozen(p)) {
-#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
-					sched_show_task_auto_comment(p);
-#else
 					sched_show_task(p);
-#endif
 					trace_android_vh_try_to_freeze_todo_unfrozen(p);
 				}
 			}

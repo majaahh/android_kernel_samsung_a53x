@@ -9,9 +9,6 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  */
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-#include <linux/sec_debug.h>
-#endif
 
 #include "mfc_rm.h"
 
@@ -231,10 +228,6 @@ static void __mfc_merge_errorinfo_data(struct mfc_core *core, bool px_fault)
 	}
 
 	dev_err(core->device, "%s\n", errorinfo);
-
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-	secdbg_exin_set_mfc_error(errorinfo);
-#endif
 }
 
 static int __mfc_get_curr_ctx(struct mfc_core *core)

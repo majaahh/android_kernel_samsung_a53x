@@ -239,7 +239,7 @@ EXPORT_SYMBOL(exynos_devfreq_set_profile);
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG)
 static int exynos_devfreq_update_status(struct exynos_devfreq_data *devdata);
 
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
+#if defined(CONFIG_SOC_S5E8825)
 static int exynos_devfreq_update_profile(struct exynos_devfreq_data *data, int prev_lev)
 {
 	struct exynos_devfreq_profile *profile = data->profile;

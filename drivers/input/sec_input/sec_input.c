@@ -2072,10 +2072,6 @@ static int __init sec_input_init(void)
 
 	pr_info("%s %s ++\n", SECLOG, __func__);
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-	ret = sec_tsp_log_init();
-	pr_info("%s %s: sec_tsp_log_init %d\n", SECLOG, __func__, ret);
-#endif
 #if IS_ENABLED(CONFIG_INPUT_SEC_SECURE_TOUCH)
 	ret = sec_secure_touch_init();
 	pr_info("%s %s: sec_secure_touch_init %d\n", SECLOG, __func__, ret);

@@ -22,9 +22,6 @@
 #include "ufs-exynos.h"
 #include "ufs-exynos-fmp.h"
 #include <trace/hooks/ufshcd.h>
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-#include <crypto/fmp_fips.h>
-#endif
 #ifndef CONFIG_KEYS_IN_PRDT
 #ifdef CONFIG_HW_KEYS_IN_CUSTOM_KEYSLOT
 struct device dev_fmp;
@@ -61,10 +58,6 @@ static inline __be32 fmp_key_word(const u8 *key, int j)
 static void exynos_ufs_fmp_fill_prdt(void *ignore, struct ufs_hba *hba, struct ufshcd_lrb *lrbp,
 					 unsigned int segments, int *err)
 {
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-	struct exynos_fmp_crypt_info fmp_ci;
-	int ret;
-#endif
 	const struct bio_crypt_ctx *bc;
 	const u8 *enckey, *twkey;
 	u64 dun_lo, dun_hi;
@@ -79,28 +72,8 @@ static void exynos_ufs_fmp_fill_prdt(void *ignore, struct ufs_hba *hba, struct u
 	 */
 	bc = lrbp->cmd->request->crypt_ctx;
 	BUILD_BUG_ON(FMP_BYPASS_MODE != 0);
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-	if (!bc) {
-		if (!(lrbp->cmd->request->bio))
-			return;
-
-		if (is_fmp_fips_op(lrbp->cmd->request->bio)) {
-			fmp_ci.fips = true;
-			goto encrypt;
-		}
-		return;
-	}
-
-	enckey = bc->bc_key->raw;
-	twkey = enckey + AES_KEYSIZE_256;
-	dun_lo = bc->bc_dun[0];
-	dun_hi = bc->bc_dun[1];
-	fmp_ci.fips = false;
-encrypt:
-#else /* CONFIG_EXYNOS_FMP_FIPS */
 	if (!bc)
 		return;
-#endif /* CONFIG_EXYNOS_FMP_FIPS */
 
 	/* If FMP wasn't enabled, we shouldn't get any encrypted requests. */
 	if (WARN_ON_ONCE(!(hba->caps & UFSHCD_CAP_CRYPTO))) {
@@ -109,37 +82,6 @@ encrypt:
 		return;
 	}
 
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-	table = (struct fmp_sg_entry *)lrbp->ucd_prdt_ptr;
-	for (i = 0; i < segments; i++) {
-		struct fmp_sg_entry *ent = &table[i];
-		struct ufshcd_sg_entry *prd = (struct ufshcd_sg_entry *)ent;
-
-		/* Each segment must be exactly one data unit. */
-		if (le32_to_cpu(prd->size) + 1 != FMP_DATA_UNIT_SIZE) {
-			dev_err(hba->dev, "scatterlist segment is misaligned for FMP\n");
-			*err = -EINVAL;
-			return;
-		}
-
-		fmp_ci.enckey = enckey;
-		fmp_ci.twkey = twkey;
-		fmp_ci.dun_lo = dun_lo;
-		fmp_ci.dun_hi = dun_hi;
-
-		ret = exynos_fmp_crypt(&fmp_ci, (void *)ent);
-		if (ret) {
-			dev_err(hba->dev, "%s: fails to crypt fmp. ret:%d\n", __func__, ret);
-			*err = ret;
-			return;
-		}
-
-		/* Increment the data unit number. */
-		dun_lo++;
-		if (dun_lo == 0)
-			dun_hi++;
-	}
-#else
 	enckey = bc->bc_key->raw;
 	twkey = enckey + AES_KEYSIZE_256;
 	dun_lo = bc->bc_dun[0];
@@ -186,7 +128,6 @@ encrypt:
 		if (dun_lo == 0)
 			dun_hi++;
 	}
-#endif
 	return;
 }
 #else
@@ -231,46 +172,6 @@ static void exynos_ufs_fmp_prepare_command(void *ignore, struct ufs_hba *hba, st
 {
 	struct exynos_ufs *ufs = to_exynos_ufs(hba);
 	struct exynos_fmp *fmp = (struct exynos_fmp*)ufs->fmp;
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-	const struct bio_crypt_ctx *bc;
-	int ret;
-	struct exynos_fmp_crypt_info fmp_ci;
-
-	BUILD_BUG_ON(FMP_BYPASS_MODE != 0);
-	bc = lrbp->cmd->request->crypt_ctx;
-	fmp_ci.fips = false;
-
-	if (!bc) {
-		if (!(lrbp->cmd->request->bio)) {
-			*err = 0;
-			return;
-		}
-
-		if (is_fmp_fips_op(lrbp->cmd->request->bio))
-			fmp_ci.fips = true;
-		else
-			goto out;
-	}
-
-	ret = exynos_fmp_crypt(&fmp_ci, (void *)&ufs->handle);
-	if (ret) {
-		dev_err(hba->dev, "%s: fail to crypt with fmp. ret:%d\n", __func__, ret);
-		*err = ret;
-		return;
-	}
-
-	if (fmp_ci.fips) {
-#ifdef CONFIG_EXYNOS_FIPS_SIMULATOR
-		if ((FIPS_keyslot_num >= 0) && (FIPS_keyslot_num <= 15))
-			fmp_ci.crypto_key_slot = FIPS_keyslot_num;
-#endif
-		lrbp->crypto_key_slot = fmp_ci.crypto_key_slot;
-		lrbp->data_unit_num = fmp_ci.data_unit_num;
-		*err = 0;
-		return;
-	}
-out:
-#endif /* CONFIG_EXYNOS_FMP_FIPS */
 	if ((lrbp->crypto_key_slot >= 0) && (fmp->valid_check == 1))
 		lrbp->crypto_key_slot++; /* account for hardware quirk */
 	*err = 0;
@@ -282,9 +183,7 @@ void exynos_ufs_fmp_init(struct ufs_hba *hba)
 {
 	unsigned long ret;
 
-#ifndef CONFIG_EXYNOS_FMP_FIPS
 	dev_info(hba->dev, "Exynos FMP Version: %s\n", FMP_DRV_VERSION);
-#endif
 	dev_info(hba->dev, "KEYS_IN_PRDT\n");
 
 	ret = exynos_smc(SMC_CMD_SMU, SMU_INIT, FMP_EMBEDDED, 0);
@@ -618,9 +517,7 @@ void exynos_ufs_fmp_init(struct ufs_hba *hba)
 	struct exynos_ufs *ufs = to_exynos_ufs(hba);
 	struct exynos_fmp *fmp;
 
-#ifndef CONFIG_EXYNOS_FMP_FIPS
 	dev_info(hba->dev, "Exynos FMP Version: %s\n", FMP_DRV_VERSION);
-#endif
 	dev_info(hba->dev, "HW_KEYS_IN_CUSTOM_KEYSLOT\n");
 
 #ifdef CONFIG_EXYNOS_FIPS_SIMULATOR
@@ -736,10 +633,6 @@ static int exynos_ufs_fmp_keyslot_program(struct blk_keyslot_manager *ksm,
 	struct exynos_fmp *fmp = (struct exynos_fmp *)ufs->fmp;
 	unsigned int num_keyslots = NUM_KEYSLOTS;
 	unsigned int slot = keyslot;
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-	int ret;
-	struct exynos_fmp_key_info fmp_ki;
-#else
 	size_t i, limit;
 	u32 count = 0;
 	u32 kw_keyvalid;
@@ -749,7 +642,6 @@ static int exynos_ufs_fmp_keyslot_program(struct blk_keyslot_manager *ksm,
 		u8 bytes[AES_256_XTS_KEY_SIZE];
 		u32 words[AES_256_XTS_KEY_SIZE / sizeof(u32)];
 	} fmp_key;
-#endif
 	if(fmp->valid_check == 1) {
 		slot += 1;
 		num_keyslots -= 1;
@@ -770,16 +662,6 @@ static int exynos_ufs_fmp_keyslot_program(struct blk_keyslot_manager *ksm,
 	}
 
 	dev_info(hba->dev, "%s slot = %d/%d\n",__func__, slot, num_keyslots);
-#ifdef CONFIG_EXYNOS_FMP_FIPS
-	fmp_ki.raw = key->raw;
-	fmp_ki.size = key->size;
-	fmp_ki.slot = slot;
-	ret = exynos_fmp_setkey(&fmp_ki, (struct fmp_handle *)&ufs->handle);
-	if (ret) {
-		dev_err(hba->dev, "%s: Fail to set FMP key in keyslot (ret: %d)\n", __func__, ret);
-		return ret;
-	}
-#else
 	/* In XTS mode, the blk_crypto_key's size is already doubled */
 	memcpy(fmp_key.bytes, key->raw, key->size);
 
@@ -824,7 +706,6 @@ static int exynos_ufs_fmp_keyslot_program(struct blk_keyslot_manager *ksm,
 	}
 
 	dev_info(hba->dev, "%s Key valid = 0x%x\n", __func__, kw_keyvalid);
-#endif
 	/* To Do
 	 * This is from ufshcd-crypto. Should check if this is needed.
 	 */
@@ -894,9 +775,7 @@ void exynos_ufs_fmp_init(struct ufs_hba *hba)
 	struct exynos_ufs *ufs = to_exynos_ufs(hba);
 	struct exynos_fmp *fmp;
 
-#ifndef CONFIG_EXYNOS_FMP_FIPS
 	dev_info(hba->dev, "Exynos FMP Version: %s\n", FMP_DRV_VERSION);
-#endif
 	dev_info(hba->dev, "KEYS_IN_CUSTOM_KEYSLOT\n");
 #ifdef CONFIG_EXYNOS_FIPS_SIMULATOR
 	fmp_ufs_handle = (struct fmp_handle *)&ufs->handle;

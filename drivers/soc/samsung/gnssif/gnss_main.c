@@ -207,11 +207,6 @@ static int parse_dt_common_pdata(struct device_node *np,
 	gif_dt_read_u32(np, "shmem,ipc_reg_offset", pdata->ipc_reg_offset);
 	gif_dt_read_u32(np, "shmem,ipc_reg_size", pdata->ipc_reg_size);
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
-	gif_dt_read_u32(np, "shmem,base_addr", pdata->base_addr);
-	gif_dt_read_u32(np, "shmem,base_addr_2nd", pdata->base_addr_2nd);
-#endif
-
 	return 0;
 }
 

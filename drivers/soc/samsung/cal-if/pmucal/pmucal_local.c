@@ -174,10 +174,6 @@ int pmucal_local_disable(unsigned int pd_id)
 		pr_err("%s %s: error on handling disable sequence. (pd_id : %d)\n",
 				PMUCAL_PREFIX, __func__, pd_id);
 
-#if defined(CONFIG_SOC_S5E9925) && !defined(CONFIG_SOC_S5E9925_EVT0)
-		if (pd_id == 4)
-			pd_id = 6;		//csis -> allcsis
-#endif
 		for (i = 0; i < pmucal_pd_list[pd_id].num_save; i++) {
 			pr_err("%s[0x%x] = 0x%x\n", pmucal_pd_list[pd_id].save[i].sfr_name,
 							pmucal_pd_list[pd_id].save[i].offset,

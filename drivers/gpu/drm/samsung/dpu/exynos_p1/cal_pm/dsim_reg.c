@@ -1311,14 +1311,12 @@ static void dsim_reg_enable_word_clock(u32 id, u32 en)
 	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_WORDCLK_EN);
 }
 
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
 static void dsim_reg_osc_gate_cond_sel(u32 id, u32 on)
 {
 	u32 val = on ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_OSC_GATE_CONDITION);
 }
-#endif
 
 static int dsim_reg_wait_hs_clk_ready(u32 id)
 {
@@ -2107,9 +2105,7 @@ void dsim_reg_init(u32 id, struct dsim_reg_config *config,
 
 	dsim_reg_enable_word_clock(id, 1);
 
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
 	dsim_reg_osc_gate_cond_sel(id, 1);
-#endif
 
 #if !defined(CONFIG_BOARD_EMULATOR)
 	/* Enable DPHY reset : DPHY reset start */

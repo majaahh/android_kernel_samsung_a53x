@@ -43,13 +43,6 @@ config PABLO_OBTE_SUPPORT
 	help
 	  Enable obte driver for Pablo.
 
-config PABLO_KUNIT_TEST
-	tristate "KUNIT Test for Pablo"
-	depends on VIDEO_EXYNOS_PABLO_ISP && KUNIT
-	default n
-	help
-	  Enable kunit test for Pablo.
-
 # Chain driver
 source "drivers/media/platform/exynos/camera/ischain/Kconfig"
 source "drivers/media/platform/exynos/camera/hardware/Kconfig"

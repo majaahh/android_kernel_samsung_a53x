@@ -739,7 +739,7 @@ int mxman_res_deinit_subsystem(struct mxman *mxman, enum scsc_subsystem sub)
 	return 0;
 }
 
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 static void mxman_res_mbox_init_wlan(struct mxman *mxman, u32 firmware_entry_point)
 {
 	u32 *mbox0;
@@ -780,7 +780,7 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 	int r;
 	struct scsc_mif_abs *mif = scsc_mx_get_mif_abs(mxman->mx);
 	struct scsc_mx *mx = mxman->mx;
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 	struct fwhdr_if *whdr_if = mxman->fw_wlan;
 #endif
 
@@ -927,7 +927,7 @@ static int mxman_res_transports_init_wlan(struct mxman *mxman, void *data, size_
 	mxfwconfig_load(mxman->mx, &mxconf->fwconfig);
 #endif
 
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 	mxman_res_mbox_init_wlan(mxman, whdr_if->get_entry_point(whdr_if));
 #endif
 

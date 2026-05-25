@@ -241,61 +241,6 @@ DEFINE_SIMPLE_ATTRIBUTE(debug_log_level_fops,
 DEFINE_SIMPLE_ATTRIBUTE(debug_ipc_loopback_test_fops,
 		debug_ipc_loopback_test_get, debug_ipc_loopback_test_set, "%llu\n");
 
-void acpm_init_eint_clk_req(u32 eint_num)
-{
-#if defined(CONFIG_SOC_S5E9925)
-	struct ipc_config config;
-	int ret = 0;
-	unsigned int cmd[4] = {0, };
-
-	if (++acpm_num_eint_clk_users > 1) {
-		WARN(1, "There is already 1 eint clk users\n");
-		return;
-	}
-
-	config.cmd = cmd;
-	/* Plugin ID = FLEXPMU */
-	config.cmd[0] = (1 << ACPM_IPC_PROTOCOL_TEST)
-				| (0x4 << ACPM_IPC_PROTOCOL_ID) | (0x6 << IPC_PLUGIN_ID);
-
-	config.cmd[0] |= (4 << 0);
-	config.cmd[1] = eint_num;
-
-	config.response = true;
-	config.indirection = false;
-
-	ret = acpm_send_data(exynos_acpm->dev->of_node, 4, &config);
-
-	config.cmd = NULL;
-#endif
-}
-EXPORT_SYMBOL_GPL(acpm_init_eint_clk_req);
-
-void acpm_init_eint_nfc_clk_req(u32 eint_num)
-{
-#if defined(CONFIG_SOC_S5E9925)
-	struct ipc_config config;
-	int ret = 0;
-	unsigned int cmd[4] = {0, };
-
-	config.cmd = cmd;
-	/* Plugin ID = FLEXPMU */
-	config.cmd[0] = (1 << ACPM_IPC_PROTOCOL_TEST)
-				| (0x4 << ACPM_IPC_PROTOCOL_ID) | (0x6 << IPC_PLUGIN_ID);
-
-	config.cmd[0] |= (5 << 0);
-	config.cmd[1] = eint_num;
-
-	config.response = true;
-	config.indirection = false;
-
-	ret = acpm_send_data(exynos_acpm->dev->of_node, 4, &config);
-
-	config.cmd = NULL;
-#endif
-}
-EXPORT_SYMBOL_GPL(acpm_init_eint_nfc_clk_req);
-
 static void acpm_debugfs_init(struct acpm_info *acpm)
 {
 	struct dentry *den;

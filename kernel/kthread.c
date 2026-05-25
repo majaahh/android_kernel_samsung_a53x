@@ -376,7 +376,7 @@ struct task_struct *__kthread_create_on_node(int (*threadfn)(void *data),
 	 * the OOM killer while kthreadd is trying to allocate memory for
 	 * new kernel thread.
 	 */
-	secdbg_dtsk_built_set_data(DTYPE_KTHREAD, kthreadd_task);
+	secdbg_dtsk_built_set_data(kthreadd_task);
 	if (unlikely(wait_for_completion_killable(&done))) {
 		/*
 		 * If I was SIGKILLed before kthreadd (or new kernel thread)
@@ -646,7 +646,7 @@ int kthread_stop(struct task_struct *k)
 	set_bit(KTHREAD_SHOULD_STOP, &kthread->flags);
 	kthread_unpark(k);
 	wake_up_process(k);
-	secdbg_dtsk_built_set_data(DTYPE_KTHREAD, k);
+	secdbg_dtsk_built_set_data(k);
 	wait_for_completion(&kthread->exited);
 	secdbg_dtsk_built_clear_data();
 	ret = k->exit_code;

@@ -75,11 +75,6 @@ config SDFAT_VIRTUAL_XATTR_SELINUX_LABEL
 	help
 	  Set this to the default string for SELinux label.
 
-config SDFAT_SUPPORT_STLOG
-	bool "Enable storage log"
-	default y
-	depends on SDFAT_FS && PROC_STLOG
-
 config SDFAT_DEBUG
 	bool "enable debug features"
 	depends on SDFAT_FS

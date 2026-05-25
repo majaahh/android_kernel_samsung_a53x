@@ -14,7 +14,7 @@ typedef void (*mifintrbit_handler)(int which_bit, void *data);
 
 struct mifintrbit; /* fwd - opaque pointer */
 
-#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) || IS_ENABLED(CONFIG_SOC_S5E9925)
+#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 #define MIFINTRBIT_NUM_INT	32
 #else
 #define MIFINTRBIT_NUM_INT      16

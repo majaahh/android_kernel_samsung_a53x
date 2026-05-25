@@ -455,17 +455,6 @@ static void dqe_init_context(struct exynos_dqe *dqe, struct device *dev)
 	for (mode_type = DQE_MODE_MAIN; mode_type < dqe->num_lut; mode_type++) {
 		lut = &dqe_lut[mode_type];
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-		for (bpc = 0; bpc < DQE_BPC_TYPE_MAX; bpc++) {
-			lut->degamma_lut[bpc][0] = 0;
-			for (i = 1; i < DQE_DEGAMMA_LUT_MAX; i++)
-				lut->degamma_lut[bpc][i] = ((i - 1) % DQE_DEGAMMA_LUT_CNT) * 64;
-
-			lut->regamma_lut[bpc][0] = 0;
-			for (i = 1; i < DQE_REGAMMA_LUT_MAX; i++)
-				lut->regamma_lut[bpc][i] = ((i - 1) % DQE_REGAMMA_LUT_CNT) * 64;
-		}
-#else
 		for (bpc = 0; bpc < DQE_BPC_TYPE_MAX; bpc++) {
 			lut->degamma_lut[bpc][0] = 0;
 			for (i = 1; i < DQE_DEGAMMA_LUT_MAX; i++) {
@@ -483,7 +472,6 @@ static void dqe_init_context(struct exynos_dqe *dqe, struct device *dev)
 			for (i = DQE_REGAMMA_LUT_CNT; i < DQE_REGAMMA_LUT_MAX; i += DQE_REGAMMA_LUT_CNT)
 				lut->regamma_lut[bpc][i] -= lut->regamma_lut[bpc][i-1];
 		}
-#endif
 		for (i = 0; i < 17; i++)
 			for (j = 0; j < 17; j++)
 				for (k = 0; k < 17; k++) {
@@ -639,7 +627,7 @@ static int dqe_restore_context(struct exynos_dqe *dqe)
 
 	time_c = (ktime_to_us(ktime_get())-time_s);
 	dqe_debug(dqe, "update%d-%d,%d %lld.%03lldms di %s/%s gm %s dg %s cgc%s %s rg %s hsc %s atc %s scl %s\n",
-		!IS_ENABLED(CONFIG_SOC_S5E9925_EVT0), atomic_read(&dqe->update_cnt),
+		atomic_read(&dqe->update_cnt),
 		dqe->cfg.in_bpc, time_c/USEC_PER_MSEC, time_c%USEC_PER_MSEC,
 		dqe_print_onoff(&dqe->ctx.disp_dither_on),
 		dqe_print_onoff(&dqe->ctx.cgc_dither_on),
@@ -1525,21 +1513,12 @@ static void dqe_set_cgc_dither(struct exynos_dqe *dqe,
 	dqe_debug(dqe, "%s\n", __func__);
 
 	/* DQE0_CGC_DITHER*/
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0) // uses same XML format with EVT1 for just test purpose
-	dqe->ctx.cgc_dither = (
-		CGC_DITHER_EN(cgc_dither[0]) | CGC_DITHER_MODE(cgc_dither[1]) |
-		CGC_DITHER_FRAME_CON(cgc_dither[2]) | CGC_DITHER_TABLE_SEL(cgc_dither[3], 0) |
-		CGC_DITHER_TABLE_SEL(cgc_dither[4], 1) | CGC_DITHER_TABLE_SEL(cgc_dither[5], 2) |
-		CGC_DITHER_FRAME_OFFSET(cgc_dither[7])
-	);
-#else
 	dqe->ctx.cgc_dither = (
 		CGC_DITHER_EN(cgc_dither[0]) | CGC_DITHER_MODE(cgc_dither[1]) |
 		CGC_DITHER_FRAME_CON(cgc_dither[2]) | CGC_DITHER_TABLE_SEL(cgc_dither[3], 0) |
 		CGC_DITHER_TABLE_SEL(cgc_dither[4], 1) | CGC_DITHER_TABLE_SEL(cgc_dither[5], 2) |
 		CGC_DITHER_BIT(cgc_dither[6]) | CGC_DITHER_FRAME_OFFSET(cgc_dither[7])
 	);
-#endif
 
 	dqe_ctrl_onoff(&dqe->ctx.cgc_dither_on, cgc_dither[0] ? DQE_CTRL_ON : DQE_CTRL_OFF, clrForced);
 }

@@ -4,7 +4,7 @@
 #define __MUIC_KUNIT_H__
 
 #if IS_ENABLED(CONFIG_SEC_KUNIT)
-#include <kunit/mock.h>
+#include <test/mock.h>
 #endif
 
 #ifndef __mockable

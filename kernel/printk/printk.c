@@ -63,7 +63,7 @@
 #include "braille.h"
 #include "internal.h"
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG) && IS_ENABLED(CONFIG_PRINTK_PROCESS)
+#if IS_ENABLED(CONFIG_PRINTK_PROCESS)
 #undef CONFIG_PRINTK_CALLER
 #endif
 
@@ -487,19 +487,6 @@ u32 log_buf_len_get(void)
 }
 EXPORT_SYMBOL_GPL(log_buf_len_get);
 
-#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
-static char hook_text[LOG_LINE_MAX + PREFIX_MAX];
-static void (*func_hook_auto_comm)(int type, const char *buf, size_t size);
-
-static size_t record_print_text(struct printk_record *r, bool syslog,
-				bool time);
-
-void register_set_auto_comm_buf(void (*func)(int type, const char *buf, size_t size))
-{
-	func_hook_auto_comm = func;
-}
-#endif
-
 /*
  * Define how much of the log buffer we could take at maximum. The value
  * must be greater than two. Note that only half of the buffer is available
@@ -536,16 +523,6 @@ static int log_store(u32 caller_id, int facility, int level,
 	struct prb_reserved_entry e;
 	struct printk_record r;
 	u16 trunc_msg_len = 0;
-#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
-	bool is_auto_comm = false;
-	int type_auto_comm;
-
-	if (level / 10 == 9) {
-		is_auto_comm = true;
-		type_auto_comm = level - LOGLEVEL_PR_AUTO_BASE;
-		level = 0;
-	}
-#endif
 
 	prb_rec_init_wr(&r, text_len);
 
@@ -586,21 +563,6 @@ static int log_store(u32 caller_id, int facility, int level,
 		prb_commit(&e);
 	else
 		prb_final_commit(&e);
-
-#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
-	if (is_auto_comm && func_hook_auto_comm) {
-		struct printk_info hook_info;
-		struct printk_record hook_r;
-		size_t len;
-
-		prb_rec_init_rd(&hook_r, &hook_info, hook_text, sizeof(hook_text));
-		if (prb_read_valid(prb, r.info->seq, &hook_r)) {
-			len = record_print_text(&hook_r, false, true);
-
-			func_hook_auto_comm(type_auto_comm, hook_text, len);
-		}
-	}
-#endif
 
 	trace_android_vh_logbuf(prb, &r);
 
@@ -2081,12 +2043,6 @@ int vprintk_store(int facility, int level,
 				if (level == LOGLEVEL_DEFAULT)
 					level = kern_level - '0';
 				break;
-#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
-			case 'B' ... 'J':
-				if (level == LOGLEVEL_DEFAULT)
-					level = LOGLEVEL_PR_AUTO_BASE + (kern_level - 'A'); /* 91 ~ 99 */
-				break;
-#endif
 			case 'c':	/* KERN_CONT */
 				lflags |= LOG_CONT;
 			}

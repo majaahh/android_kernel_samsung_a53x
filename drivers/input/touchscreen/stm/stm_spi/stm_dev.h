@@ -658,17 +658,6 @@ void stm_ts_checking_miscal(struct stm_ts_data *ts);
 int stm_notifier_call(struct notifier_block *n, unsigned long data, void *v);
 #endif
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-void stm_switching_work(struct work_struct *work);
-
-#if IS_ENABLED(CONFIG_HALL_NOTIFIER)
-int stm_hall_ic_notify(struct notifier_block *nb, unsigned long flip_cover, void *v);
-#endif
-#if IS_ENABLED(CONFIG_SUPPORT_SENSOR_FOLD)
-int stm_hall_ic_ssh_notify(struct notifier_block *nb, unsigned long flip_cover, void *v);
-#endif
-#endif
-
 #if IS_ENABLED(CONFIG_TOUCHSCREEN_DUMP_MODE)
 extern struct tsp_dump_callbacks dump_callbacks;
 #endif

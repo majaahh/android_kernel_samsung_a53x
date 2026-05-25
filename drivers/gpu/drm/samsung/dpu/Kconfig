@@ -1,6 +1,6 @@
 config DRM_SAMSUNG_DPU
 	tristate "DRM Support for Samsung EXYNOS Series"
-	depends on OF && DRM && (SOC_S5E8825 || SOC_S5E9925 || UML)
+	depends on OF && DRM && (SOC_S5E8825 || UML)
 	select DRM_KMS_HELPER
 	select VIDEOMODE_HELPERS
 	help

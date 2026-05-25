@@ -487,11 +487,6 @@ static inline bool __has_cursum_space(struct f2fs_journal *journal,
 	return size <= MAX_SIT_JENTRIES(journal);
 }
 
-#ifdef CONFIG_DDAR
-#define	F2FS_IOC_GET_DD_POLICY		FS_IOC_GET_DD_POLICY
-#define	F2FS_IOC_SET_DD_POLICY		FS_IOC_SET_DD_POLICY
-#endif
-
 /* for inline stuff */
 #define DEF_INLINE_RESERVED_SIZE	1
 static inline int get_extra_isize(struct inode *inode);
@@ -888,19 +883,6 @@ struct f2fs_inode_info {
 	unsigned char i_compress_level;		/* compress level (lz4hc,zstd) */
 	unsigned short i_compress_flag;		/* compress flag */
 	unsigned int i_cluster_size;		/* cluster size */
-
-#ifdef CONFIG_F2FS_ML_BASED_STREAM_SEPARATION
-	__u32 mtime_cnt;
-	__u32 is_cache;
-	__u64 mtime_interval;
-	__u32 overwrite_cnt;
-	__u32 append_cnt;
-	__u64 write_chunk;
-	__u64 write_chunk_cnt;
-#ifdef CONFIG_F2FS_ML_STREAMID_FORCE_COLD
-	__u32 is_force_cold;
-#endif
-#endif
 };
 
 static inline void get_read_extent_info(struct extent_info *ext,
@@ -1785,9 +1767,6 @@ struct f2fs_sec_blkops_dbg {
 };
 #endif
 
-#ifdef CONFIG_F2FS_ML_BASED_STREAM_SEPARATION
-#define STREAMID_PARAMS	11
-#endif
 struct f2fs_sb_info {
 	struct super_block *sb;			/* pointer to VFS super block */
 	struct proc_dir_entry *s_proc;		/* proc entry */
@@ -2039,14 +2018,6 @@ struct f2fs_sb_info {
 	unsigned long long s_sec_blkops_max_elapsed;
 	struct f2fs_sec_blkops_dbg s_sec_dbg_entries[F2FS_SEC_BLKOPS_ENTRIES];
 	struct f2fs_sec_blkops_dbg s_sec_dbg_max_entry;
-#endif
-
-#ifdef CONFIG_F2FS_ML_BASED_STREAM_SEPARATION
-	long long logistic_bias;
-	long long logistic_threshold;
-	long long logistic_scale[STREAMID_PARAMS];
-	int mp_uid;
-	int streamid_enable;
 #endif
 };
 

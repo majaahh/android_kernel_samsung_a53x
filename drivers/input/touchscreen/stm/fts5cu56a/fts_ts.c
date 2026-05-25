@@ -232,10 +232,6 @@ static ssize_t fts_secure_touch_enable_store(struct device *dev,
 		err = -EINVAL;
 		break;
 	}
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	if (info->ss_drv)
-		info->ss_drv->is_running = value;
-#endif
 	return err;
 }
 
@@ -2292,93 +2288,6 @@ int fts_irq_enable(struct fts_ts_info *info,
 	return retval;
 }
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-static int fts_notifier_call(struct notifier_block *n,
-			unsigned long data, void *v)
-{
-	struct fts_ts_info *info = container_of(n, struct fts_ts_info, nb);
-
-	input_dbg(true, &info->client->dev, "%s: %lu\n", __func__, data);
-
-	return 0;
-}
-
-static void fts_switching_work(struct work_struct *work)
-{
-	struct fts_ts_info *info = container_of(work, struct fts_ts_info,
-				switching_work.work);
-
-	if (info == NULL) {
-		input_err(true, NULL, "%s: tsp info is null\n", __func__);
-		return;
-	}
-
-	if (info->flip_status != info->flip_status_current) {
-		if (!info->info_work_done) {
-			input_err(true, &info->client->dev, "%s: info_work is not done yet\n", __func__);
-			info->change_flip_status = 1;
-			return;
-		}
-		info->change_flip_status = 0;
-
-		mutex_lock(&info->switching_mutex);
-		info->flip_status = info->flip_status_current;
-
-		if (info->flip_status == 0) {
-			/* open : main_tsp on */
-		} else {
-			/* close : main_tsp off */
-#if defined(CONFIG_INPUT_SEC_SECURE_TOUCH)
-			fts_secure_touch_stop(info, 1);
-#endif
-		}
-
-		fts_chk_tsp_ic_status(info, FTS_STATE_CHK_POS_HALL);
-
-		mutex_unlock(&info->switching_mutex);
-	} else if (info->board->support_flex_mode) {
-		input_info(true, &info->client->dev, "%s support_flex_mode\n", __func__);
-		mutex_lock(&info->switching_mutex);
-		fts_chk_tsp_ic_status(info, FTS_STATE_CHK_POS_SYSFS);
-		sec_input_notify(&info->nb, NOTIFIER_MAIN_TOUCH_ON, NULL);
-		mutex_unlock(&info->switching_mutex);
-	}
-}
-
-#ifdef CONFIG_FOLDER_HALL
-static int fts_hall_ic_notify(struct notifier_block *nb,
-			unsigned long flip_cover, void *v)
-{
-	struct fts_ts_info *info = container_of(nb, struct fts_ts_info,
-				hall_ic_nb);
-
-	if (info == NULL) {
-		input_err(true, NULL, "%s: tsp info is null\n", __func__);
-		return 0;
-	}
-
-	input_info(true, &info->client->dev, "%s: %s\n", __func__,
-			 flip_cover ? "close" : "open");
-
-	cancel_delayed_work(&info->switching_work);
-
-	info->flip_status_current = flip_cover;
-
-	schedule_work(&info->switching_work.work);
-
-	if (info->xenosensor_detect && info->flip_status_current) {
-		info->xenosensor_detect_count++;
-		info->xenosensor_detect_x = info->xenosensor_x;
-		info->xenosensor_detect_y = info->xenosensor_y;
-		time64_to_tm(ktime_get_real_seconds(), -sys_tz.tz_minuteswest * 60, &info->xenosensor_time);
-		input_info(true, &info->client->dev, "%s: xenosensor_detect_count %d\n", __func__, info->xenosensor_detect_count);
-	}
-
-	return 0;
-}
-#endif
-#endif
-
 #ifdef FTS_SUPPORT_TA_MODE
 struct fts_callbacks *fts_charger_callbacks;
 void tsp_charger_infom(bool en)
@@ -3080,13 +2989,8 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 #endif
 
 #ifdef SEC_TSP_FACTORY_TEST
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	retval = sec_cmd_init(&info->sec, ft_commands,
-			ARRAY_SIZE(ft_commands), SEC_CLASS_DEVT_TSP1);
-#else
 	retval = sec_cmd_init(&info->sec, ft_commands,
 			ARRAY_SIZE(ft_commands), SEC_CLASS_DEVT_TSP);
-#endif
 	if (retval < 0) {
 		input_err(true, &info->client->dev,
 				"%s: Failed to sec_cmd_init\n", __func__);
@@ -3130,34 +3034,11 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 	fts_check_custom_library(info);
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	mutex_init(&info->switching_mutex);
-	INIT_DELAYED_WORK(&info->switching_work, fts_switching_work);
-
-	sec_input_register_notify(&info->nb, fts_notifier_call, 1);
-
-	info->flip_status = -1;
-	info->flip_status_current = FTS_STATUS_UNFOLDING;	// default : 0 unfolding
-#ifdef CONFIG_FOLDER_HALL
-	/* Hall IC notify priority -> ftn -> register */
-	info->hall_ic_nb.priority = 1;
-	info->hall_ic_nb.notifier_call = fts_hall_ic_notify;
-	if (info->board->support_hall_ic) {
-		hall_ic_register_notify(&info->hall_ic_nb);
-		input_info(true, &info->client->dev, "%s: hall ic register\n", __func__);
-	}
-#endif
-#endif
-
 	schedule_delayed_work(&info->work_read_info, msecs_to_jiffies(100));
 	info->info_work_done = true;
 
 #if defined(CONFIG_TOUCHSCREEN_DUMP_MODE)
-#if defined(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	tsp_callbacks[FTS_STATUS_UNFOLDING].inform_dump = tsp_dump;
-#else
 	dump_callbacks.inform_dump = tsp_dump;
-#endif
 	INIT_DELAYED_WORK(&info->debug_work, dump_tsp_rawdata);
 	p_debug_work = &info->debug_work;
 #endif
@@ -3180,11 +3061,7 @@ err_input_link:
 	sysfs_remove_group(&info->sec.fac_dev->kobj,
 			&sec_touch_factory_attr_group);
 err_sysfs:
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	sec_cmd_exit(&info->sec, SEC_CLASS_DEVT_TSP1);
-#else
 	sec_cmd_exit(&info->sec, SEC_CLASS_DEVT_TSP);
-#endif
 err_sec_cmd:
 #endif
 	if (info->irq_enabled)
@@ -3257,19 +3134,11 @@ static int fts_remove(struct i2c_client *client)
 	disable_irq_nosync(info->client->irq);
 	free_irq(info->client->irq, info);
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	cancel_delayed_work_sync(&info->switching_work);
-#ifdef CONFIG_FOLDER_HALL
-	hall_ic_unregister_notify(&info->hall_ic_nb);
-#endif
-#endif
-
 	if (info->board->hw_i2c_reset)
 		cancel_delayed_work_sync(&info->fw_reset_work);
 	cancel_delayed_work_sync(&info->work_print_info);
 	cancel_delayed_work_sync(&info->work_read_info);
 	cancel_delayed_work_sync(&info->reset_work);
-//	cancel_delayed_work_sync(&info->work_lfd_ctrl);
 
 	wakeup_source_destroy(info->wakelock);
 
@@ -3284,11 +3153,7 @@ static int fts_remove(struct i2c_client *client)
 	sysfs_remove_link(&info->sec.fac_dev->kobj, "input");
 	sysfs_remove_group(&info->sec.fac_dev->kobj,
 			&sec_touch_factory_attr_group);
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	sec_cmd_exit(&info->sec, SEC_CLASS_DEVT_TSP1);
-#else
 	sec_cmd_exit(&info->sec, SEC_CLASS_DEVT_TSP);
-#endif
 
 	kfree(info->ito_result);
 	kfree(info->cx_data);
@@ -3357,19 +3222,12 @@ static int fts_input_open(struct input_dev *dev)
 	schedule_delayed_work(&info->open_work,
 			msecs_to_jiffies(TOUCH_OPEN_DWORK_TIME));
 #else
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	cancel_delayed_work_sync(&info->switching_work);
-	mutex_lock(&info->switching_mutex);
-#endif
 
 	if (info->fts_power_state == FTS_POWER_STATE_POWERDOWN) {
 		retval = fts_start_device(info);
 		if (retval < 0) {
 			input_err(true, &info->client->dev,
 					"%s: Failed to start device\n", __func__);
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-			mutex_unlock(&info->switching_mutex);
-#endif
 			mutex_unlock(&info->device_mutex);
 			goto out;
 		}
@@ -3386,9 +3244,6 @@ static int fts_input_open(struct input_dev *dev)
 
 	fts_set_temp(info, true);
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	mutex_unlock(&info->switching_mutex);
-#endif
 	mutex_unlock(&info->device_mutex);
 
 out:
@@ -3398,10 +3253,6 @@ out:
 	schedule_work(&info->work_print_info.work);
 	info->flip_status_prev = info->flip_status_current;
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	if (!info->board->support_hall_ic || info->board->support_flex_mode)
-		sec_input_notify(&info->nb, NOTIFIER_MAIN_TOUCH_ON, NULL);
-#endif
 	return 0;
 }
 
@@ -3441,10 +3292,6 @@ static void fts_input_close(struct input_dev *dev)
 	cancel_delayed_work(&info->work_print_info);
 	fts_print_info(info);
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	cancel_delayed_work_sync(&info->switching_work);
-	mutex_lock(&info->switching_mutex);
-#endif
 	if (info->flip_status_current || info->rear_selfie_mode) {
 		fts_stop_device(info);
 	} else {
@@ -3456,18 +3303,10 @@ static void fts_input_close(struct input_dev *dev)
 			fts_stop_device(info);
 		}
 	}
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	mutex_unlock(&info->switching_mutex);
-#endif
 	info->prox_power_off = 0;
 	info->fw_corruption = false;
 
 	mutex_unlock(&info->device_mutex);
-
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	if (!info->board->support_hall_ic)
-		sec_input_notify(&info->nb, NOTIFIER_MAIN_TOUCH_OFF, NULL);
-#endif
 }
 #endif
 
@@ -3594,21 +3433,13 @@ void fts_reinit(struct fts_ts_info *info, bool delay)
 	}
 
 	/* because edge and dead zone will recover soon */
-#if defined(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	fts_set_grip_type(info, GRIP_ALL_DATA);
-#else
 	fts_set_grip_type(info, ONLY_EDGE_HANDLER);
-#endif
 
 	fts_delay(50);
 
 out:
 	info->touch_count = 0;
 
-#if defined(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE) && defined(CONFIG_SEC_FACTORY)
-	if (info->flip_status_current == FTS_STATUS_FOLDING)
-		fts_set_hsync_scanmode(info, FTS_CMD_LPM_ASYNC_SCAN);
-#endif
 	fts_set_scanmode(info, info->scan_mode);
 }
 
@@ -3880,19 +3711,9 @@ static void fts_read_info_work(struct work_struct *work)
 
 	schedule_work(&info->work_print_info.work);
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	if (info->change_flip_status) {
-		input_info(true, &info->client->dev, "%s: re-try switching after reading info\n", __func__);
-		schedule_work(&info->switching_work.work);
-	}
-#endif
 	/* sec_touchscreen is opened by KGSL(handler registered) in probe time
 	 * so, 
 	 */
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	if (!info->board->support_hall_ic)
-		sec_input_notify(&info->nb, NOTIFIER_MAIN_TOUCH_ON, NULL);
-#endif
 	input_info(true, &info->client->dev, "%s done\n", __func__);
 
 }
@@ -4131,12 +3952,6 @@ static int fts_stop_device(struct fts_ts_info *info)
 		input_err(true, &info->client->dev, "%s: already power off\n", __func__);
 		goto out;
 	}
-#ifdef FTS_SUPPORT_SPONGELIB
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	if (info->sec.fac_dev)
-		get_lp_dump(info->sec.fac_dev, NULL, NULL);
-#endif
-#endif
 	if (info->board->hw_i2c_reset)
 		cancel_delayed_work_sync(&info->fw_reset_work);
 

@@ -7,7 +7,7 @@
  */
 
 #include <linux/platform_device.h>
-#include <kunit/mock.h>
+#include <test/mock.h>
 
 static inline struct platform_driver *platform_driver_find(const char *name)
 {

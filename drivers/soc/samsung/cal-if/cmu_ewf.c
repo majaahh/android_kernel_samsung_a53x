@@ -48,35 +48,6 @@ static void __set_cmuewf(unsigned int index, unsigned int en)
 	unsigned int reg_idx;
 
 	if (index == EWF_GRP_CAM) {
-#if defined(CONFIG_SOC_S5E9925)
-		reg_idx = EARLY_WAKEUP_FORCED_ENABLE0;
-		if (en) {
-			reg = __raw_readl(cmu_cmu + reg_idx);
-			reg |= EWF_CAM_BLK0;
-			__raw_writel(reg, cmu_cmu + reg_idx);
-		} else {
-			reg = __raw_readl(cmu_cmu + reg_idx);
-			reg &= ~(EWF_CAM_BLK0);
-			__raw_writel(reg, cmu_cmu + reg_idx);
-		}
-		reg = __raw_readl(cmu_cmu + reg_idx);
-		pr_info("[ewf] ewf_grp_cam0 / en: %d / reg: %x\n", en, reg);
-
-		reg_idx = EARLY_WAKEUP_FORCED_ENABLE1;
-		if (en) {
-			reg = __raw_readl(cmu_cmu + reg_idx);
-			reg |= EWF_CAM_BLK1;
-			__raw_writel(reg, cmu_cmu + reg_idx);
-		} else {
-			reg = __raw_readl(cmu_cmu + reg_idx);
-			reg &= ~(EWF_CAM_BLK1);
-			__raw_writel(reg, cmu_cmu + reg_idx);
-		}
-		reg = __raw_readl(cmu_cmu + reg_idx);
-		pr_info("[ewf] ewf_grp_cam1 / en: %d / reg: %x\n", en, reg);
-
-		return ;
-#else
 		reg_idx = EARLY_WAKEUP_FORCED_ENABLE0;
 
 		if (en) {
@@ -92,7 +63,6 @@ static void __set_cmuewf(unsigned int index, unsigned int en)
 		reg = __raw_readl(cmu_cmu + reg_idx);
 		pr_info("[ewf] ewf_grp_cam / en: %d / reg: %x\n", en, reg);
 		return ;
-#endif
 	}
 
 	if (index >= 32) {

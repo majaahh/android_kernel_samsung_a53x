@@ -42,7 +42,7 @@ config CONTEXTHUB_SENSOR_DEBUG
 config LOGBUF_NUM
 	int "Nanohub logbuf number"
 	depends on NANOHUB
-	default 230 if SOC_S5E5515 || SOC_S5E9925 || SOC_S5E8825
+	default 230 if SOC_S5E8825
 	help
 	  A number of logbuf lines, depends on soc
 

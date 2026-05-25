@@ -25,14 +25,8 @@
 #include "../../utility/shub_dev_core.h"
 #include "../../utility/shub_utility.h"
 
-#if defined(CONFIG_SHUB_KUNIT)
-#include <kunit/mock.h>
-#define __mockable __weak
-#define __visible_for_testing
-#else 
 #define __mockable
 #define __visible_for_testing static
-#endif
 
 /*************************************************************************/
 /* factory Sysfs                                                         */

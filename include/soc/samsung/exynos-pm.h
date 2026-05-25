@@ -105,20 +105,4 @@ struct exynos_pm_dbg {
 
 int register_pcie_is_connect(u32 (*func)(void));
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG)
-enum ids_info {
-	tg,
-	lg,
-	mg,
-	bg,
-	g3dg,
-	mifg,
-	lids,
-	mids,
-	bids,
-	gids,
-};
-
-extern int asv_ids_information(enum ids_info id);
-#endif
 #endif /* __EXYNOS_PM_H */

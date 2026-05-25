@@ -26,6 +26,7 @@ struct printk_info {
 	u8	cpu;		/* cpu id */
 	u8	in_interrupt;	/* interrupt context */
 #endif
+
 	struct dev_printk_info	dev_info;
 };
 

@@ -427,19 +427,11 @@ static ssize_t asv_info_show(struct device *dev,
 	int count = 0;
 
 	/* Set asv group info to buf */
-#if defined(CONFIG_SOC_S5E9925)
-	count += sprintf(&buf[count], "%d ", asv_ids_information(tg));
-	count += sprintf(&buf[count], "%03x ", asv_ids_information(mg));
-	count += sprintf(&buf[count], "%03x ", asv_ids_information(g3dg));
-	count += sprintf(&buf[count], "%u ", asv_ids_information(mids));
-	count += sprintf(&buf[count], "%u ", asv_ids_information(gids));
-#elif defined(CONFIG_SOC_S5E8825)
 	count += sprintf(&buf[count], "%d ", asv_ids_information(tg));
 	count += sprintf(&buf[count], "%03x ", asv_ids_information(bg));
 	count += sprintf(&buf[count], "%03x ", asv_ids_information(g3dg));
 	count += sprintf(&buf[count], "%u ", asv_ids_information(bids));
 	count += sprintf(&buf[count], "%u ", asv_ids_information(gids));
-#endif
 	count += sprintf(&buf[count], "\n");
 
 	return count;

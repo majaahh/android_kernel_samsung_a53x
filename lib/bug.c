@@ -48,7 +48,6 @@
 #include <linux/sched.h>
 #include <linux/rculist.h>
 #include <linux/ftrace.h>
-#include <linux/sec_debug.h>
 
 #include <trace/hooks/bug.h>
 

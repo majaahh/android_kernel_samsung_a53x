@@ -37,9 +37,7 @@ static int do_s3c2410wdt_builtin_expire_watchdog(void)
 
 	/* emergency reset with wdt reset */
 	wtcon = readl(wdt->reg_base + S3C2410_WTCON);
-#if !IS_ENABLED(CONFIG_SEC_DEBUG)
 	dev_info(wdt->dev, "WTCON: 0x%x\n", wtcon);
-#endif
 
 	wtcon |= S3C2410_WTCON_RSTEN | S3C2410_WTCON_ENABLE;
 
@@ -50,20 +48,6 @@ static int do_s3c2410wdt_builtin_expire_watchdog(void)
 
 	return 0;
 }
-
-#if IS_ENABLED(CONFIG_SEC_DEBUG)
-int s3c2410wdt_builtin_expire_watchdog_raw(void)
-{
-	struct s3c2410_builtin_wdt *wdt = s3c_reset_wdt;
-
-	if (!wdt)
-		return -ENODEV;
-
-	secdbg_base_built_wdd_set_emerg_addr(_RET_IP_);
-
-	return do_s3c2410wdt_builtin_expire_watchdog();
-}
-#endif
 
 extern void *return_address(unsigned int);
 

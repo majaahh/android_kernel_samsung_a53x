@@ -26,8 +26,6 @@
 #include <crypto/fmp.h>
 
 #include "fmp_fips_main.h"
-#include "fmp_test.h"
-#include "fmp_fips_info.h"
 #ifndef CONFIG_KEYS_IN_PRDT
 #include "ufs-vs-mmio.h"
 #endif
@@ -758,15 +756,6 @@ EXPORT_SYMBOL(is_fmp_fips_clean);
 
 int get_fmp_fips_state(void)
 {
-	if (unlikely(in_fmp_fips_err())) {
-#if defined(CONFIG_NODE_FOR_SELFTEST_FAIL)
-		pr_err("%s: Fail to work fmp config due to fips in error.\n", __func__);
-#else
-		panic("%s: Fail to work fmp config due to fips in error\n", __func__);
-#endif
-		return -EINVAL;
-	}
-
 	return 0;
 }
 
@@ -805,15 +794,6 @@ static void *exynos_fmp_init(struct platform_device *pdev)
 		goto err_dev;
 	}
 
-	atomic_set(&fmp->fips_start, 0);
-
-	ret = exynos_fmp_fips_register(fmp);
-	if (ret) {
-		dev_err(fmp->dev, "%s: Fail to exynos_fmp_fips_register. ret(0x%x)",
-				__func__, ret);
-		goto err_dev;
-	}
-
 	/* Check fmp status for featuring */
 	np = fmp->dev->of_node;
 	ret = of_property_read_u8(np, "dun-swap", &dun_swap);
@@ -838,7 +818,6 @@ void exynos_fmp_exit(struct platform_device *pdev)
 {
 	struct exynos_fmp *fmp = dev_get_drvdata(&pdev->dev);
 
-	exynos_fmp_fips_deregister(fmp);
 	devm_kfree(&pdev->dev, fmp);
 }
 

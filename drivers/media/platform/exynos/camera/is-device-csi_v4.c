@@ -3736,12 +3736,10 @@ static int is_csi_get_phy_setfile(struct v4l2_subdev *subdev)
 		 * If register setting way is changed to use  device tree,
 		 * need to remove condition.
 		 */
-		if (!IS_ENABLED(CONFIG_SOC_S5E9925)) {
-			err("failed to get set file node from device node");
-			ret = -ENOENT;
+		err("failed to get set file node from device node");
+		ret = -ENOENT;
 
-			goto out;
-		}
+		goto out;
 	}
 
 	return 0;

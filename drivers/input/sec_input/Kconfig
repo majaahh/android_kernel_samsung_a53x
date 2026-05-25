@@ -8,11 +8,6 @@ config INPUT_SEC_INPUT
 	help
 	  Say Y here if you want to use sec cmd.
 
-config SEC_DEBUG_TSP_LOG
-	tristate "Support for tsp_msg"
-	help
-	  Say Y here if you want to use tsp_msg node.
-
 config INPUT_TOUCHSCREEN_TCLMV2
 	tristate "touchscreen tclmv2"
 	help
@@ -44,12 +39,6 @@ config SEC_INPUT_MULTI_DEVICE
 	tristate "Multi device for Foldable"
 	help
 	  Say Y here if you need to use Multi device.
-
-config SEC_INPUT_CMD_TEST
-	tristate "KUnit test for tsp_common_test"
-	depends on SEC_KUNIT
-	help
-	  TODO: Describe config fully.
 
 config SEC_INPUT_RAWDATA
 	tristate "input rawdata"

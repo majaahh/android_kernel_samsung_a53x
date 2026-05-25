@@ -90,44 +90,10 @@ obj-$(CONFIG_SCSC_PLATFORM) += scsc_platform_mif.o
 scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += \
 	platform_mif_module.o
 
-ifeq ($(CONFIG_SOC_EXYNOS9610),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_9610.o
-endif
-ifeq ($(CONFIG_SOC_EXYNOS9630),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_9630.o
-endif
-ifeq ($(CONFIG_SOC_EXYNOS3830),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_3830.o
-endif
-ifeq ($(CONFIG_SOC_EXYNOS7570),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif.o
-endif
-ifeq ($(CONFIG_SOC_EXYNOS7872),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif.o
-endif
-ifeq ($(CONFIG_SOC_EXYNOS7885),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_7885.o
-endif
-ifeq ($(CONFIG_SOC_S5E9815),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_9815.o
-endif
-ifeq ($(CONFIG_SOC_S5E5515),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_s5e5515.o
-	scsc_platform_mif-$(CONFIG_WLBT_AUTOGEN_PMUCAL) += pmu_cal.o
-	scsc_platform_mif-$(CONFIG_WLBT_AUTOGEN_PMUCAL) += pmu_cal_data_5515.o
-endif
-ifeq ($(CONFIG_SOC_S5E8825),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_s5e8825.o
-	scsc_platform_mif-$(CONFIG_WLBT_AUTOGEN_PMUCAL) += pmu_cal.o
-	scsc_platform_mif-$(CONFIG_WLBT_AUTOGEN_PMUCAL) += pmu_cal_data_8825.o
-endif
-ifeq ($(CONFIG_SOC_S5E9925),y)
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_s5e9925.o
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += pcie_s5e9925.o
-	scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += pcie_proc.o
-endif
-#core_module for static functions and registration client module (all the service driver modules -wlan, bt,...-)
-#core for instance
+scsc_platform_mif-$(CONFIG_SCSC_PLATFORM) += platform_mif_s5e8825.o
+scsc_platform_mif-$(CONFIG_WLBT_AUTOGEN_PMUCAL) += pmu_cal.o
+scsc_platform_mif-$(CONFIG_WLBT_AUTOGEN_PMUCAL) += pmu_cal_data_8825.o
+
 obj-$(CONFIG_SCSC_CORE_CM) += scsc_mx.o
 scsc_mx-y += \
 	mxlog_transport.o \

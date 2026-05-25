@@ -162,16 +162,6 @@ static int __set_phy_isolation(struct regmap *reg_pmu,
 	if (pg_ofs > 0)
 		__set_phy_power_gating(reg_pmu, pg_ofs, on);
 
-	if (IS_ENABLED(CONFIG_PABLO_V10_0_0)) {
-		regmap_update_bits(reg_pmu, 0xa88, BIT(4), 0);
-		regmap_update_bits(reg_pmu, 0xa8c, BIT(4), 0);
-		regmap_update_bits(reg_pmu, 0xa90, BIT(4), 0);
-		regmap_update_bits(reg_pmu, 0xa94, BIT(4), 0);
-		regmap_update_bits(reg_pmu, 0xa98, BIT(4), 0);
-		regmap_update_bits(reg_pmu, 0xa9c, BIT(4), 0);
-		regmap_update_bits(reg_pmu, 0xaa0, BIT(4), 0);
-	}
-
 	pr_debug("%s iso 0x%x, pg 0x%x, on 0x%x\n", __func__, iso_ofs, pg_ofs, on);
 
 	return ret;
@@ -563,7 +553,6 @@ static int __set_phy_cfg_0800_0000_cphy(void __iomem *regs, int option, u32 *cfg
 {
 	int i;
 	u32 settle_clk_sel = 1;
-	void __iomem *base;
 	void __iomem *bias;
 
 	/* phy disable for analog logic reset */
@@ -572,29 +561,8 @@ static int __set_phy_cfg_0800_0000_cphy(void __iomem *regs, int option, u32 *cfg
 
 	usleep_range(200, 201);
 
-	if (IS_ENABLED(CONFIG_PABLO_V10_0_0)) {
-		base = ioremap(0x173E1000, 0x3000);
-		update_bits(base + 0x041C, 8, 3, 1);
-		update_bits(base + 0x051C, 8, 3, 1);
-		update_bits(base + 0x061C, 8, 3, 1);
-		update_bits(base + 0x0C1C, 8, 3, 1);
-		update_bits(base + 0x0D1C, 8, 3, 1);
-		update_bits(base + 0x0E1C, 8, 3, 1);
-		update_bits(base + 0x141C, 8, 3, 1);
-		update_bits(base + 0x151C, 8, 3, 1);
-		update_bits(base + 0x161C, 8, 3, 1);
-		update_bits(base + 0x1C1C, 8, 3, 1);
-		update_bits(base + 0x1D1C, 8, 3, 1);
-		update_bits(base + 0x1E1C, 8, 3, 1);
-		update_bits(base + 0x241C, 8, 3, 1);
-		update_bits(base + 0x251C, 8, 3, 1);
-		update_bits(base + 0x261C, 8, 3, 1);
-		iounmap(base);
+	bias = ioremap(0x170F1000, 0x1000);
 
-		bias = ioremap(0x173E1000, 0x1000);
-	} else {
-		bias = ioremap(0x170F1000, 0x1000);
-	}
 	/* BIAS/PLL */
 	writel(0x00000010, bias + 0x0000); /* M_BIAS_CON0 */
 	writel(0x00000110, bias + 0x0004); /* M_BIAS_CON1 */
@@ -642,7 +610,6 @@ static int __set_phy_cfg_0800_0000_dphy(void __iomem *regs, int option, u32 *cfg
 	int i;
 	u32 settle_clk_sel = 1;
 	u32 skew_delay_sel = 0;
-	void __iomem *base;
 	void __iomem *bias;
 
 	/* phy disable for analog logic reset */
@@ -653,30 +620,9 @@ static int __set_phy_cfg_0800_0000_dphy(void __iomem *regs, int option, u32 *cfg
 
 	usleep_range(200, 201);
 
-	if (IS_ENABLED(CONFIG_PABLO_V10_0_0)) {
-		base = ioremap(0x173E1000, 0x3000);
-		update_bits(base + 0x041C, 8, 3, 1);
-		update_bits(base + 0x051C, 8, 3, 1);
-		update_bits(base + 0x061C, 8, 3, 1);
-		update_bits(base + 0x0C1C, 8, 3, 1);
-		update_bits(base + 0x0D1C, 8, 3, 1);
-		update_bits(base + 0x0E1C, 8, 3, 1);
-		update_bits(base + 0x141C, 8, 3, 1);
-		update_bits(base + 0x151C, 8, 3, 1);
-		update_bits(base + 0x161C, 8, 3, 1);
-		update_bits(base + 0x1C1C, 8, 3, 1);
-		update_bits(base + 0x1D1C, 8, 3, 1);
-		update_bits(base + 0x1E1C, 8, 3, 1);
-		update_bits(base + 0x241C, 8, 3, 1);
-		update_bits(base + 0x251C, 8, 3, 1);
-		update_bits(base + 0x261C, 8, 3, 1);
-		iounmap(base);
+	bias = ioremap(0x170F1000, 0x1000);
 
-		bias = ioremap(0x173E1000, 0x1000);
-	} else {
-		bias = ioremap(0x170F1000, 0x1000);
-	}
-	/* BIAS/PLL */
+  /* BIAS/PLL */
 	writel(0x00000010, bias + 0x0000); /* M_BIAS_CON0 */
 	writel(0x00000110, bias + 0x0004); /* M_BIAS_CON1 */
 	writel(0x00003223, bias + 0x0008); /* M_BIAS_CON2 */

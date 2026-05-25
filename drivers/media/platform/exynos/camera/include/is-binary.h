@@ -84,11 +84,7 @@
 #define DDK_LIB_SIZE		((SZ_2M + SZ_1M + SZ_256K) + SZ_1M + RCHECKER_SIZE)
 
 #define RTA_LIB_ADDR		(LIB_START + VRA_LIB_SIZE + DDK_LIB_SIZE + CDH_SIZE)
-#ifdef CONFIG_SOC_S5E9925
-#define RTA_LIB_SIZE		(SZ_4M + SZ_2M)
-#else
 #define RTA_LIB_SIZE		(SZ_2M + SZ_2M)
-#endif
 
 /* Rule checker size for DDK */
 #define RCHECKER_SIZE		(IS_RCHECKER_SIZE_RO + IS_RCHECKER_SIZE_RW)

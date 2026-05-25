@@ -9,11 +9,7 @@
 #include <soc/samsung/exynos-sci.h>
 
 #include <soc/samsung/exynos-devfreq.h>
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 #include <soc/samsung/exynos-bcm_dbg.h>
-#else
-#include <soc/samsung/exynos-wow.h>
-#endif
 
 /* Result during profile time */
 struct profile_result {
@@ -51,12 +47,8 @@ static struct profiler {
 	struct freq_cstate		fc;			/* latest time_in_state info */
 	struct freq_cstate_snapshot	fc_snap[NUM_OF_USER];	/* previous time_in_state info */
 
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 	u64			*freq_stats[4];
 	u64			*freq_stats_snap[4];
-#else
-	struct exynos_wow_profile	*prev_profile;
-#endif
 
 	u32			cur_freq_idx;	/* current freq_idx */
 	u32			max_freq_idx;	/* current max_freq_idx */
@@ -171,9 +163,7 @@ u32 mifpro_update_mode(s32 id, int mode)
 		struct freq_cstate_snapshot *fc_snap = &profiler.fc_snap[MIGOV];
 
 		sync_fcsnap_with_cur(fc, fc_snap, profiler.table_cnt);
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 		exynos_bcm_calc_enable(1);
-#endif
 
 		profiler.enabled = mode;
 
@@ -181,9 +171,7 @@ u32 mifpro_update_mode(s32 id, int mode)
 	}
 	else if (profiler.enabled == 1 && mode == 0) {
 		exynos_devfreq_set_profile(profiler.devfreq_type, 0);
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 		exynos_bcm_calc_enable(0);
-#endif
 		profiler.enabled = mode;
 
 		// clear
@@ -202,17 +190,12 @@ u32 mifpro_update_mode(s32 id, int mode)
 		profiler.result[MIGOV].freq_stats1_sum = 0;
 		profiler.result[MIGOV].freq_stats_ratio = 0;
 		profiler.fc_snap[MIGOV].last_snap_time = 0;
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 		for (i = 0; i < 4; i++) {
 			memset(profiler.freq_stats[i], 0, sizeof(u64) * profiler.table_cnt);
 			memset(profiler.freq_stats_snap[i], 0, sizeof(u64) * profiler.table_cnt);
 			memset(profiler.result[MIGOV].freq_stats[i], 0, sizeof(u64) * profiler.table_cnt);
 
 		}
-
-#else
-		memset(profiler.prev_profile, 0, sizeof(struct exynos_wow_profile) * profiler.table_cnt);
-#endif
 
 		return 0;
 	}
@@ -263,12 +246,8 @@ u32 mifpro_update_profile(int user)
 	struct profile_result *result = &profiler.result[user];
 	int i;
 	u64 total_active_time = 0, freq_stats2_sum = 0, freq_stats3_sum = 0, diff_ccnt = 0;
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 	u64 ccnt = 0;
 	static u64 prev_ccnt = 0;
-#else
-	struct exynos_wow_profile *profile_in_state;
-#endif
 
 	profiler.cur_freq_idx = get_idx_from_freq(profiler.table, profiler.table_cnt,
 			*(profiler.freq_infos.cur_freq), RELATION_LOW);
@@ -277,7 +256,6 @@ u32 mifpro_update_profile(int user)
 	profiler.min_freq_idx = get_idx_from_freq(profiler.table, profiler.table_cnt,
 			exynos_pm_qos_request(profiler.freq_infos.pm_qos_class), RELATION_HIGH);
 
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 	// Update time in state and get tables from DVFS driver
 	exynos_devfreq_get_profile(profiler.devfreq_type, fc->time, profiler.freq_stats);
 
@@ -294,30 +272,6 @@ u32 mifpro_update_profile(int user)
 
 	diff_ccnt = ccnt - prev_ccnt;
 	prev_ccnt = ccnt;
-#else
-	profile_in_state = kzalloc(sizeof(struct exynos_wow_profile) * profiler.table_cnt, GFP_KERNEL);
-
-	exynos_devfreq_get_profile(profiler.devfreq_type, fc->time, profile_in_state);
-
-	// calculate delta from previous status
-	make_snapshot_and_time_delta(fc, fc_snap, fc_result, profiler.table_cnt);
-
-	// Call to calc power
-	compute_freq_cstate_result(profiler.table, fc_result, profiler.table_cnt,
-					profiler.cur_freq_idx, result->avg_temp);
-
-	// Calculate freq_stats array
-	for (i = 0; i < profiler.table_cnt; i++) {
-		result->freq_stats[0][i] = (profile_in_state[i].transfer_data - profiler.prev_profile[i].transfer_data) >> 20;
-		result->freq_stats[2][i] = (profile_in_state[i].nr_requests - profiler.prev_profile[i].nr_requests);
-		result->freq_stats[3][i] = (profile_in_state[i].mo_count - profiler.prev_profile[i].mo_count);
-		diff_ccnt += (profile_in_state[i].ccnt - profiler.prev_profile[i].ccnt);
-	}
-	memcpy(profiler.prev_profile, profile_in_state, sizeof(struct exynos_wow_profile) * profiler.table_cnt);
-	kfree(profile_in_state);
-	diff_ccnt /= 1000;
-#endif
-
 
 	for (i = 0 ; i < profiler.table_cnt; i++)
 		fc->time[CLK_OFF][i] -= fc->time[ACTIVE][i];
@@ -445,9 +399,7 @@ static int exynos_mif_profiler_probe(struct platform_device *pdev)
 {
 	unsigned int org_max_freq, org_min_freq, cur_freq;
 	int ret, idx;
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 	int i;
-#endif
 
 	/* get node of device tree */
 	if (!pdev->dev.of_node) {
@@ -490,14 +442,10 @@ static int exynos_mif_profiler_probe(struct platform_device *pdev)
 
 		if (init_profile_result(&profiler.result[idx], profiler.table_cnt))
 			return -EINVAL;
-#if defined(CONFIG_SOC_S5E9925_EVT0) || defined(CONFIG_SOC_S5E8825)
 		for (i = 0 ; i < 4; i++) {
 			profiler.freq_stats[i] = kzalloc(sizeof(u64) * profiler.table_cnt, GFP_KERNEL);
 			profiler.freq_stats_snap[i] = kzalloc(sizeof(u64) * profiler.table_cnt, GFP_KERNEL);
 		}
-#else
-		profiler.prev_profile = kzalloc(sizeof(struct exynos_wow_profile) * profiler.table_cnt, GFP_KERNEL);
-#endif
 	}
 
 	/* get thermal-zone to get temperature */

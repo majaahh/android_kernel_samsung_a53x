@@ -221,31 +221,6 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.len_alpha = 0,
 		.comp_mask = BIT(FMT_COMP_SBWC) | BIT(FMT_COMP_SBWCL),
 		.cs = DPU_COLORSPACE_YUV420,
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-	}, {
-		.name = "ARGB16161616",
-		.fmt = DRM_FORMAT_ARGB16161616F,
-		.dma_fmt = IDMA_IMG_FORMAT_ARGB_FP16,
-		.dpp_fmt = DPP_IMG_FORMAT_ARGB8101010,
-		.bpp = 64,
-		.padding = 0,
-		.bpc = 16,
-		.num_planes = 1,
-		.len_alpha = 16,
-		.cs = DPU_COLORSPACE_RGB,
-	}, {
-		.name = "ABGR16161616",
-		.fmt = DRM_FORMAT_ABGR16161616F,
-		.dma_fmt = IDMA_IMG_FORMAT_ABGR_FP16,
-		.dpp_fmt = DPP_IMG_FORMAT_ARGB8101010,
-		.bpp = 64,
-		.padding = 0,
-		.bpc = 16,
-		.num_planes = 1,
-		.len_alpha = 16,
-		.comp_mask = BIT(FMT_COMP_SAJC),
-		.cs = DPU_COLORSPACE_RGB,
-#endif
 	},
 };
 

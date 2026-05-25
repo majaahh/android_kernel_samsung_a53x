@@ -343,7 +343,7 @@ void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif)
 #endif
 {
 	int i;
-#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) || IS_ENABLED(CONFIG_SOC_S5E9925)
+#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 	u8 start;
 	u8 end;
 #endif
@@ -358,7 +358,7 @@ void mifintrbit_init(struct mifintrbit *intr, struct scsc_mif_abs *mif)
 	/* store the target "type", we will use it to get the obj pointer */
 	intr->target = target;
 	bitmap_zero(intr->bitmap_fromhost, MIFINTRBIT_NUM_INT);
-#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) || IS_ENABLED(CONFIG_SOC_S5E9925)
+#if IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 	mif->get_msi_range(mif, &start, &end, target);
 	/* fill bitmap */
 	bitmap_fill(intr->bitmap_tohost, MIFINTRBIT_NUM_INT);

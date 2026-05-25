@@ -285,24 +285,6 @@ struct workqueue_struct {
 	struct pool_workqueue __rcu *numa_pwq_tbl[]; /* PWR: unbound pwqs indexed by node */
 };
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG)
-SECDBG_DEFINE_MEMBER_TYPE(workqueue_struct_name, workqueue_struct, name);
-SECDBG_DEFINE_MEMBER_TYPE(workqueue_struct_nr_pwqs_to_flush, workqueue_struct, nr_pwqs_to_flush);
-SECDBG_DEFINE_MEMBER_TYPE(workqueue_struct_flush_color, workqueue_struct, flush_color);
-SECDBG_DEFINE_MEMBER_TYPE(workqueue_struct_pwqs, workqueue_struct, pwqs);
-SECDBG_DEFINE_MEMBER_TYPE(pool_workqueue_pwqs_node, pool_workqueue, pwqs_node);
-SECDBG_DEFINE_MEMBER_TYPE(pool_workqueue_flush_color, pool_workqueue, flush_color);
-SECDBG_DEFINE_MEMBER_TYPE(pool_workqueue_nr_in_flight, pool_workqueue, nr_in_flight);
-SECDBG_DEFINE_MEMBER_TYPE(pool_workqueue_pool, pool_workqueue, pool);
-SECDBG_DEFINE_MEMBER_TYPE(worker_pool_busy_hash, worker_pool, busy_hash);
-SECDBG_DEFINE_MEMBER_TYPE(worker_pool_manager, worker_pool, manager);
-SECDBG_DEFINE_MEMBER_TYPE(worker_hentry, worker, hentry);
-SECDBG_DEFINE_MEMBER_TYPE(worker_current_pwq, worker, current_pwq);
-SECDBG_DEFINE_MEMBER_TYPE(worker_task, worker, task);
-SECDBG_DEFINE_MEMBER_TYPE(worker_current_work, worker, current_work);
-SECDBG_DEFINE_MEMBER_TYPE(worker_current_func, worker, current_func);
-#endif
-
 static struct kmem_cache *pwq_cache;
 
 static cpumask_var_t *wq_numa_possible_cpumask;
@@ -2878,7 +2860,7 @@ void flush_workqueue(struct workqueue_struct *wq)
 
 	mutex_unlock(&wq->mutex);
 
-	secdbg_dtsk_built_set_data(DTYPE_WQFLUSH, wq);
+	secdbg_dtsk_built_set_data(wq);
 	wait_for_completion(&this_flusher.done);
 	secdbg_dtsk_built_clear_data();
 
@@ -3092,7 +3074,7 @@ static bool __flush_work(struct work_struct *work, bool from_cancel)
 	lock_map_release(&work->lockdep_map);
 
 	if (start_flush_work(work, &barr, from_cancel)) {
-		secdbg_dtsk_built_set_data(DTYPE_WORK, work);
+		secdbg_dtsk_built_set_data(work);
 		wait_for_completion(&barr.done);
 		secdbg_dtsk_built_clear_data();
 		destroy_work_on_stack(&barr.work);
@@ -5887,11 +5869,8 @@ static void wq_watchdog_timer_fn(struct timer_list *unused)
 
 	rcu_read_unlock();
 
-	if (lockup_detected) {
+	if (lockup_detected)
 		show_workqueue_state();
-		if (IS_ENABLED(CONFIG_SEC_DEBUG_WORKQUEUE_LOCKUP_PANIC))
-			BUG();
-	}
 
 	wq_watchdog_reset_touched();
 	mod_timer(&wq_watchdog_timer, jiffies + thresh);

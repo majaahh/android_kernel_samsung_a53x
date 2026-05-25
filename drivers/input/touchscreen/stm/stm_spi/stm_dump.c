@@ -174,9 +174,6 @@ void stm_ts_spi_sponge_dump_flush(struct stm_ts_data *ts, int dump_area)
 			snprintf(buff, sizeof(buff), "%03d: %04x%04x%04x%04x%04x\n",
 					i + (ts->sponge_dump_event * dump_area),
 					edata[0], edata[1], edata[2], edata[3], edata[4]);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-			sec_tsp_sponge_log(buff);
-#endif
 		}
 	}
 
@@ -395,11 +392,6 @@ void stm_ts_init_proc(struct stm_ts_data *ts)
 	if (!ts->cmoffset_main_proc)
 		goto err_alloc_main;
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	if (ts->plat_data->support_dual_foldable == SUB_TOUCH)
-		entry_cmoffset_all = proc_create("tsp_cmoffset_all_sub", S_IFREG | S_IRUGO, NULL, &tsp_cmoffset_all_file_ops);
-	else
-#endif
 		entry_cmoffset_all = proc_create("tsp_cmoffset_all", S_IFREG | S_IRUGO, NULL, &tsp_cmoffset_all_file_ops);
 	
 	if (!entry_cmoffset_all) {

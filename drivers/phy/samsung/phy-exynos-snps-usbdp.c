@@ -821,14 +821,6 @@ static int additional_cr_reg_update(struct exynos_usbphy_info *info)
 	cr_reg |= (1 << 3) | (0x3 << 1);
 	phy_exynos_snps_usbdp_cr_write(info, CRREG_LANE_TX(0x10eb), cr_reg);
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925) && IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-	/* P1 mode block power table update: Enable AFE */
-	phy_exynos_snps_usbdp_cr_write(info, CRREG_LANE_RX(0x1042), 0x0203);
-
-	/* P2 mode block power table update: Enable AFE */
-	phy_exynos_snps_usbdp_cr_write(info, CRREG_LANE_RX(0x1043), 0x181);
-#endif
-
 	return 0;
 }
 

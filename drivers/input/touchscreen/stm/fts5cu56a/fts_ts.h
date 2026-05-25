@@ -18,14 +18,10 @@
 #define TSP_PATH_EXTERNAL_FW_SIGNED	"/sdcard/Firmware/TSP/tsp_signed.bin"
 #define TSP_PATH_SPU_FW_SIGNED		"/spu/TSP/ffu_tsp.bin"
 
-#if defined(CONFIG_FOLDER_HALL) && defined(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
+#if defined(CONFIG_FOLDER_HALL)
 #include <linux/hall.h>
 #endif
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-#define input_raw_info_d(mode, dev, fmt, ...) input_raw_info(MAIN_TOUCH, dev, fmt, ## __VA_ARGS__)
-#else
 #define input_raw_info_d(mode, dev, fmt, ...) input_raw_info(mode, dev, fmt, ## __VA_ARGS__)
-#endif
 
 #define input_raw_info(mode, dev, fmt, ...) dev_info(dev, fmt, ## __VA_ARGS__)
 #define input_dbg(mode, dev, fmt, ...) dev_dbg(dev, fmt, ## __VA_ARGS__)
@@ -869,15 +865,6 @@ struct fts_ts_info {
 	struct notifier_block nb;
 	int flip_status_current;
 	int flip_status_prev;
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	int flip_status;
-	int change_flip_status;
-	struct mutex switching_mutex;
-	struct delayed_work switching_work;
-#ifdef CONFIG_FOLDER_HALL
-	struct notifier_block hall_ic_nb;
-#endif
-#endif
 #ifdef USE_OPEN_DWORK
 	struct delayed_work open_work;
 #endif
@@ -1064,9 +1051,6 @@ int fts_set_hsync_scanmode(struct fts_ts_info *info, u8 mode);
 int fts_set_external_noise_mode(struct fts_ts_info *info, u8 mode);
 int fts_fix_active_mode(struct fts_ts_info *info, bool enable);
 #ifdef FTS_SUPPORT_SPONGELIB
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf);
-#endif
 int fts_check_custom_library(struct fts_ts_info *info);
 #endif
 
@@ -1088,11 +1072,7 @@ extern void fts_set_grip_type(struct fts_ts_info *info, u8 set_type);
 void fts_run_rawdata_read_all(struct fts_ts_info *info);
 
 #ifdef CONFIG_TOUCHSCREEN_DUMP_MODE
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-extern struct tsp_dump_callbacks *tsp_callbacks;
-#else
 extern struct tsp_dump_callbacks dump_callbacks;
-#endif
 #endif
 
 #endif /* _LINUX_FTS_TS_H_ */

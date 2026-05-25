@@ -44,8 +44,3 @@ obj-$(CONFIG_BLK_SED_OPAL)	+= sed-opal.o
 obj-$(CONFIG_BLK_PM)		+= blk-pm.o
 obj-$(CONFIG_BLK_INLINE_ENCRYPTION)	+= keyslot-manager.o blk-crypto.o
 obj-$(CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK)	+= blk-crypto-fallback.o
-obj-$(CONFIG_BLK_SEC_STATS)	+= blk-sec-stats.o
-
-ifdef CONFIG_SEC_KUNIT
-GCOV_PROFILE_blk-sec-stats.o	:=y
-endif

@@ -247,9 +247,7 @@ static inline u32 dqe_reg_get_lut_addr(u32 id, enum dqe_reg_type type,
 	case DQE_REG_SCL:
 		if (index >= DQE_SCL_REG_MAX)
 			return 0;
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0) // EVT0 support DECON SCL but not implemented
 		addr = DQE_SCL_Y_VCOEF(index);
-#endif
 		break;
 	case DQE_REG_DE:
 		if (index >= DQE_DE_REG_MAX)
@@ -420,7 +418,6 @@ static void dqe_reg_set_img_size(u32 id, u32 width, u32 height)
 
 static void dqe_reg_set_scaled_img_size(u32 id, u32 xres, u32 yres)
 {
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0) // EVT0 support DECON SCL but not implemented
 	u32 addr;
 	int h_ratio = 1 << 20; /* DECON post scaler is deprecated */
 	int v_ratio = 1 << 20;
@@ -433,7 +430,6 @@ static void dqe_reg_set_scaled_img_size(u32 id, u32 xres, u32 yres)
 
 	addr = DQE_SCL_MAIN_V_RATIO;
 	dqe_write_mask(id, addr, V_RATIO(v_ratio), V_RATIO_MASK);
-#endif
 }
 
 /* exposed to driver layer for DQE CAL APIs */

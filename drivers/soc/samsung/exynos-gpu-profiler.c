@@ -66,17 +66,6 @@ static struct profiler {
 
 u64 get_gpu_hw_status(void)
 {
-#if defined(CONFIG_SOC_S5E9925)
-	u32 addr = 0x1000a004;
-	unsigned long tmp;
-
-	if (exynos_smc_readsfr(addr, &tmp) == 0) {
-		int shift = 7;
-		unsigned long mask = 0x1fe;
-
-		return (u64)((tmp>>shift)&mask);
-	}
-#endif
 	return 0;
 }
 

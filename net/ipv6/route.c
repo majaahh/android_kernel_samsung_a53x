@@ -2659,7 +2659,6 @@ static void ip6_negative_advice(struct sock *sk,
 	sk_dst_reset(sk);
 }
 
-
 static void ip6_link_failure(struct sk_buff *skb)
 {
 	struct rt6_info *rt;

@@ -434,9 +434,6 @@ ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf
 				snprintf(ibuff, sizeof(ibuff), "%03d: %04x%04x%04x%04x%04x\n",
 						i + (ts->sponge_dump_event * dump_area),
 						edata[0], edata[1], edata[2], edata[3], edata[4]);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-				sec_tsp_sponge_log(ibuff);
-#endif
 			}
 		}
 
@@ -614,34 +611,6 @@ static ssize_t aod_active_area(struct device *dev,
 			ts->plat_data->aod_data.active_area[2]);
 }
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-static ssize_t dualscreen_policy_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	struct sec_cmd_data *sec = dev_get_drvdata(dev);
-	struct stm_ts_data *ts = container_of(sec, struct stm_ts_data, sec);
-	int ret, value;
-
-	if (!(ts->plat_data->support_flex_mode && (ts->plat_data->support_dual_foldable == MAIN_TOUCH)))
-		return count;
-
-	ret = kstrtoint(buf, 10, &value);
-	if (ret < 0)
-		return ret;
-
-	input_info(true, &ts->client->dev, "%s: power_state[%d] %sfolding\n",
-					__func__, ts->plat_data->power_state, ts->flip_status_current ? "" : "un");
-
-	if (ts->plat_data->power_state == SEC_INPUT_STATE_POWER_OFF && ts->flip_status_current == STM_TS_STATUS_UNFOLDING) {
-		cancel_delayed_work(&ts->switching_work);
-		schedule_work(&ts->switching_work.work);
-	}
-
-	return count;
-}
-#endif
-
 static DEVICE_ATTR(scrub_pos, 0444, scrub_position_show, NULL);
 static DEVICE_ATTR(hw_param, 0664, hardware_param_show, hardware_param_store);
 static DEVICE_ATTR(read_ambient_info, 0444, read_ambient_info_show, NULL);
@@ -654,9 +623,6 @@ static DEVICE_ATTR(virtual_prox, 0664, protos_event_show, protos_event_store);
 static DEVICE_ATTR(fod_pos, 0444, stm_ts_fod_position_show, NULL);
 static DEVICE_ATTR(fod_info, 0444, stm_ts_fod_info_show, NULL);
 static DEVICE_ATTR(aod_active_area, 0444, aod_active_area, NULL);
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-static DEVICE_ATTR(dualscreen_policy, 0664, NULL, dualscreen_policy_store);
-#endif
 
 static struct attribute *cmd_attributes[] = {
 	&dev_attr_scrub_pos.attr,
@@ -671,9 +637,6 @@ static struct attribute *cmd_attributes[] = {
 	&dev_attr_fod_pos.attr,
 	&dev_attr_fod_info.attr,
 	&dev_attr_aod_active_area.attr,
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	&dev_attr_dualscreen_policy.attr,
-#endif
 	NULL,
 };
 
@@ -3972,11 +3935,7 @@ static void run_rawdata_read_all(void *device_data)
 	struct stm_ts_data *ts = container_of(sec, struct stm_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	input_raw_data_clear(MAIN_TOUCH);
-#else
 	input_raw_data_clear();
-#endif
 	ts->tsp_dump_lock = true;
 
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev,
@@ -6551,15 +6510,6 @@ int stm_ts_fn_init(struct stm_ts_data *ts)
 {
 	int retval = 0;
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	if (ts->plat_data->support_dual_foldable == MAIN_TOUCH)
-		retval = sec_cmd_init(&ts->sec, sec_cmds,
-				ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP1);
-	else if (ts->plat_data->support_dual_foldable == SUB_TOUCH)
-		retval = sec_cmd_init(&ts->sec, sec_cmds,
-				ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP2);
-	else
-#endif
 		retval = sec_cmd_init(&ts->sec, sec_cmds,
 			ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP);
 
@@ -6610,13 +6560,6 @@ void stm_ts_fn_remove(struct stm_ts_data *ts)
 	sysfs_remove_group(&ts->sec.fac_dev->kobj,
 			&cmd_attr_group);
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	if (ts->plat_data->support_dual_foldable == MAIN_TOUCH)
-		sec_cmd_exit(&ts->sec, SEC_CLASS_DEVT_TSP1);
-	else if (ts->plat_data->support_dual_foldable == SUB_TOUCH)
-		sec_cmd_exit(&ts->sec, SEC_CLASS_DEVT_TSP2);
-	else
-#endif
 		sec_cmd_exit(&ts->sec, SEC_CLASS_DEVT_TSP);
 }
 

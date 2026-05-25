@@ -1106,9 +1106,6 @@ int stm_ts_input_open(struct input_dev *dev)
 	secure_touch_stop(ts, 0);
 #endif
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	cancel_delayed_work_sync(&ts->switching_work);
-#endif
 	mutex_lock(&ts->switching_mutex);
 
 	if (ts->plat_data->power_state == SEC_INPUT_STATE_LPM) {
@@ -1139,10 +1136,6 @@ int stm_ts_input_open(struct input_dev *dev)
 		schedule_work(&ts->work_print_info.work);
 	ts->flip_status_prev = ts->flip_status_current;
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE) && IS_ENABLED(CONFIG_INPUT_SEC_NOTIFIER)
-	if (ts->plat_data->support_flex_mode && (ts->plat_data->support_dual_foldable == MAIN_TOUCH))
-		sec_input_notify(&ts->stm_input_nb, NOTIFIER_MAIN_TOUCH_ON, NULL);
-#endif
 	return 0;
 }
 
@@ -1181,23 +1174,12 @@ void stm_ts_input_close(struct input_dev *dev)
 	}
 
 	cancel_delayed_work(&ts->reset_work);
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	cancel_delayed_work_sync(&ts->switching_work);
-#endif
 	mutex_lock(&ts->switching_mutex);
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	if (ts->plat_data->support_dual_foldable == MAIN_TOUCH && ts->flip_status_current == STM_TS_STATUS_FOLDING) {
-		ts->plat_data->stop_device(ts);
-	} else {
-#endif
 		if (ts->plat_data->lowpower_mode || ts->plat_data->ed_enable || ts->plat_data->pocket_mode || ts->plat_data->fod_lp_mode)
 			ts->plat_data->lpmode(ts, TO_LOWPOWER_MODE);
 		else
 			ts->plat_data->stop_device(ts);
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	}
-#endif
 
 	mutex_unlock(&ts->switching_mutex);
 	mutex_unlock(&ts->modechange);
@@ -1406,13 +1388,6 @@ static int stm_ts_hw_init(struct spi_device *client)
 
 	ts->flip_status = -1;
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	if (ts->plat_data->support_dual_foldable == SUB_TOUCH)
-		ts->flip_status_current = STM_TS_STATUS_FOLDING;
-	else
-		ts->flip_status_current = STM_TS_STATUS_UNFOLDING;
-#endif
-
 	input_info(true, &ts->client->dev, "%s: Initialized\n", __func__);
 
 	stm_ts_init_proc(ts);
@@ -1517,9 +1492,6 @@ static int stm_ts_init(struct spi_device *client)
 	INIT_DELAYED_WORK(&ts->work_read_info, stm_ts_read_info_work);
 	INIT_DELAYED_WORK(&ts->work_print_info, stm_ts_print_info_work);
 	INIT_DELAYED_WORK(&ts->work_read_functions, stm_ts_get_touch_function);
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	INIT_DELAYED_WORK(&ts->switching_work, stm_switching_work);
-#endif
 #if IS_ENABLED(CONFIG_INPUT_SEC_SECURE_TOUCH)
 	INIT_DELAYED_WORK(&ts->secure_work, stm_ts_secure_work);
 #endif
@@ -1561,21 +1533,6 @@ static int stm_ts_init(struct spi_device *client)
 	sec_input_register_notify(&ts->stm_input_nb, stm_notifier_call, 1);
 #endif
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-#if IS_ENABLED(CONFIG_HALL_NOTIFIER)
-	ts->hall_ic_nb.priority = 1;
-	ts->hall_ic_nb.notifier_call = stm_hall_ic_notify;
-	hall_notifier_register(&ts->hall_ic_nb);
-	input_info(true, &ts->client->dev, "%s: hall ic register\n", __func__);
-#endif
-#if IS_ENABLED(CONFIG_SUPPORT_SENSOR_FOLD)
-	ts->hall_ic_nb_ssh.priority = 1;
-	ts->hall_ic_nb_ssh.notifier_call = stm_hall_ic_ssh_notify;
-	sensorfold_notifier_register(&ts->hall_ic_nb_ssh);
-	input_info(true, &ts->client->dev, "%s: hall ic(ssh) register\n", __func__);
-#endif
-#endif
-
 #if IS_ENABLED(CONFIG_TOUCHSCREEN_DUMP_MODE)
 	dump_callbacks.inform_dump = stm_ts_dump_tsp_log;
 	INIT_DELAYED_WORK(&ts->check_rawdata, stm_ts_check_rawdata);
@@ -1611,19 +1568,10 @@ void stm_ts_release(struct spi_device *client)
 	if (ts->stm_input_nb.notifier_call)
 		sec_input_unregister_notify(&ts->stm_input_nb);
 #endif
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-#if IS_ENABLED(CONFIG_HALL_NOTIFIER)
-	if (ts->hall_ic_nb.notifier_call)
-		hall_notifier_unregister(&ts->hall_ic_nb);
-#endif
-#endif
 	cancel_delayed_work_sync(&ts->work_read_info);
 	cancel_delayed_work_sync(&ts->work_print_info);
 	cancel_delayed_work_sync(&ts->work_read_functions);
 	cancel_delayed_work_sync(&ts->reset_work);
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-	cancel_delayed_work_sync(&ts->switching_work);
-#endif
 #if IS_ENABLED(CONFIG_INPUT_SEC_SECURE_TOUCH)
 	cancel_delayed_work_sync(&ts->secure_work);
 #endif

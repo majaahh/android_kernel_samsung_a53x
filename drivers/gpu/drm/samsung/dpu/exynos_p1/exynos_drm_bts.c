@@ -20,7 +20,6 @@
 
 #include <soc/samsung/bts.h>
 #include <soc/samsung/exynos-devfreq.h>
-#include <dt-bindings/soc/samsung/s5e9925-devfreq.h>
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif

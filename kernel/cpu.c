@@ -252,7 +252,7 @@ static bool cpuhp_is_ap_state(enum cpuhp_state state)
 static inline void wait_for_ap_thread(struct cpuhp_cpu_state *st, bool bringup)
 {
 	struct completion *done = bringup ? &st->done_up : &st->done_down;
-	secdbg_dtsk_built_set_data(DTYPE_CPUHP, (void *)st->thread);
+	secdbg_dtsk_built_set_data((void *)st->thread);
 	wait_for_completion(done);
 	secdbg_dtsk_built_clear_data();
 }

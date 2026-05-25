@@ -683,13 +683,8 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 
 	print_modules();
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_AUTO_COMMENT)
-	if (regs)
-		show_regs_auto_comment(regs, panic_on_warn);
-#else
 	if (regs)
 		show_regs(regs);
-#endif
 
 	check_panic_on_warn("kernel");
 

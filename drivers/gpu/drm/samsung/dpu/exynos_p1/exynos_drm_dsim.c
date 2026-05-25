@@ -1223,14 +1223,6 @@ static int dsim_fcmd_check(struct dsim_device *dsim, u32 id, u32 unit)
 		return -EINVAL;
 	}
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-	/* Check align : Xfer unit should be 8byte-aligned */
-	if (unit % DSIM_FCMD_ALIGN_CONSTRAINT) {
-		dsim_err(dsim, "packet unit should be 8byte-aligned\n");
-		return -EINVAL;
-	}
-#endif
-
 	return 0;
 }
 

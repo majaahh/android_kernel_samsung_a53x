@@ -33,11 +33,7 @@
 #include <linux/user_namespace.h>
 #include <linux/freezer.h>
 
-#ifdef CONFIG_FUSE_SUPPORT_STLOG
-#include <linux/fslog.h>
-#else
 #define ST_LOG(fmt, ...)
-#endif
 
 /** Default max number of pages that can be used in a single read request */
 #define FUSE_DEFAULT_MAX_PAGES_PER_REQ 32

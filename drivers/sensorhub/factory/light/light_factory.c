@@ -29,14 +29,8 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 
-#if defined(CONFIG_SHUB_KUNIT)
-#include <kunit/mock.h>
-#define __mockable __weak
-#define __visible_for_testing
-#else
 #define __mockable
 #define __visible_for_testing static
-#endif
 
 /*************************************************************************/
 /* factory Sysfs                                                         */

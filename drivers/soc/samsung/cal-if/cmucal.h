@@ -542,17 +542,6 @@ struct cmucal_clkout {
 	.clk.enable_idx	= _eo,				\
 }
 #if defined(CONFIG_CMUCAL_QCH_IGNORE_SUPPORT) || defined(CONFIG_CMUCAL_QCH_IGNORE_SUPPORT_MODULE)
-#if defined(CONFIG_SOC_S5E9925)
-#define CLK_QCH(_id, _o, _so, _ig)			\
-[_id & MASK_OF_ID] = {	\
-	.clk.id		= _id,				\
-	.clk.name	= #_id,				\
-	.clk.pid	= EMPTY_CLK_ID,			\
-	.clk.offset_idx	= _o,				\
-	.clk.status_idx	= _so,				\
-	.ignore_idx     = _ig,                          \
-}
-#else
 #define CLK_QCH(_id, _o, _so, _eo, _ig)			\
 [_id & MASK_OF_ID] = {	\
 	.clk.id		= _id,				\
@@ -563,7 +552,6 @@ struct cmucal_clkout {
 	.clk.enable_idx	= _eo,				\
 	.ignore_idx     = _ig,                          \
 }
-#endif
 #else
 #define CLK_QCH(_id, _o, _so, _eo)			\
 [_id & MASK_OF_ID] = {	\

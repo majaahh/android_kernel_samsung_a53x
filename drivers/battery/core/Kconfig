@@ -54,40 +54,12 @@ config SB_VOTE
 	  (set/get/find)
 	  refer to sb_voter.h
 
-config SB_PQUEUE_TEST
-	tristate "KUnit test for sb_pqueue_test"
-	depends on SEC_KUNIT
-	help
-    	  Say Y here to enable
-	  support to kunit test.
-	  for kunitest
-          for sb_pqueue_test
-
 config SB_NOTIFY_TEST
 	tristate "KUnit test for sb_notify_test"
-	depends on SEC_KUNIT
+	depends on eEC_KUNIT
 	help
     	  Say Y here to enable
 	  support to kunit test.
 	  for kunitest
           for sb_notify_test
-
-config SB_SYSFS_TEST
-	tristate "KUnit test for sb_sysfs_test"
-	depends on SEC_KUNIT
-	help
-    	  Say Y here to enable
-	  support to kunit test.
-	  for kunitest
-          for sb_sysfs_test
-
-config SB_VOTE_TEST
-	tristate "KUnit test for sb_vote_test"
-	depends on SEC_KUNIT
-	help
-    	  Say Y here to enable
-	  support to kunit test.
-	  for kunitest
-          for sb_vote_test
-
 endmenu

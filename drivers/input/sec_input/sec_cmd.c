@@ -9,16 +9,10 @@
 
 #include "sec_cmd.h"
 #include "sec_input.h"
-#include "sec_tsp_log.h"
 
 struct class *tsp_sec_class;
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-__visible_for_testing struct sec_cmd_data *kunit_sec;
-EXPORT_SYMBOL(kunit_sec);
-#else
 #define __visible_for_testing static
-#endif
 
 const char *str_power_state[3] = { "OFF", "LP", "ON" };
 const char *str_use_case[CHECK_ALL + 1] = {
@@ -309,9 +303,6 @@ check_not_support_cmd:
 
 	return count;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_store);
-#endif
 
 #else	/* defined USE_SEC_CMD_QUEUE */
 static void cmd_store_function(struct sec_cmd_data *data)
@@ -451,9 +442,6 @@ check_not_support_cmd:
 		snprintf(tbuf, sizeof(tbuf), "[r:%lu.%06lu]",
 				(unsigned long)t,
 				nanosec_rem / 1000);
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-		sec_debug_tsp_command_history(tbuf);
-#endif
 	}
 }
 
@@ -520,11 +508,6 @@ __visible_for_testing ssize_t cmd_store(struct device *dev, struct device_attrib
 						nanosec_rem / 1000);
 
 				snprintf(task_info, 40, "\n[%d:%s:%s]", current->pid, current->comm, dev_name(data->fac_dev));
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-				sec_debug_tsp_command_history(task_info);
-				sec_debug_tsp_command_history(cmd.cmd);
-				sec_debug_tsp_command_history(tbuf);
-#endif
 			}
 			break;
 		}
@@ -564,9 +547,6 @@ __visible_for_testing ssize_t cmd_store(struct device *dev, struct device_attrib
 	sec_cmd_execution(data, true);
 	return count;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_store);
-#endif
 #endif
 
 __visible_for_testing ssize_t cmd_status_show(struct device *dev,
@@ -602,9 +582,6 @@ __visible_for_testing ssize_t cmd_status_show(struct device *dev,
 
 	return snprintf(buf, sizeof(buff), "%s\n", buff);
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_status_show);
-#endif
 
 __visible_for_testing ssize_t cmd_status_all_show(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
@@ -639,9 +616,6 @@ __visible_for_testing ssize_t cmd_status_all_show(struct device *dev,
 
 	return snprintf(buf, sizeof(buff), "%s\n", buff);
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_status_all_show);
-#endif
 
 __visible_for_testing ssize_t cmd_result_show(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
@@ -670,9 +644,6 @@ __visible_for_testing ssize_t cmd_result_show(struct device *dev,
 
 	return size;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_result_show);
-#endif
 
 __visible_for_testing ssize_t cmd_result_all_show(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
@@ -696,9 +667,6 @@ __visible_for_testing ssize_t cmd_result_all_show(struct device *dev,
 
 	return size;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_result_all_show);
-#endif
 
 __visible_for_testing ssize_t cmd_list_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -729,9 +697,6 @@ __visible_for_testing ssize_t cmd_list_show(struct device *dev,
 
 	return ret;
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(cmd_list_show);
-#endif
 
 static DEVICE_ATTR(cmd, 0220, NULL, cmd_store);
 static DEVICE_ATTR_RO(cmd_status);
@@ -858,9 +823,6 @@ ssize_t sec_cmd_enabled_show(struct device *dev, struct device_attribute *attr,
 {
 	return enabled_show(dev, attr, buf);
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_cmd_enabled_show);
-#endif
 
 static ssize_t enabled_store(struct device *dev, struct device_attribute *attr,
 					const char *buf, size_t count)
@@ -923,9 +885,6 @@ ssize_t sec_cmd_enabled_store(struct device *dev, struct device_attribute *attr,
 {
 	return enabled_store(dev, attr, buf, count);
 }
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-EXPORT_SYMBOL_KUNIT(sec_cmd_enabled_store);
-#endif
 
 static DEVICE_ATTR_RW(prox_power_off);
 static DEVICE_ATTR_RO(support_feature);

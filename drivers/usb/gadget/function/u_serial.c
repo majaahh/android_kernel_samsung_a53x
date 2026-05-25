@@ -592,7 +592,8 @@ static int gs_start_io(struct gs_port *port)
 		gs_start_tx(port);
 		/* Unblock any pending writes into our circular buffer, in case
 		 * we didn't in gs_start_tx() */
-		tty_port_tty_wakeup(&port->port);
+		if (port->port.tty)
+			tty_wakeup(port->port.tty);
 	} else {
 		/* Free reqs only if we are still connected */
 		if (port->port_usb) {

@@ -574,9 +574,6 @@ static void synchronize_rcu_expedited_wait(void)
 				preempt_enable();
 			}
 		}
-		if (IS_ENABLED(CONFIG_SEC_DEBUG_PANIC_ON_RCU_STALL))
-			panic("RCU Stall\n");
-
 		jiffies_stall = 3 * rcu_jiffies_till_stall_check() + 3;
 	}
 }
@@ -864,7 +861,7 @@ void synchronize_rcu_expedited(void)
 		rew.rew_s = s;
 		INIT_WORK_ONSTACK(&rew.rew_work, wait_rcu_exp_gp);
 		queue_work(rcu_gp_wq, &rew.rew_work);
-		secdbg_dtsk_built_set_data(DTYPE_WORK, &rew.rew_work);
+		secdbg_dtsk_built_set_data(&rew.rew_work);
 	}
 
 	/* Wait for expedited grace period to complete. */

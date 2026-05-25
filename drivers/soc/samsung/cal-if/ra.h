@@ -39,13 +39,7 @@ enum trans_opt {
 #define PLL_ENABLE_SHIFT	(31)
 #define PLL_ENABLE		(0x1 << PLL_ENABLE_SHIFT)
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
-#define FIN_HZ			(76.8*MHZ)
-#elif IS_ENABLED(CONFIG_SOC_EXYNOS2100)
 #define FIN_HZ			(26*MHZ)
-#elif IS_ENABLED(CONFIG_SOC_S5E8825)
-#define FIN_HZ			(26*MHZ)
-#endif
 
 #define CLK_WAIT_CNT		1000
 #define RECALC_MAX		32

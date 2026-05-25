@@ -161,7 +161,7 @@ struct scsc_mif_abs {
  * Outgoing MIF Interrupt Hardware Controls
  */
 	void (*irq_bit_set)(struct scsc_mif_abs *interface, int bit_num, enum scsc_mif_abs_target target);
-#if defined(CONFIG_SCSC_PCIE_PAEAN_X86) || defined(CONFIG_SOC_S5E9925)
+#if defined(CONFIG_SCSC_PCIE_PAEAN_X86)
 	void (*get_msi_range)(struct scsc_mif_abs *interface, u8 *start, u8 *end, enum scsc_mif_abs_target target);
 #endif
 

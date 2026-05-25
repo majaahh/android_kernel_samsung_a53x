@@ -570,181 +570,6 @@ static ssize_t read_support_feature(struct device *dev,
 }
 
 #ifdef FTS_SUPPORT_SPONGELIB
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct sec_cmd_data *sec = dev_get_drvdata(dev);
-	struct fts_ts_info *info;
-
-	u8 string_data[10] = {0, };
-	u16 current_index;
-	u8 dump_format, dump_num;
-	u16 dump_start, dump_end;
-	int i, j, ret;
-	u16 addr;
-	u8 buffer[30];
-	u8 position = FTS_SPONGE_LP_DUMP_DATA_FORMAT_10_LEN;
-
-	if (!sec)
-		return -ENODEV;
-
-	info = container_of(sec, struct fts_ts_info, sec);
-
-	if (!info->lp_dump)
-		return -ENOMEM;
-
-	if (!info->use_sponge)
-		return -ENODEV;
-
-	if (info->fts_power_state == FTS_POWER_STATE_POWERDOWN) {
-		input_err(true, &info->client->dev, "%s: [ERROR] Touch is stopped\n",
-				__func__);
-		goto read_buf;
-	}
-
-	if (info->reset_is_on_going) {
-		input_err(true, &info->client->dev, "%s: reset is ongoing\n",
-				__func__);
-		goto read_buf;
-	}
-
-	if (info->lp_dump_readmore == 0)
-		goto read_buf;
-
-	fts_interrupt_set(info, INT_DISABLE);
-
-	addr = FTS_CMD_SPONGE_LP_DUMP;
-
-	ret = info->fts_read_from_sponge(info, addr, string_data, 4);
-	if (ret < 0) {
-		input_err(true, &info->client->dev,
-				"%s: Failed to read from Sponge, addr=0x%X\n", __func__, addr);
-		if (buf)
-			snprintf(buf, SEC_CMD_BUF_SIZE,
-					"NG, Failed to read from Sponge, addr=0x%X", addr);
-		fts_interrupt_set(info, INT_ENABLE);
-		goto out;
-	}
-
-	dump_format = string_data[0];
-	dump_num = string_data[1];
-	dump_start = FTS_CMD_SPONGE_LP_DUMP + 4;
-	dump_end = dump_start + (dump_format * (dump_num - 1));
-
-	if (dump_format > 10) {
-		input_err(true, &info->client->dev,
-				"%s: abnormal data:0x%X, 0x%X\n", __func__, string_data[0], string_data[1]);
-		if (buf)
-			snprintf(buf, SEC_CMD_BUF_SIZE, "%s",
-					"NG, Failed to read from dump format");
-		fts_interrupt_set(info, INT_ENABLE);
-		goto out;
-	}
-
-	current_index = (string_data[3] & 0xFF) << 8 | (string_data[2] & 0xFF);
-	if (current_index > dump_end || current_index < dump_start) {
-		input_err(true, &info->client->dev,
-				"Failed to Sponge LP log %d\n", current_index);
-		if (buf)
-			snprintf(buf, SEC_CMD_BUF_SIZE,
-					"NG, Failed to Sponge LP log, current_index=%d",
-				current_index);
-		fts_interrupt_set(info, INT_ENABLE);
-		goto out;
-	}
-
-	input_info(true, &info->client->dev, "%s: DEBUG format=%d, num=%d, start=%d, end=%d, current_index=%d\n",
-				__func__, dump_format, dump_num, dump_start, dump_end, current_index);
-
-	for (i = dump_num - 1 ; i >= 0 ; i--) {
-		u16 string_addr;
-		int value, j;
-
-		if (current_index < (dump_format * i))
-			string_addr = (dump_format * dump_num) + current_index - (dump_format * i);
-		else
-			string_addr = current_index - (dump_format * i);
-
-		if (string_addr < dump_start)
-			string_addr += (dump_format * dump_num);
-
-		addr = string_addr;
-
-		ret = info->fts_read_from_sponge(info, addr, string_data, dump_format);
-		if (ret < 0) {
-			input_err(true, &info->client->dev,
-					"%s: Failed to read from Sponge, addr=0x%X\n", __func__, addr);
-			if (buf)
-				snprintf(buf, SEC_CMD_BUF_SIZE,
-						"NG, Failed to read from Sponge, addr=0x%X", addr);
-			fts_interrupt_set(info, INT_ENABLE);
-			goto out;
-		}
-
-		value = 0;
-
-		for (j = 0; j < 10; j++)
-			value += string_data[j];
-
-		if (value == 0)
-			continue;
-
-		info->lp_dump[info->lp_dump_index] = (string_addr >> 8) & 0xFF;
-		info->lp_dump[info->lp_dump_index + 1] = string_addr & 0xFF;
-
-		for (j = 0; j < 10; j += 2) {
-			info->lp_dump[info->lp_dump_index + 2 + j] = string_data[j + 1];
-			info->lp_dump[info->lp_dump_index + 2 + j + 1] = string_data[j];
-		}
-		info->lp_dump_index += position;
-
-		if (info->lp_dump_index >= position * FTS_SPONGE_LP_DUMP_LENGTH)
-			info->lp_dump_index = 0;
-	}
-
-	fts_interrupt_set(info, INT_ENABLE);
-
-read_buf:
-	if (buf) {
-		int pos = info->lp_dump_index;
-		
-		for (i = 0; i < FTS_SPONGE_LP_DUMP_LENGTH; i++) {
-			if (pos >= FTS_SPONGE_LP_DUMP_DATA_FORMAT_10_LEN * FTS_SPONGE_LP_DUMP_LENGTH)
-				pos = 0;
-
-			if (info->lp_dump[pos] == 0 && info->lp_dump[pos + 1] == 0) {
-				pos += position;
-				continue;
-			}
-
-			snprintf(buffer, sizeof(buffer), "%d: ", info->lp_dump[pos] << 8 | info->lp_dump[pos + 1]);
-			strlcat(buf, buffer, PAGE_SIZE);
-			memset(buffer, 0x00, sizeof(buffer));
-			for (j = 0; j < 10; j++) {
-				snprintf(buffer, sizeof(buffer), "%02x", info->lp_dump[pos + 2 + j]);
-				strlcat(buf, buffer, PAGE_SIZE);
-				memset(buffer, 0x00, sizeof(buffer));
-			}
-			snprintf(buffer, sizeof(buffer), "\n");
-			strlcat(buf, buffer, PAGE_SIZE);
-			memset(buffer, 0x00, sizeof(buffer));
-
-			pos += position;
-		}
-	}
-out:
-	info->lp_dump_readmore = 0;
-
-	if (buf) {
-		if (strlen(buf) == 0)
-			snprintf(buf, SEC_CMD_BUF_SIZE, "%s", "empty");
-
-		return strlen(buf);
-	}
-
-	return ret;
-}
-#else
 static ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
@@ -904,7 +729,6 @@ out:
 	return strlen(buf);
 }
 #endif
-#endif
 
 static ssize_t prox_power_off_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1020,34 +844,6 @@ static ssize_t fts_fod_position_show(struct device *dev,
 	return strlen(buf);
 }
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-static ssize_t dualscreen_policy_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	struct sec_cmd_data *sec = dev_get_drvdata(dev);
-	struct fts_ts_info *info = container_of(sec, struct fts_ts_info, sec);
-	int ret, value;
-
-	if (!info->board->support_flex_mode)
-		return count;
-
-	ret = kstrtoint(buf, 10, &value);
-	if (ret < 0)
-		return ret;
-
-	input_info(true, &info->client->dev, "%s: power_state[%d] %sfolding\n",
-					__func__, info->fts_power_state, info->flip_status_current ? "": "un");
-
-	if (info->fts_power_state == FTS_POWER_STATE_POWERDOWN && info->flip_status_current == FTS_STATUS_UNFOLDING) {
-		cancel_delayed_work(&info->switching_work);
-		schedule_work(&info->switching_work.work);
-	}
-
-	return count;
-}
-#endif
-
 static DEVICE_ATTR(hw_param, 0664, hardware_param_show, hardware_param_store);
 static DEVICE_ATTR(read_ambient_info, 0444, read_ambient_info_show, NULL);
 static DEVICE_ATTR(sensitivity_mode, 0664, sensitivity_mode_show, sensitivity_mode_store);
@@ -1060,9 +856,6 @@ static DEVICE_ATTR(prox_power_off, 0664, prox_power_off_show, prox_power_off_sto
 static DEVICE_ATTR(virtual_prox, 0664, protos_event_show, protos_event_store);
 static DEVICE_ATTR(fod_info, 0444, fts_fod_info_show, NULL);
 static DEVICE_ATTR(fod_pos, 0444, fts_fod_position_show, NULL);
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-static DEVICE_ATTR(dualscreen_policy, 0664, NULL, dualscreen_policy_store);
-#endif
 static struct attribute *sec_touch_facotry_attributes[] = {
 	&dev_attr_scrub_pos.attr,
 	&dev_attr_hw_param.attr,
@@ -1076,9 +869,6 @@ static struct attribute *sec_touch_facotry_attributes[] = {
 	&dev_attr_virtual_prox.attr,
 	&dev_attr_fod_info.attr,
 	&dev_attr_fod_pos.attr,
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	&dev_attr_dualscreen_policy.attr,
-#endif
 	NULL,
 };
 
@@ -3630,9 +3420,6 @@ static void run_rawdata_read_all(void *device_data)
 	struct fts_ts_info *info = container_of(sec, struct fts_ts_info, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
-#ifdef CONFIG_TOUCHSCREEN_DUAL_FOLDABLE
-	input_raw_data_clear(MAIN_TOUCH);
-#endif
 	info->rawdata_read_lock = true;
 
 	input_raw_info_d(true, &info->client->dev,

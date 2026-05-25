@@ -691,11 +691,7 @@ enum decon_regs_type {
 #define DSIMIF_OFFSET(_i)			(0x8000 + 0x1000 * (_i))
 #define DPIF_OFFSET(_i)				(0xC000 + 0x1000 * (_i))
 #define SCALER_OFFSET(_i)			(0xE000 + 0x1000 * (_i))
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define PPS_OFFS				(0x0000)
-#else
 #define PPS_OFFS				(0x0020)
-#endif
 
 
 #define DSC_CONTROL0(_id)			(COMP_OFFSET(_id) + 0x0000)
@@ -1200,12 +1196,6 @@ enum decon_regs_type {
 #define SRAMC_INT_ERROR_IRQ			(1 << 0)
 
 #define SRAMC_D_COM_INT_ERROR_STATUS		(0x001C)
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define SRAMC_TDMC_ERROR			(1 << 1)
-#define SRAMC_SRAM_FULL				(1 << 0)
-#define SRAMC_D_COM_INT_ERROR_MASK		(0x3 << 0)
-#define SRAMC_D_COM_INT_ERROR_STATUS_GET(_v)	(((_v) >> 0) & 0x3)
-#else
 #define SRAMC_SCL_FULL(_i)			(1 << ( 7  + (4 * (_i))))
 #define SRAMC_ROT_FULL(_i)			(1 << ( 6  + (4 * (_i))))
 #define SRAMC_SBWC_FULL(_i)			(1 << ( 5  + (4 * (_i))))
@@ -1213,15 +1203,10 @@ enum decon_regs_type {
 #define SRAMC_SRAM_FULL				(1 << 0)
 #define SRAMC_D_COM_INT_ERROR_MASK		(0xff1 << 0)
 #define SRAMC_D_COM_INT_ERROR_STATUS_GET(_v)	(((_v) >> 0) & 0xff1)
-#endif
 
 
 //===[ G_XXX -- Global ]===
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define SRAMC_G_BASE_ADDR			(0x19D5F000)
-#else
 #define SRAMC_G_BASE_ADDR			(0x1AD5F000)
-#endif
 #define SRAMC_G1_BASE_ADDR			(0x1AF5F000)
 
 #define SRAMC_G_COM_SWRST_CON			(0x0004)

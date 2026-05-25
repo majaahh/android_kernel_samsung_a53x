@@ -10,10 +10,6 @@
 #ifndef _SEC_INPUT_H_
 #define _SEC_INPUT_H_
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-#include <kunit/test.h>
-#include <kunit/mock.h>
-#endif
 #include <asm/unaligned.h>
 #include <linux/completion.h>
 #include <linux/ctype.h>
@@ -126,99 +122,6 @@ const struct file_operations ops_name = {				\
 #define INPUT_TCLM_LOG_BUF_SIZE		64
 #define INPUT_DEBUG_INFO_SIZE		1024
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-#include "sec_tsp_log.h"
-
-#define input_dbg(mode, dev, fmt, ...)						\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_dbg(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s %d:%s",	\
-					dev_driver_string(dev), dev_name(dev),	\
-					current->pid, current->comm);		\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL %d:%s",	\
-					current->pid, current->comm);		\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-#define input_info(mode, dev, fmt, ...)						\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s %d:%s",	\
-					dev_driver_string(dev), dev_name(dev),	\
-						current->pid, current->comm);	\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL %d:%s",	\
-					current->pid, current->comm);		\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-#define input_err(mode, dev, fmt, ...)						\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_err(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s %d:%s",	\
-					dev_driver_string(dev), dev_name(dev),	\
-					current->pid, current->comm);		\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL %d:%s",	\
-					current->pid, current->comm);	\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-
-#define input_fail_hist(mode, dev, fmt, ...)					\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s %d:%s",	\
-					dev_driver_string(dev), dev_name(dev),	\
-					current->pid, current->comm);	\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL %d:%s",	\
-					current->pid, current->comm);		\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-		sec_debug_tsp_fail_hist(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-
-#define input_raw_info_d(dev_count, dev, fmt, ...)				\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (dev)								\
-		snprintf(input_log_buf, sizeof(input_log_buf), "%s %s",		\
-				dev_driver_string(dev), dev_name(dev));		\
-	else									\
-		snprintf(input_log_buf, sizeof(input_log_buf), "NULL");		\
-	sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);		\
-	sec_debug_tsp_raw_data_msg(dev_count, input_log_buf, fmt, ## __VA_ARGS__);	\
-})
-
-#define input_raw_info(mode, dev, fmt, ...)					\
-({										\
-	if (mode) {								\
-		input_raw_info_d(0, dev, fmt, ## __VA_ARGS__);			\
-	} else {								\
-		dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);			\
-	}									\
-})
-
-#define input_raw_data_clear_by_device(mode) sec_tsp_raw_data_clear(mode)
-#define input_raw_data_clear() sec_tsp_raw_data_clear(0)
-
-#define input_log_fix()	sec_tsp_log_fix()
-#else
 #define input_dbg(mode, dev, fmt, ...)						\
 ({										\
 	dev_dbg(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
@@ -237,7 +140,6 @@ const struct file_operations ops_name = {				\
 #define input_log_fix()	{}
 #define input_raw_data_clear_by_device(mode) {}
 #define input_raw_data_clear() {}
-#endif
 
 /*
  * for input_event_codes.h

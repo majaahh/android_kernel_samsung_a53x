@@ -52,10 +52,6 @@
 	CON_INITCALL
   }
 
-  .test_modules : {
-	KUNIT_TEST_MODULES
-  }
-
   .exitcall : {
 	__exitcall_begin = .;
 	*(.exitcall.exit)

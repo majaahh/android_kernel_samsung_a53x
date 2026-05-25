@@ -552,12 +552,6 @@ export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
 export PAHOLE_FLAGS
 
-ifneq ($(SEC_BUILD_CONF_VENDOR_BUILD_OS),)
-export PLATFORM_VERSION_FOR_GPU=$(SEC_BUILD_CONF_VENDOR_BUILD_OS)
-else
-export PLATFORM_VERSION_FOR_GPU=$(PLATFORM_VERSION)
-endif
-
 # Files to ignore in find ... statements
 
 export RCS_FIND_IGNORE := \( -name SCCS -o -name BitKeeper -o -name .svn -o    \
@@ -1395,9 +1389,6 @@ archprepare: outputmakefile archheaders archscripts scripts include/config/kerne
 
 prepare0: archprepare
 	$(Q)$(MAKE) $(build)=scripts/mod
-ifeq ($(CONFIG_EXYNOS_FMP_INTEGRITY_TEST), y)
-	$(MAKE) -f $(srctree)/drivers/crypto/fmp/Makefile fips_clean
-endif
 	$(Q)$(MAKE) $(build)=.
 
 # All the preparing..
@@ -1601,11 +1592,6 @@ modules_prepare: prepare
 modules_install: __modinst_pre
 PHONY += __modinst_pre
 __modinst_pre:
-ifeq ($(CONFIG_EXYNOS_FMP_INTEGRITY_TEST), y)
-	@$(kecho) ' FIPS Generate and embed HMAC ';
-	@$(srctree)/scripts/fmp/IntegrityCheckProvider.py \
-		drivers/crypto/fmp/fmp-core.ko drivers/crypto/fmp/fips140_ic_support.c
-endif
 	@rm -rf $(MODLIB)/kernel
 	@rm -f $(MODLIB)/source
 	@mkdir -p $(MODLIB)/kernel

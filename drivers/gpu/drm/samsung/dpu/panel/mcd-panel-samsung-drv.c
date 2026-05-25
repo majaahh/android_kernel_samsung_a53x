@@ -2439,50 +2439,20 @@ static const struct exynos_panel_funcs mcd_exynos_panel_funcs = {
 #endif
 };
 static const struct exynos_panel_mode exynos_panel_modes[] = {
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
-	{
-		.mode = { DRM_MODE("1080x2316@120", DRM_MODE_TYPE_DRIVER, 303196,
-			1080, 1081, 1082, 1083, 0, 2316, 2331, 2332, 2333, 0, 0) },
-		.exynos_mode = { EXYNOS_MODE(MIPI_DSI_CLOCK_NON_CONTINUOUS,
-			8, false, true, 2, 2, 193) },
-	},
-	{
-		.mode = { DRM_MODE("1080x2340@120", DRM_MODE_TYPE_DRIVER, 306315,
-			1080, 1081, 1082, 1083, 0, 2340, 2355, 2356, 2357, 0, 0) },
-		.exynos_mode = { EXYNOS_MODE(MIPI_DSI_CLOCK_NON_CONTINUOUS,
-			8, false, true, 2, 2, 117) },
-	},
-	{
-		.mode = { DRM_MODE("1080x2400@120", DRM_MODE_TYPE_DRIVER, 314113,
-			1080, 1081, 1082, 1083, 0, 2400, 2415, 2416, 2417, 0, 0) },
-		.exynos_mode = { EXYNOS_MODE(MIPI_DSI_CLOCK_NON_CONTINUOUS,
-			8, false, true, 2, 2, 120) },
-	},
-#else
 	{
 		.mode = { DRM_MODE("1080x2400@120", DRM_MODE_TYPE_DRIVER, 314113,
 			1080, 1081, 1082, 1083, 0, 2400, 2415, 2416, 2417, 0, 0) },
 		.exynos_mode = { EXYNOS_MODE(MIPI_DSI_CLOCK_NON_CONTINUOUS,
 			8, false, true, 1, 2, 40) },
 	},
-#endif
 };
 static const struct exynos_panel_mode exynos_panel_lp_mode[] = {
-#if IS_ENABLED(CONFIG_SOC_S5E9925)
-	{
-		.mode = { DRM_MODE("1080x2400@30", DRM_MODE_TYPE_DRIVER, 78528,
-				1080, 1081, 1082, 1083, 0, 2400, 2415, 2416, 2417, 0, 0) },
-		.exynos_mode = { EXYNOS_MODE(MIPI_DSI_CLOCK_NON_CONTINUOUS,
-				8, true, true, 2, 2, 120) },
-	},
-#else
 	{
 		.mode = { DRM_MODE("1080x2400@30", DRM_MODE_TYPE_DRIVER, 78528,
 				1080, 1081, 1082, 1083, 0, 2400, 2415, 2416, 2417, 0, 0) },
 		.exynos_mode = { EXYNOS_MODE(MIPI_DSI_CLOCK_NON_CONTINUOUS,
 				8, true, true, 1, 2, 40) },
 	},
-#endif
 };
 
 const struct exynos_panel_desc default_mcd_samsung_panel_desc = {

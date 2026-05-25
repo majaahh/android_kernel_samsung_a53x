@@ -9,7 +9,7 @@ config SCSC_CORE
 config SCSC_INDEPENDENT_SUBSYSTEM
 	tristate "Samsung SCSC independent subsystems arch"
 	depends on SCSC_CORE
-	depends on (SOC_S5E5515 || SOC_S5E8825 || SOC_S5E9925 || SCSC_PCIE)
+	depends on (SOC_S5E8825 || SCSC_PCIE)
 	default y
 
 config SCSC_WLBT_CONFIG_PLATFORM

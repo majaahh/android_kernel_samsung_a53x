@@ -181,9 +181,6 @@ void log_decon_bigdata(struct decon_device *decon)
 
 	len = mcd_drm_decon_snprintf_disp_panic(decon, buf, MAX_DECON_BIGDATA_BUF);
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-	secdbg_exin_set_decon(buf);
-#endif
 	pr_info("DISPLAY_PANIC:%s\n", buf);
 }
 

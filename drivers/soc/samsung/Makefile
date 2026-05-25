@@ -83,7 +83,6 @@ exynos_sci-$(CONFIG_EXYNOS_SCI_DBG)	+= exynos-sci_dbg.o
 obj-$(CONFIG_EXYNOS_BCM_DBG)    += exynos-bcm.o
 obj-$(CONFIG_EXYNOS_BCM_DBG_DUMP)       += exynos-bcm_dbg-dump.o
 exynos-bcm-y			+= exynos-bcm_dbg.o exynos-bcm_dbg-dt.o
-exynos-bcm-$(CONFIG_SOC_S5E9925) += exynos-bcm_dbg-9925.o
 exynos-bcm-$(CONFIG_SOC_S5E8825) += exynos-bcm_dbg-8825.o
 
 # Exynos Samsung Secure Platform

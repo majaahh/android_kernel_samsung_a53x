@@ -86,15 +86,9 @@ struct exynos_context {
 };
 
 #ifndef GPEX_STATIC
-#if IS_ENABLED(CONFIG_MALI_EXYNOS_UNIT_TESTS)
-#define GPEX_STATIC
-#else
 #define GPEX_STATIC static
 #endif
-#endif
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define MAX(x, y) ((x) < (y) ? (y) : (x))
 #define CSTD_UNUSED(x) ((void)(x))
 
 enum { DEBUG = 1, INFO, WARNING, ERROR };

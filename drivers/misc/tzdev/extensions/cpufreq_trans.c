@@ -14,9 +14,7 @@
 #include <linux/cpufreq.h>
 #include <linux/module.h>
 #include <linux/notifier.h>
-#if defined(CONFIG_SOC_S5E9925) || defined(CONFIG_SOC_S5E8825)
 #include <soc/samsung/exynos-acme.h>
-#endif
 #include "core/iwservice.h"
 #include "core/log.h"
 #include "core/subsystem.h"
@@ -59,13 +57,8 @@ static struct notifier_block cpufreq_trans_notifier = {
 
 int cpufreq_trans_init(void)
 {
-#if defined(CONFIG_SOC_S5E9925) || defined(CONFIG_SOC_S5E8825)
 	return exynos_cpufreq_register_notifier(&cpufreq_trans_notifier,
 		CPUFREQ_TRANSITION_NOTIFIER);
-#else
-	return cpufreq_register_notifier(&cpufreq_trans_notifier,
-		CPUFREQ_TRANSITION_NOTIFIER);
-#endif
 }
 
 tzdev_late_initcall(cpufreq_trans_init);

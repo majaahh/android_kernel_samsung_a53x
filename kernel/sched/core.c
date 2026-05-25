@@ -20,8 +20,6 @@
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
 
-#include <linux/sec_debug.h>
-
 #include "../workqueue_internal.h"
 #include "../../io_uring/io-wq.h"
 #include "../smpboot.h"
@@ -6750,37 +6748,6 @@ void sched_show_task(struct task_struct *p)
 	put_task_stack(p);
 }
 EXPORT_SYMBOL_GPL(sched_show_task);
-
-#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
-void sched_show_task_auto_comment(struct task_struct *p)
-{
-	unsigned long free = 0;
-	int ppid;
-
-	if (!try_get_task_stack(p))
-		return;
-
-	pr_auto(ASL1, "task:%-15.15s state:%c", p->comm, task_state_to_char(p));
-
-	if (p->state == TASK_RUNNING)
-		pr_cont("  running task    ");
-#ifdef CONFIG_DEBUG_STACK_USAGE
-	free = stack_not_used(p);
-#endif
-	ppid = 0;
-	rcu_read_lock();
-	if (pid_alive(p))
-		ppid = task_pid_nr(rcu_dereference(p->real_parent));
-	rcu_read_unlock();
-	pr_cont(" stack:%5lu pid:%5d ppid:%6d flags:0x%08lx\n",
-		free, task_pid_nr(p), ppid,
-		(unsigned long)task_thread_info(p)->flags);
-
-	print_worker_info(KERN_INFO, p);
-	show_stack_auto_comment(p, NULL);
-	put_task_stack(p);
-}
-#endif /* CONFIG_SEC_DEBUG_AUTO_COMMENT */
 
 static inline bool
 state_filter_match(unsigned long state_filter, struct task_struct *p)

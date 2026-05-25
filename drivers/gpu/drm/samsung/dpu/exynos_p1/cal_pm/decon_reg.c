@@ -142,104 +142,6 @@ void decon_regs_desc_init(void __iomem *regs, const char *name,
 }
 
 /******************* SRAMC_Display & Global CAL functions ********************/
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-static void sramc_g_reg_init(u32 id)
-{
-	void __iomem *sramc_g_regs;
-	void __iomem *sramc_g1_regs;
-
-	if (id != REGS_DECON0_ID)
-		return;
-
-	sramc_g_regs = ioremap(SRAMC_G_BASE_ADDR, 0x14);
-	if (!sramc_g_regs) {
-		cal_log_err(id, "sramc_g_regs ioremap is faileid\n", id);
-		return;
-	}
-
-	sramc_g1_regs = ioremap(SRAMC_G1_BASE_ADDR, 0x14);
-	if (!sramc_g1_regs) {
-		cal_log_err(id, "sramc_g1_regs ioremap is faileid\n", id);
-		iounmap(sramc_g_regs);
-		return;
-	}
-
-	/*
-	 * If SRMCON reset is performed,
-	 *  secure settings will be cleared.
-	 */
-	//writel(SRAMC_G_SRESET, sramc_g_regs + SRAMC_G_COM_SWRST_CON);
-	writel(SRAMC_G_PSLVERR_EN, sramc_g_regs + SRAMC_G_COM_PSLVERR_CON);
-	writel(SRAMC_SRAM_FULL_ALLOC_WAIT,
-			sramc_g_regs + SRAMC_G_COM_SRAM_FULL_CON);
-
-	/*
-	 * If SRMCON reset is performed,
-	 *  secure settings will be cleared.
-	 */
-	//writel(SRAMC_G_SRESET, sramc_g1_regs + SRAMC_G_COM_SWRST_CON);
-	writel(SRAMC_G_PSLVERR_EN, sramc_g1_regs + SRAMC_G_COM_PSLVERR_CON);
-	writel(SRAMC_SRAM_FULL_ALLOC_WAIT,
-			sramc_g1_regs + SRAMC_G_COM_SRAM_FULL_CON);
-
-	iounmap(sramc_g1_regs);
-	iounmap(sramc_g_regs);
-}
-
-static void sramc_d_reg_set_pslave_err(u32 id, u32 en)
-{
-	u32 val, mask;
-
-	val = en ? ~0 : 0;
-	mask = SRAMC_D_PSLVERR_EN;
-	srcd_write_mask(id, SRAMC_D_COM_PSLVERR_CON, val, mask, 0);
-	srcd_write_mask(id, SRAMC_D_COM_PSLVERR_CON, val, mask, 1);
-}
-
-static void sramc_d_reg_set_irq_enable(u32 id)
-{
-	srcd_write_mask(id, SRAMC_D_COM_IRQ_CON, ~0, SRAMC_IRQ_EN, 0);
-	srcd_write_mask(id, SRAMC_D_COM_IRQ_CON, ~0, SRAMC_IRQ_EN, 1);
-}
-
-static void sramc_d_reg_set_irq_mask(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	srcd_write_mask(id, SRAMC_D_COM_IRQ_MASK, val, SRAMC_INT_ERROR_MASK, 0);
-	srcd_write_mask(id, SRAMC_D_COM_IRQ_MASK, val, SRAMC_INT_ERROR_MASK, 1);
-}
-
-static void sramc_d_reg_clear_irq(u32 id, u32 irq, u32 fid)
-{
-	srcd_write_mask(id, SRAMC_D_COM_IRQ_STATUS, ~0, irq, fid);
-}
-
-void sramc_d_reg_get_irq_and_clear(u32 id)
-{
-	u32 fid;
-	u32 val;
-
-	for (fid = 0; fid < 2; fid++) {
-		val = srcd_read(id, SRAMC_D_COM_INT_ERROR_STATUS, fid);
-		cal_log_err(id, "SRAMC%d_D_ERROR_STATUS : 0x%x", fid,
-				SRAMC_D_COM_INT_ERROR_STATUS_GET(val));
-		if (val & SRAMC_SRAM_FULL)
-			cal_log_err(id, "SRAMC%d_D%d: SRAM full\n", fid, id);
-		if (val & SRAMC_TDMC_ERROR)
-			cal_log_err(id, "SRAMC%d_D%d: TDMC error\n", fid, id);
-		sramc_d_reg_clear_irq(id, val, fid);
-	}
-}
-
-static void sramc_d_reg_init(u32 id)
-{
-	sramc_d_reg_set_pslave_err(id, 1);
-	sramc_d_reg_set_irq_enable(id);
-	sramc_d_reg_set_irq_mask(id, 0);
-}
-
-#else
 static void sramc_g_reg_init(u32 id)
 {
 	void __iomem *sramc_g_regs;
@@ -322,7 +224,6 @@ static void sramc_d_reg_init(u32 id)
 	sramc_d_reg_set_irq_enable(id);
 	sramc_d_reg_set_irq_mask(id, 0);
 }
-#endif
 
 
 /******************* DECON CAL functions *************************/
@@ -1276,14 +1177,11 @@ static void dsc_reg_set_pps(u32 dsc_id, struct decon_dsc *dsc_enc)
 	u32 val;
 	u32 initial_dec_delay;
 
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
 	/* reset value of dsc1 version is changed from 0x11 to 0x12 @EVT1  */
 	val = dsc_read(DSC_PPS00_03(dsc_id));
 	val &= ~PPS00_VER_MASK;
 	val |= PPS00_VER(0x11);
 	dsc_write(DSC_PPS00_03(dsc_id), val);
-	//cal_log_info(dsc_id, "DSC_PPS00_03 = 0x%08x\n", val);
-#endif
 
 	val = PPS04_COMP_CFG(dsc_enc->comp_cfg);
 	val |= PPS05_BPP(dsc_enc->bit_per_pixel);
@@ -2507,11 +2405,7 @@ void __decon_dump(u32 id, struct decon_regs *regs, bool dsc_en)
 	void __iomem *sub_regs = regs->sub_regs;
 	void __iomem *wincon_regs = regs->wincon_regs;
 	void __iomem *srcd_regs;
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-	u32 srcd_cnt = MAX_SRAMC_D_REGS;
-#else
 	u32 srcd_cnt = 1;
-#endif
 
 	/* decon_main */
 	cal_log_info(id, "\n=== DECON%d_MAIN SFR DUMP ===\n", id);

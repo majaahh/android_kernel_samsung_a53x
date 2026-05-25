@@ -1284,7 +1284,7 @@ u32 *scsc_mx_service_get_mbox_ptr(struct scsc_service *service, int mbox_index)
 
 	mif_abs = scsc_mx_get_mif_abs(mx);
 
-#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86) && !IS_ENABLED(CONFIG_SOC_S5E9925)
+#if !IS_ENABLED(CONFIG_SCSC_PCIE_PAEAN_X86)
 	return mifmboxman_get_mbox_ptr(scsc_mx_get_mboxman(mx), mif_abs, mbox_index);
 #else
 	return NULL;

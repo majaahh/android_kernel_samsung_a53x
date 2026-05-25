@@ -18,9 +18,6 @@
  */
 #include <linux/sti/abc_common.h>
 #include <linux/sti/abc_spec_manager.h>
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-#include <linux/sti/abc_kunit.h>
-#endif
 #define DEBUG_ABC
 #define WARNING_REPORT
 struct abc_info *pinfo;
@@ -40,17 +37,6 @@ int abc_init;
 EXPORT_SYMBOL_KUNIT(abc_init);
 int REGISTERED_ABC_EVENT_TOTAL;
 EXPORT_SYMBOL_KUNIT(REGISTERED_ABC_EVENT_TOTAL);
-
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-char abc_common_kunit_test_work_str[ABC_TEST_UEVENT_MAX][ABC_TEST_STR_MAX] = {"", };
-EXPORT_SYMBOL_KUNIT(abc_common_kunit_test_work_str);
-
-char sec_abc_kunit_test_log_str[ABC_TEST_STR_MAX];
-EXPORT_SYMBOL_KUNIT(sec_abc_kunit_test_log_str);
-
-char abc_hub_kunit_test_uevent_str[ABC_HUB_TEST_STR_MAX];
-EXPORT_SYMBOL_KUNIT(abc_hub_kunit_test_uevent_str);
-#endif
 
 /* "module_name", "error_name", "host", on, singular_spec, error_count */
 struct registered_abc_event_struct abc_event_list[] = {
@@ -149,11 +135,6 @@ struct registered_abc_event_struct abc_event_list[] = {
 	{"vib", "fw_load_fail", "it", true, true, 0, ABC_GROUP_NONE},
 	{"vib", "int_gnd_short", "", true, false, 0, ABC_GROUP_NONE},
 	{"wacom", "digitizer_not_connected", "", true, true, 0, ABC_GROUP_NONE},
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-	{"kunit", "test_warn", "", true, true, 0, ABC_GROUP_NONE},
-	{"kunit", "test_info", "", true, true, 0, ABC_GROUP_NONE},
-	{"kunit", "test_error", "", true, true, 0, ABC_GROUP_NONE},
-#endif
 };
 EXPORT_SYMBOL_KUNIT(abc_event_list);
 
@@ -171,31 +152,6 @@ static const struct of_device_id sec_abc_dt_match[] = {
 	{ .compatible = "samsung,sec_abc" },
 	{ }
 };
-#endif
-
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-void abc_common_test_get_work_str(char *utest_event_str[])
-{
-	int i;
-
-	for (i = 0; i < ABC_TEST_UEVENT_MAX; i++) {
-		if (utest_event_str[i]) {
-			if (i >= 2 && !strncmp(utest_event_str[i], TIME_KEYWORD, strlen(TIME_KEYWORD)))
-				strlcpy(abc_common_kunit_test_work_str[i],
-						TIME_KEYWORD, ABC_TEST_STR_MAX);
-			else
-				strlcpy(abc_common_kunit_test_work_str[i],
-						utest_event_str[i], ABC_TEST_STR_MAX);
-		}
-	}
-}
-EXPORT_SYMBOL_KUNIT(abc_common_test_get_work_str);
-
-void abc_common_test_get_log_str(char *log_str)
-{
-	strlcpy(sec_abc_kunit_test_log_str, log_str, sizeof(sec_abc_kunit_test_log_str));
-}
-EXPORT_SYMBOL_KUNIT(abc_common_test_get_log_str);
 #endif
 
 static int sec_abc_resume(struct device *dev)
@@ -225,7 +181,7 @@ int sec_abc_get_idx_of_registered_event(char *module_name, char *error_name)
 }
 EXPORT_SYMBOL_KUNIT(sec_abc_get_idx_of_registered_event);
 
-#if !IS_ENABLED(CONFIG_SEC_FACTORY) && !IS_ENABLED(CONFIG_SEC_KUNIT)
+#if !IS_ENABLED(CONFIG_SEC_FACTORY)
 static int sec_abc_get_error_count(char *module_name, char *error_name)
 {
 	int i = sec_abc_get_idx_of_registered_event(module_name, error_name);
@@ -310,12 +266,8 @@ void sec_abc_send_uevent(struct abc_key_data *key_data, char *uevent_type)
 
 	for (idx = 0; uevent_str[idx]; idx++)
 		ABC_PRINT("%s", uevent_str[idx]);
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-	abc_common_test_get_work_str(uevent_str);
-	complete(&pinfo->test_uevent_done);
-#endif
 
-#if !IS_ENABLED(CONFIG_SEC_FACTORY) && !IS_ENABLED(CONFIG_SEC_KUNIT)
+#if !IS_ENABLED(CONFIG_SEC_FACTORY)
 	sec_abc_update_error_count(key_data->event_module, key_data->event_name);
 #endif
 	kobject_uevent_env(&sec_abc->kobj, KOBJ_CHANGE, uevent_str);
@@ -377,9 +329,6 @@ int sec_abc_clear_pre_events(void)
 	abc_save_pre_event = false;
 	abc_enable_mode &= ~(PRE_EVENT_ENABLE_BIT);
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-	complete(&pinfo->test_work_done);
-#endif
 	mutex_unlock(&pinfo->pre_event_mutex);
 	ABC_PRINT("end");
 	return cnt;
@@ -466,7 +415,7 @@ void sec_abc_process_changed_enable_mode(void)
 	} else {
 		ABC_PRINT_KUNIT("ABC is disabled. Clear events");
 		sec_abc_reset_all_buffer();
-#if !IS_ENABLED(CONFIG_SEC_FACTORY) && !IS_ENABLED(CONFIG_SEC_KUNIT)
+#if !IS_ENABLED(CONFIG_SEC_FACTORY)
 		sec_abc_reset_error_count();
 #endif
 	}
@@ -710,9 +659,6 @@ static void sec_abc_work_func(struct work_struct *work)
 abc_work_end:
 	ABC_DEBUG("work done");
 	mutex_unlock(&pinfo->work_mutex);
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-	complete(&pinfo->test_work_done);
-#endif
 }
 
 /* event string format
@@ -742,7 +688,7 @@ void sec_abc_enqueue_work(struct abc_event_work work_data[], char *str)
 
 void sec_abc_send_event(char *str)
 {
-#if !IS_ENABLED(CONFIG_SEC_FACTORY) && !IS_ENABLED(CONFIG_SEC_KUNIT)
+#if !IS_ENABLED(CONFIG_SEC_FACTORY)
 	if (sec_abc_is_skip_event(str))
 		return;
 #endif
@@ -890,10 +836,6 @@ static int sec_abc_probe(struct platform_device *pdev)
 	if (!pinfo->workqueue)
 		goto err_create_abc_wq;
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-	init_completion(&pinfo->test_uevent_done);
-	init_completion(&pinfo->test_work_done);
-#endif
 	init_completion(&pinfo->enable_done);
 	mutex_init(&pinfo->pre_event_mutex);
 	mutex_init(&pinfo->enable_mutex);

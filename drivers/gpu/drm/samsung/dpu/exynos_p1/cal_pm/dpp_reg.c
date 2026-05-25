@@ -359,11 +359,7 @@ static void idma_reg_set_comp(u32 id, enum dpp_comp_type comp_type,
 		val = IDMA_SAJC_EN;
 
 	dma_write_mask(id, RDMA_IN_CTRL_0, val, mask);
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-	dma_write_mask(id, RDMA_RECOVERY_CTRL, val ? ~0 : 0, IDMA_RECOVERY_EN);
-#else /* recovery is not needed due to hang-free */
 	dma_write_mask(id, RDMA_RECOVERY_CTRL, 0, IDMA_RECOVERY_EN);
-#endif
 	dma_write_mask(id, RDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
 				IDMA_RECOVERY_NUM_MASK);
 
@@ -1945,16 +1941,6 @@ int __dpp_check(u32 id, const struct dpp_params_info *p, unsigned long attr)
 			return -ENOTSUPP;
 		}
 	}
-
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-	/* sbwc & flip will be supported from evt1 */
-	if ((p->comp_type == COMP_TYPE_SBWC) || (p->comp_type == COMP_TYPE_SBWCL)) {
-		if ((p->rot > DPP_ROT_NORMAL) && (p->rot < DPP_ROT_90)) {
-			cal_log_err(id, "SBWC & FLIP is not supported at the same time in DPP%d\n");
-			return -ENOTSUPP;
-		}
-	}
-#endif
 
 	if (test_bit(DPP_ATTR_SRAMC, &attr) && (dpp0->dpuf_resource.check)) {
 		src_w = (p->rot >= DPP_ROT_90)? p->src.h: p->src.w;

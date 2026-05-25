@@ -30,7 +30,5 @@ extern void __iomem *acpm_srambase;
 extern void exynos_acpm_timer_clear(void);
 extern u32 exynos_get_peri_timer_icvra(void);
 extern void *get_fvmap_base(void);
-extern void acpm_init_eint_clk_req(u32 eint_num);
-extern void acpm_init_eint_nfc_clk_req(u32 eint_num);
 
 #endif

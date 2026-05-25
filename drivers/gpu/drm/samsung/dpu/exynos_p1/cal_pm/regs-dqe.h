@@ -362,12 +362,8 @@ enum dqe_regs_type {
 #define DEGAMMA_EN(_v)			(((_v) & 0x1) << 0)
 #define DEGAMMA_EN_MASK			(0x1 << 0)
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define DQE_DEGAMMALUT(_n)		(0x1804 + ((_n) * 0x4))
-#else
 #define DQE_DEGAMMA_POSX(_n)		(0x1804 + ((_n) * 0x4))
 #define DQE_DEGAMMA_POSY(_n)		(0x1848 + ((_n) * 0x4))
-#endif
 #define DEGAMMA_LUT_H(_v)		(((_v) & 0x1FFF) << 16)
 #define DEGAMMA_LUT_H_MASK		(0x1FFF << 16)
 #define DEGAMMA_LUT_L(_v)		(((_v) & 0x1FFF) << 0)
@@ -377,15 +373,9 @@ enum dqe_regs_type {
 
 #define DQE_DEGAMMA_LUT(_n)		(0x1800 + ((_n) * 0x4))
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define DQE_DEGAMMA_LUT_CNT		(65)
-#define DQE_DEGAMMA_REG_MAX		(1+DIV_ROUND_UP(DQE_DEGAMMA_LUT_CNT,2)) 	// 34 CON+LUT/2
-#define DQE_DEGAMMA_LUT_MAX		(1+DQE_DEGAMMA_LUT_CNT) 		// 66 CON+LUT
-#else
 #define DQE_DEGAMMA_LUT_CNT		(33) // LUT_X + LUT_Y
 #define DQE_DEGAMMA_REG_MAX		(1+DIV_ROUND_UP(DQE_DEGAMMA_LUT_CNT,2)*2) // 35 CON+LUT_XY/2
 #define DQE_DEGAMMA_LUT_MAX		(1+DQE_DEGAMMA_LUT_CNT*2)		// 67 CON+LUT
-#endif
 
 /*----------------------[LINEAR MATRIX]----------------------------------------*/
 #define DQE_LINEAR_MATRIX_CON		(0x1C00)
@@ -436,18 +426,12 @@ enum dqe_regs_type {
 #define REGAMMA_EN(_v)			(((_v) & 0x1) << 0)
 #define REGAMMA_EN_MASK			(0x1 << 0)
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define DQE_REGAMMALUT_R(_n)		(0x2404 + ((_n) * 0x4))
-#define DQE_REGAMMALUT_G(_n)		(0x2488 + ((_n) * 0x4))
-#define DQE_REGAMMALUT_B(_n)		(0x250C + ((_n) * 0x4))
-#else
 #define DQE_REGAMMA_R_POSX(_n)		(0x2404 + ((_n) * 0x4))
 #define DQE_REGAMMA_R_POSY(_n)		(0x2448 + ((_n) * 0x4))
 #define DQE_REGAMMA_G_POSX(_n)		(0x248C + ((_n) * 0x4))
 #define DQE_REGAMMA_G_POSY(_n)		(0x24D0 + ((_n) * 0x4))
 #define DQE_REGAMMA_B_POSX(_n)		(0x2514 + ((_n) * 0x4))
 #define DQE_REGAMMA_B_POSY(_n)		(0x2558 + ((_n) * 0x4))
-#endif
 
 #define REGAMMA_LUT_H(_v)		(((_v) & 0x1FFF) << 16)
 #define REGAMMA_LUT_H_MASK		(0x1FFF << 16)
@@ -458,33 +442,12 @@ enum dqe_regs_type {
 
 #define DQE_REGAMMA_LUT(_n)		(0x2400 + ((_n) * 0x4))
 
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define DQE_REGAMMA_LUT_CNT		(65) // LUT R/G/B
-#define DQE_REGAMMA_REG_MAX		(1+DIV_ROUND_UP(DQE_REGAMMA_LUT_CNT,2)*3) // 100 CON + LUT_RGB
-#define DQE_REGAMMA_LUT_MAX		(1+DQE_REGAMMA_LUT_CNT*3)	// 196 CON + LUT_RGB
-#else
 #define DQE_REGAMMA_LUT_CNT		(33) // LUT_RGB_X/Y
 #define DQE_REGAMMA_REG_MAX		(1+DIV_ROUND_UP(DQE_REGAMMA_LUT_CNT,2)*2*3) // 103 CON + LUT_RGB_X/Y
 #define DQE_REGAMMA_LUT_MAX		(1+DQE_REGAMMA_LUT_CNT*2*3) 	// 199 CON + LUT_RGB_X/Y
-#endif
 
 /*----------------------[CGC_DITHER]-----------------------------------------*/
 #define DQE_CGC_DITHER			(0x2800)
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define CGC_DITHER_TABLE_SEL_B		(0x1 << 7)
-#define CGC_DITHER_TABLE_SEL_G		(0x1 << 6)
-#define CGC_DITHER_TABLE_SEL_R		(0x1 << 5)
-#define CGC_DITHER_TABLE_SEL(_v, _n)	((_v) << (5 + (_n)))
-#define CGC_DITHER_TABLE_SEL_MASK(_n)	(0x1 << (5 + (_n)))
-#define CGC_DITHER_FRAME_OFFSET(_v)	((_v) << 3)
-#define CGC_DITHER_FRAME_OFFSET_MASK	(0x3 << 3)
-#define CGC_DITHER_FRAME_CON(_v)	((_v) << 2)
-#define CGC_DITHER_FRAME_CON_MASK	(0x1 << 2)
-#define CGC_DITHER_MODE(_v)		((_v) << 1)
-#define CGC_DITHER_MODE_MASK		(0x1 << 1)
-#define CGC_DITHER_EN(_v)		((_v) << 0)
-#define CGC_DITHER_EN_MASK		(0x1 << 0)
-#else
 #define CGC_DITHER_FRAME_OFFSET(_v)	((_v) << 12)
 #define CGC_DITHER_FRAME_OFFSET_MASK	(0xF << 12)
 #define CGC_DITHER_BIT(_v)		(((_v) & 0x1) << 8)
@@ -500,7 +463,6 @@ enum dqe_regs_type {
 #define CGC_DITHER_MODE_MASK		(0x1 << 1)
 #define CGC_DITHER_EN(_v)		((_v) << 0)
 #define CGC_DITHER_EN_MASK		(0x1 << 0)
-#endif
 #define DQE_CGC_DITHER_LUT_MAX	(8)
 
 /*----------------------[DISP_DITHER]-----------------------------------------*/
@@ -564,7 +526,6 @@ enum dqe_regs_type {
 #define DQE_DE_REG_MAX			(6)
 #define DQE_DE_LUT_MAX			(19)
 
-#if !IS_ENABLED(CONFIG_SOC_S5E9925_EVT0) // Enable for EVT1 only as some definition is duplicated
 /*----------------------[SCL]-----------------------------------------*/
 #define DQE_SCL_SCALED_IMG_SIZE		(0x3400)
 #define SCALED_IMG_HEIGHT(_v)		((_v) << 16)
@@ -594,17 +555,12 @@ enum dqe_regs_type {
 #define POS_F(_v)			((_v) << 0)
 #define POS_F_MASK			(0xFFFFF << 0)
 #define POS_F_GET(_v)			(((_v) >> 0) & 0xFFFFF)
-#endif
 
 #define DQE_SCL_COEF_SET		(9) // 0X ~ 8X
 #define DQE_SCL_VCOEF_MAX		(4) // nA ~ nD
 #define DQE_SCL_HCOEF_MAX		(8) // nA ~ nH
 #define DQE_SCL_COEF_MAX		(DQE_SCL_VCOEF_MAX+DQE_SCL_HCOEF_MAX)
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-#define DQE_SCL_COEF_CNT		(2) // Y & C coef
-#else
 #define DQE_SCL_COEF_CNT		(1) // Y coef only
-#endif
 #define DQE_SCL_REG_MAX			(DQE_SCL_COEF_SET*DQE_SCL_COEF_MAX*DQE_SCL_COEF_CNT)
 #define DQE_SCL_LUT_MAX			(DQE_SCL_REG_MAX)
 

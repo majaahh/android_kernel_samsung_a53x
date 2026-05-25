@@ -963,9 +963,6 @@ static void exynos_smpl_warn_work(struct work_struct *work)
 
 #if IS_ENABLED(CONFIG_SEC_PM)
 		info->smpl_warn_cnt++;
-#if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-		secdbg_exin_set_smpl(info->smpl_warn_cnt);
-#endif
 #endif /* CONFIG_SEC_PM */
 	}
 }

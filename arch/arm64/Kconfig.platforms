@@ -85,29 +85,6 @@ config ARCH_EXYNOS
 	help
 	  This enables support for ARMv8 based Samsung Exynos SoC family.
 
-config SOC_EXYNOS2100
-	bool "Samsung EXYNOS2100"
-	select SOC_SAMSUNG
-	select ARCH_EXYNOS
-	select ARCH_HAS_CPUFREQ
-	select HAVE_S3C2410_I2C if I2C
-	select HAVE_S3C2410_WATCHDOG if WATCHDOG
-	select HAVE_S3C_RTC if RTC_CLASS
-	select ARCH_SUPPORTS_MSI
-	select ARM_AMBA
-	select CLKSRC_OF
-	select USE_OF
-	select PINCTRL
-	select SAMSUNG_DMADEV
-	select ARM_GIC_V3
-	help
-	  Samsung EXYNOS991 has GIC600 so, ARM_GIC_V3 must be enabled
-
-config BOARD_UNIVERSAL2100
-	bool "Samsung EXYNOS2100 Universal Board support"
-	help
-	  Samsung EXYNOS2100 universal2100 board support config
-
 config ARCH_SPARX5
 	bool "ARMv8 based Microchip Sparx5 SoC family"
 	select PINCTRL

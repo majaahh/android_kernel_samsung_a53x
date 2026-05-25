@@ -13,11 +13,7 @@
 #include <linux/msdos_fs.h>
 #include <linux/kobject.h>
 
-#ifdef CONFIG_FAT_SUPPORT_STLOG
-#include <linux/fslog.h>
-#else
 #define ST_LOG(fmt, ...)
-#endif
 
 /*
  * vfat shortname flags

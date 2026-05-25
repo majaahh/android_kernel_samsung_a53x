@@ -63,96 +63,6 @@
 #define INPUT_LOG_BUF_SIZE		512
 #define INPUT_TCLM_LOG_BUF_SIZE		64
 
-#if IS_ENABLED(CONFIG_SEC_DEBUG_TSP_LOG)
-#include <linux/sec_debug.h>		/* exynos */
-#include "sec_tsp_log.h"
-
-#define input_dbg(mode, dev, fmt, ...)						\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_dbg(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s",	\
-					dev_driver_string(dev), dev_name(dev));	\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL");	\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-#define input_info(mode, dev, fmt, ...)						\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s",	\
-					dev_driver_string(dev), dev_name(dev));	\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL");	\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-#define input_err(mode, dev, fmt, ...)						\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_err(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s",	\
-					dev_driver_string(dev), dev_name(dev));	\
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL");	\
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-#define MAIN_TOUCH	1
-#define SUB_TOUCH	2
-
-#define input_raw_info(mode, dev, fmt, ...)					\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode == SUB_TOUCH) {						\
- 		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s", \
-					dev_driver_string(dev), dev_name(dev)); \
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL"); \
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-		sec_debug_tsp_raw_data_msg(mode, input_log_buf, fmt, ## __VA_ARGS__);	\
-	} else {						\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s", \
-					dev_driver_string(dev), dev_name(dev)); \
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL"); \
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-		sec_debug_tsp_raw_data_msg(mode, input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-#define input_raw_data_clear(mode) sec_tsp_raw_data_clear(mode)
-#else
-#define input_raw_info(mode, dev, fmt, ...)					\
-({										\
-	static char input_log_buf[INPUT_LOG_BUF_SIZE];				\
-	dev_info(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
-	if (mode) {								\
-		if (dev)							\
-			snprintf(input_log_buf, sizeof(input_log_buf), "%s %s", \
-					dev_driver_string(dev), dev_name(dev)); \
-		else								\
-			snprintf(input_log_buf, sizeof(input_log_buf), "NULL"); \
-		sec_debug_tsp_log_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-		sec_debug_tsp_raw_data_msg(input_log_buf, fmt, ## __VA_ARGS__);	\
-	}									\
-})
-#define input_raw_data_clear() sec_tsp_raw_data_clear()
-#endif
-#define input_log_fix()	sec_tsp_log_fix()
-#else
 #define input_dbg(mode, dev, fmt, ...)						\
 ({										\
 	dev_dbg(dev, SECLOG " " fmt, ## __VA_ARGS__);				\
@@ -168,7 +78,6 @@
 #define input_raw_info(mode, dev, fmt, ...) input_info(mode, dev, fmt, ## __VA_ARGS__)
 #define input_log_fix()	{}
 #define input_raw_data_clear() {}
-#endif
 
 /*
  * for input_event_codes.h

@@ -668,26 +668,7 @@ int mock_in_sequence(struct KUNIT_T *test, struct mock_expectation *first, ...);
 			RETURN(return_type, retval);			       \
 		}
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-#define DEFINE_INVOKABLE(name, return_type, RETURN_ASSIGN, param_types...)     \
-		void *INVOKE_ID(name)(struct KUNIT_T *test,		       \
-				      const void *params[],		       \
-				      int len) {			       \
-			return_type *retval;				       \
-									       \
-			ASSERT_EQ(test, NUM_VA_ARGS(param_types), len);	       \
-			retval = test_kzalloc(test,			       \
-					      sizeof(*retval),		       \
-					      GFP_KERNEL);		       \
-			ASSERT_NOT_ERR_OR_NULL(test, retval);		       \
-			RETURN_ASSIGN() REAL_ID(name)(			       \
-					ARRAY_ACCESSORS_FROM_TYPES(	       \
-							param_types));	       \
-			return retval;					       \
-		}
-#else
 #define DEFINE_INVOKABLE(name, return_type, RETURN_ASSIGN, param_types...)
-#endif
 
 #define DEFINE_REDIRECT_MOCKABLE_COMMON(name,				       \
 					return_type,			       \
@@ -1059,33 +1040,9 @@ DECLARE_STRUCT_CLASS_MOCK_INIT(void);
 #define DEFINE_FUNCTION_MOCK_VOID_RETURN(name, param_types...) \
 		DEFINE_FUNCTION_MOCK_VOID_RETURN_INTERNAL(name, param_types)
 
-#if IS_ENABLED(CONFIG_SEC_KUNIT)
-
-/**
- * __mockable - A function decorator that allows the function to be mocked.
- *
- * Example:
- *
- * .. code-block:: c
- *
- *	int __mockable example(int arg) { ... }
- */
-#define __mockable __weak
-#define __mockable_alias(id) __weak __alias(id)
-
-/**
- * __visible_for_testing - Makes a static function visible when testing.
- *
- * A macro that replaces the `static` specifier on functions and global
- * variables that is static when compiled normally and visible when compiled for
- * tests.
- */
-#define __visible_for_testing
-#else
 #define __mockable
 #define __mockable_alias(id) __alias(id)
 #define __visible_for_testing static
-#endif
 
 #define CONVERT_TO_ACTUAL_TYPE(type, ptr) (*((type *) ptr))
 

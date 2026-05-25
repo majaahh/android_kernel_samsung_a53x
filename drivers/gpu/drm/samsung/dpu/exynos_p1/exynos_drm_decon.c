@@ -1210,12 +1210,7 @@ decon_enable(struct exynos_drm_crtc *crtc, struct drm_crtc_state *old_crtc_state
 	if (is_tui_trans(old_crtc_state)) {
 		decon_info(decon, "tui transition : skip power enable\n");
 	} else {
-#if IS_ENABLED(CONFIG_SOC_S5E9925_EVT0)
-		exynos_pd_booton_rel("pd_dpuf0");
-		exynos_pd_booton_rel("pd_dpuf1");
-#else
-		exynos_pd_booton_rel("pd_dpuf");
-#endif
+	exynos_pd_booton_rel("pd_dpuf");
 
 		pm_runtime_get_sync(decon->dev);
 		decon_set_te_pinctrl(decon, true);

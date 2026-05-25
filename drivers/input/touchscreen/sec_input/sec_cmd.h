@@ -43,26 +43,6 @@ struct class *tsp_sec_class;
 #define SEC_CMD_RESULT_STR_LEN_EXPAND	(SEC_CMD_RESULT_STR_LEN * 4)
 #define SEC_CMD_PARAM_NUM		8
 
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-#define DEV_COUNT		2
-
-#define FLIP_STATUS_DEFAULT	-1
-#define FLIP_STATUS_MAIN	0
-#define FLIP_STATUS_SUB		1
-
-#define PATH_MAIN_SEC_CMD		"/sys/class/sec/tsp1/cmd"
-#define PATH_MAIN_SEC_CMD_STATUS	"/sys/class/sec/tsp1/cmd_status"
-#define PATH_MAIN_SEC_CMD_RESULT	"/sys/class/sec/tsp1/cmd_result"
-#define PATH_MAIN_SEC_CMD_STATUS_ALL	"/sys/class/sec/tsp1/cmd_status_all"
-#define PATH_MAIN_SEC_CMD_RESULT_ALL	"/sys/class/sec/tsp1/cmd_result_all"
-
-#define PATH_SUB_SEC_CMD		"/sys/class/sec/tsp2/cmd"
-#define PATH_SUB_SEC_CMD_STATUS		"/sys/class/sec/tsp2/cmd_status"
-#define PATH_SUB_SEC_CMD_RESULT		"/sys/class/sec/tsp2/cmd_result"
-#define PATH_SUB_SEC_CMD_STATUS_ALL	"/sys/class/sec/tsp2/cmd_status_all"
-#define PATH_SUB_SEC_CMD_RESULT_ALL	"/sys/class/sec/tsp2/cmd_result_all"
-#endif
-
 struct sec_cmd {
 	struct list_head	list;
 	const char		*cmd_name;
@@ -120,12 +100,4 @@ extern void sec_cmd_set_cmd_result_all(struct sec_cmd_data *data, char *buff, in
 extern int sec_cmd_init(struct sec_cmd_data *data, struct sec_cmd *cmds, int len, int devt);
 extern void sec_cmd_exit(struct sec_cmd_data *data, int devt);
 extern void sec_cmd_send_event_to_user(struct sec_cmd_data *data, char *test, char *result);
-
-#if IS_ENABLED(CONFIG_TOUCHSCREEN_DUAL_FOLDABLE)
-void sec_cmd_virtual_tsp_register(struct sec_cmd_data *sec);
-int sec_cmd_virtual_tsp_read_sysfs(struct sec_cmd_data *sec, const char *path, char *buf, int len);
-int sec_cmd_virtual_tsp_write_sysfs(struct sec_cmd_data *sec, const char *path, const char *cmd);
-int sec_cmd_virtual_tsp_write_cmd(struct sec_cmd_data *sec, bool main, bool sub);
-void sec_cmd_virtual_tsp_write_cmd_factory_all(struct sec_cmd_data *sec, bool main, bool sub);
-#endif
 #endif /* _SEC_CMD_H_ */
