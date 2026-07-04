@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 ifeq ($(CONFIG_SEC_A25),y)
 subdir-y += a25x
 else ifeq ($(CONFIG_SEC_A33),y)
