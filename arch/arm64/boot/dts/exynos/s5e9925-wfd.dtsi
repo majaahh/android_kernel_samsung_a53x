@@ -10,7 +10,7 @@
 	tsmux: tsmux@186E0000 {
 		compatible = "samsung,exynos-tsmux";
 		reg = <0x0 0x186E0000 0x1000>;
-		interrupts = <0 INTREQ__WFD IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__WFD IRQ_TYPE_LEVEL_HIGH 0>;
 		iommus = <&sysmmu_d1_mfc0>;
 		samsung,iommu-group = <&iommu_group_mfc>;
 		power-domains = <&pd_mfc0>;

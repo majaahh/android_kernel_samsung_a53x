@@ -229,5 +229,14 @@
 			somac-ready-run = < 1 >;
 			somac-ready-cpus = "0-3";
 		};
+
+		gsc {
+			enabled = <1>;
+			up_threshold = <185>;
+			down_threshold = <155>;
+			min_interval_us = <48000>;
+			min_retain_us = <120000>;
+			min_admit_ns = <0>;
+		};
 	};
 };

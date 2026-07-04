@@ -379,7 +379,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI00_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI00_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x00>;
 		reg = <0x0 0x11D00000 0x1000>;
@@ -401,7 +401,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI00_SPI_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI00_SPI_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x04>;
 		reg = <0x0 0x11D10000 0x1000>;
@@ -423,7 +423,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI01_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI01_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x08>;
 		reg = <0x0 0x11D20000 0x1000>;
@@ -445,7 +445,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI01_SPI_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI01_SPI_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x0C>;
 		reg = <0x0 0x11D30000 0x1000>;
@@ -467,7 +467,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI02_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI02_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x10>;
 		reg = <0x0 0x11D40000 0x1000>;
@@ -489,7 +489,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI02_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI02_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x14>;
 		reg = <0x0 0x11D50000 0x1000>;
@@ -511,7 +511,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI03_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI03_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x18>;
 		reg = <0x0 0x11D60000 0x1000>;
@@ -533,7 +533,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI03_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI03_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x1C>;
 		reg = <0x0 0x11D70000 0x1000>;
@@ -555,7 +555,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI04_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI04_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric0_usi>;
 		samsung,usi-offset = <0x24>;
 		reg = <0x0 0x10500000 0x1000>;
@@ -577,7 +577,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI04_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI04_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric0_usi>;
 		samsung,usi-offset = <0x28>;
 		reg = <0x0 0x10510000 0x1000>;
@@ -599,7 +599,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI05_USI_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI05_USI_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x17C>;
 		reg = <0x0 0x11DD0000 0x1000>;
@@ -621,7 +621,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI05_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI05_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x2C>;
 		reg = <0x0 0x11D80000 0x1000>;
@@ -643,7 +643,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI06_USI_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI06_USI_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x180>;
 		reg = <0x0 0x11DE0000 0x1000>;
@@ -665,7 +665,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI06_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI06_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x04>;
 		reg = <0x0 0x11D90000 0x1000>;
@@ -687,7 +687,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI07_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI07_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x30>;
 		reg = <0x0 0x10900000 0x1000>;
@@ -709,7 +709,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI07_SPI_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI07_SPI_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x34>;
 		reg = <0x0 0x10910000 0x1000>;
@@ -731,7 +731,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI08_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI08_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x38>;
 		reg = <0x0 0x10920000 0x1000>;
@@ -753,7 +753,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI08_SPI_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI08_SPI_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x3C>;
 		reg = <0x0 0x10930000 0x1000>;
@@ -775,7 +775,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI09_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI09_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x40>;
 		reg = <0x0 0x10940000 0x1000>;
@@ -797,7 +797,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI09_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI09_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x44>;
 		reg = <0x0 0x10950000 0x1000>;
@@ -819,7 +819,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI10_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI10_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x48>;
 		reg = <0x0 0x10960000 0x1000>;
@@ -841,7 +841,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI10_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI10_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x4C>;
 		reg = <0x0 0x10970000 0x1000>;
@@ -863,7 +863,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI11_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI11_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x58>;
 		reg = <0x0 0x11DA0000 0x1000>;
@@ -885,7 +885,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI11_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI11_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x5C>;
 		reg = <0x0 0x11DB0000 0x1000>;
@@ -907,7 +907,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x00>;
 		reg = <0x0 0x14F00000 0x1000>;
@@ -929,7 +929,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__SPI_I2C_CMGP0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__SPI_I2C_CMGP0 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x70>;
 		reg = <0x0 0x14F10000 0x1000>;
@@ -951,7 +951,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x10>;
 		reg = <0x0 0x14F20000 0x1000>;
@@ -973,7 +973,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__SPI_I2C_CMGP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__SPI_I2C_CMGP1 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x74>;
 		reg = <0x0 0x14F30000 0x1000>;
@@ -995,7 +995,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x20>;
 		reg = <0x0 0x14F40000 0x1000>;
@@ -1017,7 +1017,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__I2C_CMGP2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I2C_CMGP2 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x24>;
 		reg = <0x0 0x14F50000 0x1000>;
@@ -1039,7 +1039,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP3 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x30>;
 		reg = <0x0 0x14F60000 0x1000>;
@@ -1061,7 +1061,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__I2C_CMGP3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I2C_CMGP3 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x34>;
 		reg = <0x0 0x14F70000 0x1000>;
@@ -1083,7 +1083,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP4 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP4 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x40>;
 		reg = <0x0 0x14F80000 0x1000>;
@@ -1105,7 +1105,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__I2C_CMGP4 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I2C_CMGP4 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x44>;
 		reg = <0x0 0x14F90000 0x1000>;
@@ -1127,7 +1127,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP5 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP5 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x50>;
 		reg = <0x0 0x14FA0000 0x1000>;
@@ -1149,7 +1149,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__I2C_CMGP5 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I2C_CMGP5 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x54>;
 		reg = <0x0 0x14FB0000 0x1000>;
@@ -1171,7 +1171,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP6 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP6 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x60>;
 		reg = <0x0 0x14FC0000 0x1000>;
@@ -1193,7 +1193,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__I2C_CMGP6 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I2C_CMGP6 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x64>;
 		reg = <0x0 0x14FD0000 0x1000>;
@@ -1215,7 +1215,7 @@
 		samsung,reset-before-trans;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__CMGP_I2C IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__CMGP_I2C IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x80>;
 		reg = <0x0 0x14FE0000 0x1000>;
@@ -1244,7 +1244,7 @@
 		samsung,dma-offset-tx = <1>;
 		samsung,dma-offset-rx = <0>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI00_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI00_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x00>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI00>;
@@ -1271,7 +1271,7 @@
 		samsung,dma-offset-tx = <3>;
 		samsung,dma-offset-rx = <2>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI01_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI01_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x08>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI01>;
@@ -1298,7 +1298,7 @@
 		samsung,dma-offset-tx = <5>;
 		samsung,dma-offset-rx = <4>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI02_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI02_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x10>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI02>;
@@ -1325,7 +1325,7 @@
 		samsung,dma-offset-tx = <7>;
 		samsung,dma-offset-rx = <6>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI03_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI03_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_2_usi>;
 		samsung,usi-offset = <0x18>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI03>;
@@ -1352,7 +1352,7 @@
 		samsung,dma-offset-tx = <9>;
 		samsung,dma-offset-rx = <8>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI04_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI04_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric0_usi>;
 		samsung,usi-offset = <0x24>;
 		clocks = <&clock GATE_PERIC0_CMU_PERIC0_QCH>, <&clock DOUT_DIV_CLK_PERIC0_USI04>;
@@ -1379,7 +1379,7 @@
 		samsung,dma-offset-tx = <11>;
 		samsung,dma-offset-rx = <10>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI05_USI_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI05_USI_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x17C>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI05>;
@@ -1406,7 +1406,7 @@
 		samsung,dma-offset-tx = <13>;
 		samsung,dma-offset-rx = <12>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI06_USI_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI06_USI_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x180>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI06>;
@@ -1433,7 +1433,7 @@
 		samsung,dma-offset-tx = <15>;
 		samsung,dma-offset-rx = <14>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI07_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI07_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x30>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH>, <&clock DOUT_DIV_CLK_PERIC1_USI07>;
@@ -1460,7 +1460,7 @@
 		samsung,dma-offset-tx = <17>;
 		samsung,dma-offset-rx = <16>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI08_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI08_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x38>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH>, <&clock DOUT_DIV_CLK_PERIC1_USI08>;
@@ -1487,7 +1487,7 @@
 		samsung,dma-offset-tx = <19>;
 		samsung,dma-offset-rx = <18>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI09_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI09_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x40>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH>, <&clock DOUT_DIV_CLK_PERIC1_USI09>;
@@ -1514,7 +1514,7 @@
 		samsung,dma-offset-tx = <21>;
 		samsung,dma-offset-rx = <20>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI10_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI10_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric1_usi>;
 		samsung,usi-offset = <0x48>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH>, <&clock DOUT_DIV_CLK_PERIC1_USI10>;
@@ -1541,7 +1541,7 @@
 		samsung,dma-offset-tx = <23>;
 		samsung,dma-offset-rx = <22>;
 		samsung,dma-value = <1>;
-		interrupts = <GIC_SPI INTREQ__USI11_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI11_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_peric2_1_usi>;
 		samsung,usi-offset = <0x58>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH>, <&clock DOUT_DIV_CLK_PERIC2_USI11>;
@@ -1559,7 +1559,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x00>;
 		clocks = <&clock GATE_USI_CMGP0_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI0>;
@@ -1577,7 +1577,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x10>;
 		clocks = <&clock GATE_USI_CMGP1_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI1>;
@@ -1595,7 +1595,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x20>;
 		clocks = <&clock GATE_USI_CMGP2_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI2>;
@@ -1613,7 +1613,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP3 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x30>;
 		clocks = <&clock GATE_USI_CMGP3_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI3>;
@@ -1630,7 +1630,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x40>;
 		clocks = <&clock GATE_USI_CMGP4_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI4>;
@@ -1648,7 +1648,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x50>;
 		clocks = <&clock GATE_USI_CMGP5_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI5>;
@@ -1666,7 +1666,7 @@
 		swap-mode = <1>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH 0>;
 		samsung,usi-phandle = <&sysreg_cmgp_usi>;
 		samsung,usi-offset = <0x60>;
 		clocks = <&clock GATE_USI_CMGP6_QCH>, <&clock DOUT_DIV_CLK_CMGP_USI6>;
@@ -1684,7 +1684,7 @@
 		reg = <0x0 0x11C40000 0x100>;
 		samsung,fifo-size = <256>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__DBG_UART IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__DBG_UART IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart0_bus>;
 		samsung,usi-serial-v2;
@@ -1704,15 +1704,15 @@
 		reg = <0x0 0x10840000 0x100>;
 		samsung,fifo-size = <256>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__BT_UART IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__BT_UART IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default", "rts", "tx_dat";
-		pinctrl-0 = <&uart1_bus_single>; /* or _bus_dual */
+		pinctrl-0 = <&uart1_bus_single &uart1_bus_rxd_hiz>; /* or _bus_dual */
 		pinctrl-1 = <&uart1_bus_rts &uart1_bus_tx_con>;
 		pinctrl-2 = <&uart1_bus_tx_dat>;
 		samsung,usi-serial-v2;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH>, <&clock DOUT_DIV_CLK_PERIC1_UART_BT>;
 		clock-names = "gate_uart_clk1", "ipclk_uart1";
-		status = "disabled";
+		status = "okay";
 	};
 
 	/* USI_PERIC2_USI00_UART */
@@ -1722,7 +1722,7 @@
 		reg = <0x0 0x11D00000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI00_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI00_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart2_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1740,7 +1740,7 @@
 		reg = <0x0 0x11D20000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI01_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI01_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart3_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1758,7 +1758,7 @@
 		reg = <0x0 0x11D40000 0x100>;
 		samsung,fifo-size = <256>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI02_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI02_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart4_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1776,7 +1776,7 @@
 		reg = <0x0 0x11D60000 0x100>;
 		samsung,fifo-size = <256>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI03_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI03_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart5_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1794,7 +1794,7 @@
 		reg = <0x0 0x10500000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI04_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI04_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart6_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1812,7 +1812,7 @@
 		reg = <0x0 0x11DD0000 0x100>;
 		samsung,fifo-size = <256>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI05_USI_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI05_USI_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart7_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1830,7 +1830,7 @@
 		reg = <0x0 0x11DE0000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI06_USI_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI06_USI_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart8_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1848,7 +1848,7 @@
 		reg = <0x0 0x10900000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI07_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI07_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart9_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1866,7 +1866,7 @@
 		reg = <0x0 0x10920000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI08_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI08_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart10_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1884,7 +1884,7 @@
 		reg = <0x0 0x10940000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI09_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI09_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart11_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1902,7 +1902,7 @@
 		reg = <0x0 0x10960000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI10_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI10_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart12_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1920,7 +1920,7 @@
 		reg = <0x0 0x11DA0000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI11_USI IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI11_USI IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart13_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1938,7 +1938,7 @@
 		reg = <0x0 0x14F00000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart14_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1956,7 +1956,7 @@
 		reg = <0x0 0x14F20000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart15_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1974,7 +1974,7 @@
 		reg = <0x0 0x14F40000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart16_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -1992,7 +1992,7 @@
 		reg = <0x0 0x14F60000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP3 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart17_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -2010,7 +2010,7 @@
 		reg = <0x0 0x14F80000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP0 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart18_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -2028,7 +2028,7 @@
 		reg = <0x0 0x14FA0000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP1 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart19_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -2046,7 +2046,7 @@
 		reg = <0x0 0x14FC0000 0x100>;
 		samsung,fifo-size = <64>;
 		reg-io-width = <4>;
-		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__USI_CMGP2 IRQ_TYPE_LEVEL_HIGH 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart20_bus_single>; /* or _bus_dual */
 		samsung,usi-serial-v2;
@@ -2061,7 +2061,7 @@
 	i3c_0: i3c@10460000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x10460000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C00 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C00 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH >, <&clock DOUT_DIV_CLK_PERIC1_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2073,7 +2073,7 @@
 	i3c_1: i3c@10470000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x10470000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C01 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C01 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH >, <&clock DOUT_DIV_CLK_PERIC1_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2085,7 +2085,7 @@
 	i3c_2: i3c@10480000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x10480000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C02 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C02 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH >, <&clock DOUT_DIV_CLK_PERIC1_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2097,7 +2097,7 @@
 	i3c_ois: i3c@11DC0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11DC0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C03_OIS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C03_OIS IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH >, <&clock DOUT_DIV_CLK_PERIC1_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2109,7 +2109,7 @@
 	i3c_4: i3c@11C80000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11C80000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C04 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C04 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH >, <&clock DOUT_DIV_CLK_PERIC1_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2121,7 +2121,7 @@
 	i3c_5: i3c@11C90000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11C90000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C05 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C05 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC1_CMU_PERIC1_QCH >, <&clock DOUT_DIV_CLK_PERIC1_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2133,7 +2133,7 @@
 	i3c_6: i3c@11CA0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11CA0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C06 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C06 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH >, <&clock DOUT_DIV_CLK_PERIC2_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2145,7 +2145,7 @@
 	i3c_7: i3c@11CB0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11CB0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C07 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C07 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH >, <&clock DOUT_DIV_CLK_PERIC2_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2157,7 +2157,7 @@
 	i3c_8: i3c@11CC0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11CC0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C08 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C08 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH >, <&clock DOUT_DIV_CLK_PERIC2_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2169,7 +2169,7 @@
 	i3c_9: i3c@11CD0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11CD0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C09 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C09 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH >, <&clock DOUT_DIV_CLK_PERIC2_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2181,7 +2181,7 @@
 	i3c_10: i3c@11CE0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11CE0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C10 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C10 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH >, <&clock DOUT_DIV_CLK_PERIC2_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";
@@ -2193,7 +2193,7 @@
 	i3c_11: i3c@11CF0000 {
 		compatible = "samsung,exynos-i3c-hci";
 		reg = <0x0 0x11CF0000 0x10000>;
-		interrupts = <GIC_SPI INTREQ__I3C11 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__I3C11 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_PERIC2_CMU_PERIC2_QCH >, <&clock DOUT_DIV_CLK_PERIC2_I2C>;
 		clock-names = "gate_clk", "ipclk";
 		pinctrl-names = "default";

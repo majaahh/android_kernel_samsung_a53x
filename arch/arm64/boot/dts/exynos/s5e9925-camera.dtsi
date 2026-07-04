@@ -39,25 +39,25 @@
 		    <0x0 0x15E00000 0x10000>, /* MCFP */
 		    <0x0 0x18040000 0x10000>, /* YUVP */
 		    <0x0 0x15C40000 0x10000>; /* MCSC */
-		interrupts = <0 INTREQ__CSTAT_CH0_0 IRQ_TYPE_LEVEL_HIGH>, /*CSTAT0_0 */
-			<0 INTREQ__CSTAT_CH0_1 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT0_1 */
-			<0 INTREQ__CSTAT_CH1_0 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT1_0 */
-			<0 INTREQ__CSTAT_CH1_1 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT1_1 */
-			<0 INTREQ__CSTAT_CH2_0 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT2_0 */
-			<0 INTREQ__CSTAT_CH2_1 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT2_1 */
-			<0 INTREQ__CSTAT_CH3_0 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT3_0 */
-			<0 INTREQ__CSTAT_CH3_1 IRQ_TYPE_LEVEL_HIGH>,      /* CSTAT3_1 */
-			<0 INTREQ__LME_O_INT0 IRQ_TYPE_LEVEL_HIGH>,       /* LME_0 */
-			<0 INTREQ__BYRP_0 IRQ_TYPE_LEVEL_HIGH>,           /* BYRP_0 */
-			<0 INTREQ__BYRP_1 IRQ_TYPE_LEVEL_HIGH>,           /* BYRP_1 */
-			<0 INTREQ__RGBP_0 IRQ_TYPE_LEVEL_HIGH>,           /* RGBP_0 */
-			<0 INTREQ__RGBP_1 IRQ_TYPE_LEVEL_HIGH>,           /* RGBP_1 */
-			<0 INTREQ__MCFP_INTREQ_0 IRQ_TYPE_LEVEL_HIGH>,    /* MCFP_0 */
-			<0 INTREQ__MCFP_INTREQ_1 IRQ_TYPE_LEVEL_HIGH>,    /* MCFP_1 */
-			<0 INTREQ__YUVP_0 IRQ_TYPE_LEVEL_HIGH>,           /* YUVP_0 */
-			<0 INTREQ__YUVP_1 IRQ_TYPE_LEVEL_HIGH>,           /* YUVP_1 */
-			<0 INTREQ__MCSC_INTREQ_0 IRQ_TYPE_LEVEL_HIGH>,    /* MCSC_0 */
-			<0 INTREQ__MCSC_INTREQ_1 IRQ_TYPE_LEVEL_HIGH>;    /* MCSC_1 */
+		interrupts = <0 INTREQ__CSTAT_CH0_0 IRQ_TYPE_LEVEL_HIGH 0>, /*CSTAT0_0 */
+			<0 INTREQ__CSTAT_CH0_1 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT0_1 */
+			<0 INTREQ__CSTAT_CH1_0 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT1_0 */
+			<0 INTREQ__CSTAT_CH1_1 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT1_1 */
+			<0 INTREQ__CSTAT_CH2_0 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT2_0 */
+			<0 INTREQ__CSTAT_CH2_1 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT2_1 */
+			<0 INTREQ__CSTAT_CH3_0 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT3_0 */
+			<0 INTREQ__CSTAT_CH3_1 IRQ_TYPE_LEVEL_HIGH 0>,      /* CSTAT3_1 */
+			<0 INTREQ__LME_O_INT0 IRQ_TYPE_LEVEL_HIGH 0>,       /* LME_0 */
+			<0 INTREQ__BYRP_0 IRQ_TYPE_LEVEL_HIGH 0>,           /* BYRP_0 */
+			<0 INTREQ__BYRP_1 IRQ_TYPE_LEVEL_HIGH 0>,           /* BYRP_1 */
+			<0 INTREQ__RGBP_0 IRQ_TYPE_LEVEL_HIGH 0>,           /* RGBP_0 */
+			<0 INTREQ__RGBP_1 IRQ_TYPE_LEVEL_HIGH 0>,           /* RGBP_1 */
+			<0 INTREQ__MCFP_INTREQ_0 IRQ_TYPE_LEVEL_HIGH 0>,    /* MCFP_0 */
+			<0 INTREQ__MCFP_INTREQ_1 IRQ_TYPE_LEVEL_HIGH 0>,    /* MCFP_1 */
+			<0 INTREQ__YUVP_0 IRQ_TYPE_LEVEL_HIGH 0>,           /* YUVP_0 */
+			<0 INTREQ__YUVP_1 IRQ_TYPE_LEVEL_HIGH 0>,           /* YUVP_1 */
+			<0 INTREQ__MCSC_INTREQ_0 IRQ_TYPE_LEVEL_HIGH 0>,    /* MCSC_0 */
+			<0 INTREQ__MCSC_INTREQ_1 IRQ_TYPE_LEVEL_HIGH 0>;    /* MCSC_1 */
 		pinctrl-names = "default","release";
 		pinctrl-0 = <>;
 		pinctrl-1 = <>;
@@ -204,8 +204,8 @@
 	camerapp_gdc: gdc@17700000 {
 		compatible = "samsung,exynos-is-gdc";
 		reg = <0x0 0x17700000 0x10000>; /* GDC */
-		interrupts = <0 INTREQ__GDC_IRQ_0 IRQ_TYPE_LEVEL_HIGH>, /* GDC_0 */
-			   <0 INTREQ__GDC_IRQ_1 IRQ_TYPE_LEVEL_HIGH>;    /* GDC_1 */
+		interrupts = <0 INTREQ__GDC_IRQ_0 IRQ_TYPE_LEVEL_HIGH 0>, /* GDC_0 */
+			   <0 INTREQ__GDC_IRQ_1 IRQ_TYPE_LEVEL_HIGH 0>;    /* GDC_1 */
 		pinctrl-names = "default","release";
 		pinctrl-0 = <>;
 		pinctrl-1 = <>;
@@ -387,7 +387,7 @@
 			<0x0 0x17141200 0x100>,	/* VC2 */
 			<0x0 0x17141300 0x100>;	/* VC3 */
 		reg-names = "mux", "ctl", "vc0", "vc1", "vc2", "vc3";
-		interrupts = <GIC_SPI INTREQ__CSIS_DMA0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__CSIS_DMA0 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "dma";
 		module = <&camif_wdma0>;
 	};
@@ -401,7 +401,7 @@
 			<0x0 0x17142200 0x100>,	/* VC2 */
 			<0x0 0x17142300 0x100>;	/* VC3 */
 		reg-names = "mux", "ctl", "vc0", "vc1", "vc2", "vc3";
-		interrupts = <GIC_SPI INTREQ__CSIS_DMA1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__CSIS_DMA1 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "dma";
 		module = <&camif_wdma0>;
 	};
@@ -415,7 +415,7 @@
 			<0x0 0x17143200 0x100>,	/* VC2 */
 			<0x0 0x17143300 0x100>;	/* VC3 */
 		reg-names = "mux", "ctl", "vc0", "vc1", "vc2", "vc3";
-		interrupts = <GIC_SPI INTREQ__CSIS_DMA2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__CSIS_DMA2 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "dma";
 		module = <&camif_wdma0>;
 	};
@@ -429,7 +429,7 @@
 			<0x0 0x17144200 0x100>,	/* VC2 */
 			<0x0 0x17144300 0x100>;	/* VC3 */
 		reg-names = "mux", "ctl", "vc0", "vc1", "vc2", "vc3";
-		interrupts = <GIC_SPI INTREQ__CSIS_DMA3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__CSIS_DMA3 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "dma";
 		module = <&camif_wdma0>;
 	};
@@ -443,7 +443,7 @@
 			<0x0 0x17145200 0x100>,	/* VC2 */
 			<0x0 0x17145300 0x100>;	/* VC3 */
 		reg-names = "mux", "ctl", "vc0", "vc1", "vc2", "vc3";
-		interrupts = <GIC_SPI INTREQ__CSIS_DMA4 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__CSIS_DMA4 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "dma";
 		module = <&camif_wdma0>;
 	};
@@ -464,9 +464,10 @@
 	camif_ebuf: camif-ebuf@17152000 {
 		compatible = "samsung,camif-ebuf";
 		reg = <0x0 0x17152000 0x1000>;
-		interrupts = <0 INTREQ__SENSOR_ABORT IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SENSOR_ABORT IRQ_TYPE_LEVEL_HIGH 0>;
 		num_of_ebuf = <4>;
-		status = "disabled";
+		fake_done_offset = <4>;
+		status = "okay";
 	};
 
 	camif_bns: camif-bns@17153000 {
@@ -582,7 +583,7 @@
 			<0x0 0x170F0000 0x10000>, /* PHY: M0S4S4S4S4S4S2 */
 			<0x0 0x17150050 0x10>; /* CSIS_FRO */
 		reg-names = "csi", "phy", "fro";
-		interrupts = <0 INTREQ__CSIS0 IRQ_TYPE_LEVEL_HIGH>; /*MIPI-CSI0 */
+		interrupts = <0 INTREQ__CSIS0 IRQ_TYPE_LEVEL_HIGH 0>; /*MIPI-CSI0 */
 		interrupt-names = "csi";
 		phys = <&mipi_phy_csis0_m0s4s4s4s4s4s4_s22 0>;
 		phy-names = "csis_dphy";
@@ -600,7 +601,7 @@
 			<0x0 0x170F0000 0x10000>, /* PHY: M0S4S4S4S4S4S2 */
 			<0x0 0x17150050 0x10>; /* CSIS_FRO */
 		reg-names = "csi", "phy", "fro";
-		interrupts = <0 INTREQ__CSIS1 IRQ_TYPE_LEVEL_HIGH>; /* MIPI-CSI1 */
+		interrupts = <0 INTREQ__CSIS1 IRQ_TYPE_LEVEL_HIGH 0>; /* MIPI-CSI1 */
 		interrupt-names = "csi";
 		phys = <&mipi_phy_csis1_m0s4s4s4s4s4s4_s22 0>;
 		phy-names = "csis_dphy";
@@ -619,7 +620,7 @@
 			<0x0 0x170F0000 0x10000>, /* PHY: M0S4S4S4S4S4S2 */
 			<0x0 0x17150050 0x10>; /* CSIS_FRO */
 		reg-names = "csi", "phy", "fro";
-		interrupts = <0 INTREQ__CSIS2 IRQ_TYPE_LEVEL_HIGH>; /* MIPI-CSI2 */
+		interrupts = <0 INTREQ__CSIS2 IRQ_TYPE_LEVEL_HIGH 0>; /* MIPI-CSI2 */
 		interrupt-names = "csi";
 		phys = <&mipi_phy_csis2_m0s4s4s4s4s4s4_s22 0>;
 		phy-names = "csis_dphy";
@@ -637,7 +638,7 @@
 			<0x0 0x170F0000 0x10000>, /* PHY: M0S4S4S4S4S4S2 */
 			<0x0 0x17150050 0x10>; /* CSIS_FRO */
 		reg-names = "csi", "phy", "fro";
-		interrupts = <0 INTREQ__CSIS3 IRQ_TYPE_LEVEL_HIGH>; /* MIPI-CSI3 */
+		interrupts = <0 INTREQ__CSIS3 IRQ_TYPE_LEVEL_HIGH 0>; /* MIPI-CSI3 */
 		interrupt-names = "csi";
 		phys = <&mipi_phy_csis3_m0s4s4s4s4s4s4_s22 0>;
 		phy-names = "csis_dphy";
@@ -655,7 +656,7 @@
 			<0x0 0x170F0000 0x10000>, /* PHY: M0S4S4S4S4S4S2 */
 			<0x0 0x17150050 0x10>; /* CSIS_FRO */
 		reg-names = "csi", "phy", "fro";
-		interrupts = <0 INTREQ__CSIS4 IRQ_TYPE_LEVEL_HIGH>; /* MIPI-CSI4 */
+		interrupts = <0 INTREQ__CSIS4 IRQ_TYPE_LEVEL_HIGH 0>; /* MIPI-CSI4 */
 		interrupt-names = "csi";
 		phys = <&mipi_phy_csis4_m0s4s4s4s4s4s4_s22 0>;
 		phy-names = "csis_dphy";
@@ -673,7 +674,7 @@
 			<0x0 0x170F0000 0x10000>, /* PHY: M0S4S4S4S4S4S2 */
 			<0x0 0x17150050 0x10>; /* CSIS_FRO */
 		reg-names = "csi", "phy", "fro";
-		interrupts = <0 INTREQ__CSIS5 IRQ_TYPE_LEVEL_HIGH>; /* MIPI-CSI5 */
+		interrupts = <0 INTREQ__CSIS5 IRQ_TYPE_LEVEL_HIGH 0>; /* MIPI-CSI5 */
 		interrupt-names = "csi";
 		phys = <&mipi_phy_csis5_m0s4s4s4s4s4s4_s22 0>;
 		phy-names = "csis_dphy";
@@ -726,8 +727,8 @@
 			<0x0 0x17020430 0x4>, /* PDP input vc mux(CSIS_PDP_VC_CON0) in SYSREG */
 			<0x0 0x17020530 0x4>; /* CSIS_PDP_SC_PDP_IN_EN in SYSREG */
 		reg-names = "core", "common", "mux", "vc_mux", "en";
-		interrupts = <0 INTREQ__PDP0 IRQ_TYPE_LEVEL_HIGH>,
-			<0 INTREQ__PDP1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__PDP0 IRQ_TYPE_LEVEL_HIGH 0>,
+			<0 INTREQ__PDP1 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		/*
 		 * Select input CSIS link & VC
@@ -751,8 +752,8 @@
 			<0x0 0x17020434 0x4>, /* PDP input vc mux(CSIS_PDP_VC_CON0) in SYSREG */
 			<0x0 0x17020534 0x4>; /* CSIS_PDP_SC_PDP_IN_EN in SYSREG */
 		reg-names = "core", "common", "mux", "vc_mux", "en";
-		interrupts = <0 INTREQ__PDP2 IRQ_TYPE_LEVEL_HIGH>,
-			<0 INTREQ__PDP3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__PDP2 IRQ_TYPE_LEVEL_HIGH 0>,
+			<0 INTREQ__PDP3 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		/*
 		 * Select input CSIS link & VC
@@ -776,8 +777,8 @@
 			<0x0 0x17020438 0x4>, /* PDP input vc mux(CSIS_PDP_VC_CON0) in SYSREG */
 			<0x0 0x17020538 0x4>; /* CSIS_PDP_SC_PDP_IN_EN in SYSREG */
 		reg-names = "core", "common", "mux", "vc_mux", "en";
-		interrupts = <0 INTREQ__PDP4 IRQ_TYPE_LEVEL_HIGH>,
-			<0 INTREQ__PDP5 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__PDP4 IRQ_TYPE_LEVEL_HIGH 0>,
+			<0 INTREQ__PDP5 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		/*
 		 * Select input CSIS link & VC
@@ -801,8 +802,8 @@
 			<0x0 0x1702043C 0x4>, /* PDP input vc mux(CSIS_PDP_VC_CON0) in SYSREG */
 			<0x0 0x1702053C 0x4>; /* CSIS_PDP_SC_PDP_IN_EN in SYSREG */
 		reg-names = "core", "common", "mux", "vc_mux", "en";
-		interrupts = <0 INTREQ__PDP6 IRQ_TYPE_LEVEL_HIGH>,
-			<0 INTREQ__PDP7 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__PDP6 IRQ_TYPE_LEVEL_HIGH 0>,
+			<0 INTREQ__PDP7 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		/*
 		 * Select input CSIS link & VC

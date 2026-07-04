@@ -22,10 +22,10 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI EXT_INTA0_OUT0 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA0_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA0_OUT2 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA0_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA0_OUT4 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA0_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA0_OUT6 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA0_OUT7 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI EXT_INTA0_OUT0 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA0_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA0_OUT2 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA0_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA0_OUT4 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA0_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA0_OUT6 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA0_OUT7 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpa1: gpa1 {
@@ -35,10 +35,10 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI EXT_INTA1_OUT0 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA1_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA1_OUT2 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA1_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA1_OUT4 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA1_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA1_OUT6 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA1_OUT7 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI EXT_INTA1_OUT0 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA1_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA1_OUT2 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA1_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA1_OUT4 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA1_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA1_OUT6 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA1_OUT7 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpa2: gpa2 {
@@ -48,10 +48,10 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI EXT_INTA2_OUT0 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA2_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA2_OUT2 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA2_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA2_OUT4 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA2_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA2_OUT6 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA2_OUT7 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI EXT_INTA2_OUT0 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA2_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA2_OUT2 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA2_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA2_OUT4 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA2_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA2_OUT6 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA2_OUT7 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpa3: gpa3 {
@@ -61,10 +61,10 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI EXT_INTA3_OUT0 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA3_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA3_OUT2 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA3_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA3_OUT4 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA3_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI EXT_INTA3_OUT6 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA3_OUT7 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI EXT_INTA3_OUT0 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA3_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA3_OUT2 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA3_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA3_OUT4 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA3_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI EXT_INTA3_OUT6 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA3_OUT7 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpa4: gpa4 {
@@ -74,7 +74,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI EXT_INTA4_OUT0 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI EXT_INTA4_OUT1 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI EXT_INTA4_OUT0 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI EXT_INTA4_OUT1 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpq0: gpq0 {
@@ -92,9 +92,15 @@
 
 		/* USI_UART_BT */
 		uart1_bus_single: uart1-bus {
-			samsung,pins = "gpq0-3", "gpq0-2", "gpq0-1", "gpq0-0";
+			samsung,pins = "gpq0-3", "gpq0-2", "gpq0-1";
 			samsung,pin-function = <2>;
 			samsung,pin-pud = <3>;
+		};
+
+		uart1_bus_rxd_hiz: uart1-bus-rxdpud {
+			samsung,pins = "gpq0-0";
+			samsung,pin-function = <2>;
+			samsung,pin-pud = <0>;
 		};
 
 		uart1_bus_rts: uart1-bus-rts {
@@ -113,6 +119,21 @@
 			samsung,pins = "gpq0-1";
 			samsung,pin-function = <1>;
 		};
+
+		wlbt_pmic_pinctrl: wlbt_pmic_pinctrl {
+			samsung,pins = "gpa3-3";
+			samsung,pin-function = <1>;
+		};
+
+		wlbt_clk_pinctrl: wlbt_clk_pinctrl {
+			samsung,pins = "gpa4-0";
+			samsung,pin-function = <15>;
+		};
+
+		wlbt_wakeup_pinctrl: wlbt_wakeup_pinctrl {
+			samsung,pins = "gpa3-5";
+			samsung,pin-function = <15>;
+		};
 	};
 
 	/* CMGP */
@@ -124,7 +145,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM00 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM01 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM00 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM01 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm1: gpm1 {
@@ -134,7 +155,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM02 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM03 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM02 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM03 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm2: gpm2 {
@@ -144,7 +165,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM04 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM05 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM04 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM05 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm3: gpm3 {
@@ -154,7 +175,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM06 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM07 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM06 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM07 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm4: gpm4 {
@@ -164,7 +185,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM08 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM09 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM08 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM09 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm5: gpm5 {
@@ -174,7 +195,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM10 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM11 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM10 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM11 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm6: gpm6 {
@@ -184,7 +205,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM12 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM13 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM12 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM13 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm7: gpm7 {
@@ -194,7 +215,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM14 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM15 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM14 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM15 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm8: gpm8 {
@@ -204,7 +225,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM16 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM17 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM16 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM17 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm9: gpm9 {
@@ -214,7 +235,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM18 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM19 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM18 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM19 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm10: gpm10 {
@@ -224,7 +245,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM20 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM21 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM20 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM21 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm11: gpm11 {
@@ -234,7 +255,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM22 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM23 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM22 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM23 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm12: gpm12 {
@@ -244,7 +265,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM24 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM25 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM24 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM25 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm13: gpm13 {
@@ -254,7 +275,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM26 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__EXT_INTM27 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM26 IRQ_TYPE_LEVEL_HIGH 0>, <GIC_SPI INTREQ__EXT_INTM27 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm14: gpm14 {
@@ -264,7 +285,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM28 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM28 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm15: gpm15 {
@@ -274,7 +295,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM29 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM29 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm16: gpm16 {
@@ -284,7 +305,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM30 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM30 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm17: gpm17 {
@@ -294,7 +315,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM31 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM31 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm20: gpm20 {
@@ -304,7 +325,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM34 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM34 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm21: gpm21 {
@@ -314,7 +335,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM35 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM35 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm22: gpm22 {
@@ -324,7 +345,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM36 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM36 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm23: gpm23 {
@@ -334,7 +355,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM37 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM37 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		gpm24: gpm24 {
@@ -344,7 +365,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI INTREQ__EXT_INTM38 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__EXT_INTM38 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		/* USI_CMGP00 */
@@ -1522,6 +1543,8 @@
 			samsung,pin-function = <3>;
 			samsung,pin-pud = <3>;
 			samsung,pin-drv = <0>;
+			samsung,pin-con-pdn = <3>;
+			samsung,pin-pud-pdn = <0>;
 		};
 
 		/* PERIC2 USI03 */

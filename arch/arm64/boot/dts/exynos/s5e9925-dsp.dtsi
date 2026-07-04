@@ -19,7 +19,7 @@
 		compatible = "samsung,exynos-dsp";
 		reg = <0x0 0x16200000 0x200000>;
 
-		interrupts = <GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_1 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		clocks = <&clock GATE_IP_DNC_QCH>,
 		       <&clock GATE_IP_DSP_QCH>,

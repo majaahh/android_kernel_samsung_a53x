@@ -49,7 +49,7 @@
 			use_acpm = "true";
 			update_fvp = "true";
 
-			use_migov = "true";
+			use_profiler = "true";
 
 			sysbusy = "true";
 
@@ -153,6 +153,14 @@
 			governor = <SIMPLE_INTERACTIVE>;
 
 			dfs_id = <ACPM_DVFS_DISP>;
+
+			skew {
+				skew_0 {
+					master_dm_name = "DISP_INT";
+					constraint_dm_type = <4>;
+					constraint_type = <0>;
+				};
+			};
 		};
 
 		devfreq_4: devfreq_cam@17000050 {
@@ -266,6 +274,14 @@
 			governor = <SIMPLE_INTERACTIVE>;
 
 			dfs_id = <ACPM_DVFS_DNC>;
+
+			skew {
+				skew_0 {
+					master_dm_name = "DNC_INT";
+					constraint_dm_type = <4>;
+					constraint_type = <0>;
+				};
+			};
 		};
 
 		devfreq_8: devfreq_mfc0@17000090 {

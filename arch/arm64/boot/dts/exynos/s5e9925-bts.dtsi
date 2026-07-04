@@ -1513,8 +1513,8 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
 				qmax0_limit_r = <0x1>;

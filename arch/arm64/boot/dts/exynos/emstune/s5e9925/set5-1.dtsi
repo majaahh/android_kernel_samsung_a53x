@@ -12,6 +12,7 @@
 			system-background	= <SCHED_POLICY_ENERGY>;
 			nnapi-hal		= <SCHED_POLICY_ENERGY>;
 			camera-daemon		= <SCHED_POLICY_ENERGY>;
+			midground = <SCHED_POLICY_ENERGY>;
 		};
 
 		/* weight (%) applied to active cpu's efficiency */
@@ -25,6 +26,7 @@
 			system-background	= <100 300 300>;
 			nnapi-hal		= <100 300 300>;
 			camera-daemon		= <100 300 300>;
+			midground = <100 300 300>;
 		};
 
 		/* weight (%) applied to idle cpu's efficiency */
@@ -38,6 +40,7 @@
 			system-background	= <100 100 100>;
 			nnapi-hal		= <100 100 100>;
 			camera-daemon		= <100 100 100>;
+			midground = <100 100 100>;
 		};
 
 		/* Boosting margin applied to frequency selection */
@@ -53,6 +56,7 @@
 		ontime {
 			foreground 	= <1>;
 			top-app		= <1>;
+			midground   = <1>;
 
 			domain0 {
 				cpus = "0-3";
@@ -72,5 +76,9 @@
 		};
 
 		ecs { };
+
+		cpufreq_gov {
+			pelt-margin = <25 25 25>;
+		};
 	};
 };

@@ -26,7 +26,7 @@
 			0x0 0x16CD0000 0x10000
 			0x0 0x16C00000 0x2000
 			>;
-		interrupts = <GIC_SPI INTREQ__GPU_INT IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPU_INT IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names =  "SGPU";
 		memory-region = <&sgpu_rmem>;
 		flags = <CHIP_VANGOGH_LITE>;

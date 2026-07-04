@@ -16,9 +16,19 @@
 #include <dt-bindings/soc/samsung/cpupm.h>
 
 / {
-	arm-pmu {
-		compatible = "arm,armv8-pmuv3";
-		interrupts = <GIC_PPI 7 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_HIGH)>;
+	arm-klein-pmu {
+		compatible = "arm,cortex-a510-pmu";
+		interrupts = <GIC_PPI 7 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_HIGH) &ppi_cluster0>;
+	};
+
+	arm-matterhorn-pmu {
+		compatible = "arm,cortex-a710-pmu";
+		interrupts = <GIC_PPI 7 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_HIGH) &ppi_cluster1>;
+	};
+
+	arm-montblanc-pmu {
+		compatible = "arm,cortex-x2-pmu";
+		interrupts = <GIC_PPI 7 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_HIGH) &ppi_cluster2>;
 	};
 
 	#define CPU_CL0	"0-3"
@@ -27,7 +37,7 @@
 	#define CPU_ALL	"0-7"
 
 	power-data {
-		#define CPUCL0_DMIPS_PER_MHZ 267
+		#define CPUCL0_DMIPS_PER_MHZ 260
 		#define CPUCL1_DMIPS_PER_MHZ 380
 		#define CPUCL2_DMIPS_PER_MHZ 488
 
@@ -354,8 +364,10 @@
 			dm-type = <DM_CPU_CL0>;
 			dss-type = <ESS_FLAG_CPU_CL0>;
 
-			max-freq = <1728000>;
+			max-freq = <1824000>;
 			min-freq = <400000>;
+
+			pm_qos-booting = <1728000>;
 
 			fast-switch;
 			thread-run-on = "0-5";
@@ -377,7 +389,8 @@
 					1440000
 					1536000
 					1632000
-					1728000 >;
+					1728000
+					1824000 >;
 
 			dm-constraints {
 				list = <&lit_dsu_perf>,
@@ -504,7 +517,8 @@
 				  1440000 960000
 				  1536000 1008000
 				  1632000 1104000
-				  1728000 1152000 >;
+				  1728000 1152000
+				  1824000 1824000 >;
 		};
 		lit_dsu_perf_game: dm-table@0010 {
 			const-type = <CONSTRAINT_MIN>;
@@ -527,7 +541,8 @@
 				  1440000 720000
 				  1536000 768000
 				  1632000 1104000
-				  1728000 1152000 >;
+				  1728000 1152000
+				  1824000 1200000 >;
 		};
 		med_dsu_perf: dm-table@0001 {
 			const-type = <CONSTRAINT_MIN>;
@@ -676,7 +691,8 @@
 				  1440000  0
 				  1536000  0
 				  1632000  0
-				  1728000  0 >;
+				  1728000  0
+				  1824000  0 >;
 		};
 		med_mif_perf: dm-table@0004 {
 			const-type = <CONSTRAINT_MIN>;
@@ -757,7 +773,7 @@
 		cal-id = <ACPM_DVFS_DSU>;
 		dm-type = <DM_DSU>;
 		dss-type = <ESS_FLAG_DSU>;
-		max-freq = <1728000>;
+		max-freq = <1824000>;
 		min-freq = <96000>;
 		init-with-dt = <1>;
 
@@ -794,7 +810,8 @@
 			1536000
 			1584000
 			1632000
-			1728000 >;
+			1728000
+			1824000 >;
 
 		request_domain0 {
 			sibling-cpus = CPU_CL0;
@@ -844,6 +861,7 @@
 				device_type = "ufc-domain";
 				shared-cpus = CPU_CL0;
 				table-col-idx = <3>;
+				hold-freq = <1728000>;
 			};
 			domain@1 {
 				device_type = "ufc-domain";
@@ -871,8 +889,8 @@
 				device_type = "ufc-table";
 				ctrl-type = <MAX_LIMIT>;
 
-				table = < 2803000 2803000 2515000 1728000 0 0
-					  2707000 2707000 2515000 1728000 0 0
+				table = < 2803000 2803000 2515000 1824000 0 0
+					  2707000 2707000 2515000 1824000 0 0
 					  2611000 2611000 2515000 1536000 0 0
 					  2515000 2515000 2515000 1536000 0 0
 					  2400000 2400000 2400000 1536000 0 0
@@ -921,11 +939,11 @@
 					  1248000 1248000 1248000  960000 1 1
  					  1152000 1152000 1152000  960000 1 1
 					  1056000 1056000 1056000  960000 1 1
- 					   960000  960000  960000  768000 1 1
-					   864000  864000  864000  768000 1 1
- 					   768000  768000  768000  768000 0 1
-					   672000  672000  672000  768000 0 1
-					   576000  576000  576000  768000 0 1 >;
+ 					   960000  960000  960000  768000 1 0
+					   864000  864000  864000  768000 1 0
+ 					   768000  768000  768000  768000 0 0
+					   672000  672000  672000  768000 0 0
+					   576000  576000  576000  768000 0 0 >;
 					  /* fill little freq automatically */
 			};
 		};
@@ -946,7 +964,7 @@
 		afm_domain0: domain@0 {
 			device_type = "afm-domain";
 			compatible = "samsung,exynos-afm";
-			interrupts = <GIC_SPI INTREQ__OCP_REATOR_CPUCL0_0 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__OCP_REATOR_CPUCL0_0 IRQ_TYPE_LEVEL_HIGH 0>;
 			sibling-cpus = "0-3";
 			interrupt-src = <MAIN_PMIC>;
 			s2mps-afm-offset = <0x74>;
@@ -958,7 +976,7 @@
 		afm_domain1: domain@1 {
 			device_type = "afm-domain";
 			compatible = "samsung,exynos-afm";
-			interrupts = <GIC_SPI INTREQ__OCP_REATOR_CPUCL0_1 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__OCP_REATOR_CPUCL0_1 IRQ_TYPE_LEVEL_HIGH 0>;
 			sibling-cpus = "4-6";
 			interrupt-src = <MAIN_PMIC>;
 			s2mps-afm-offset = <0x80>;
@@ -970,7 +988,7 @@
 		afm_domain2: domain@2 {
 			device_type = "afm-domain";
 			compatible = "samsung,exynos-afm";
-			interrupts = <GIC_SPI INTREQ__OCP_REATOR_CPUCL0_2 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__OCP_REATOR_CPUCL0_2 IRQ_TYPE_LEVEL_HIGH 0>;
 			sibling-cpus = "7";
 			interrupt-src = <MAIN_PMIC>;
 			s2mps-afm-offset = <0x80>;

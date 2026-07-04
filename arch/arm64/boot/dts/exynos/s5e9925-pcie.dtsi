@@ -30,7 +30,7 @@
 			0x0 0x28000000 0x2000   /* configuration space */
 			0x0 0x11390000 0x1000>; /* I/A space */
 		reg-names = "elbi", "soc", "phy", "phyudbg", "sysreg_iocc", "sysreg", "dbi", "pcs", "config", "ia";
-		interrupts = <GIC_SPI INTREQ__PCIE_GEN2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__PCIE_GEN2 IRQ_TYPE_LEVEL_HIGH 0>;
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &gic 0 INTREQ__PCIE_GEN2 0x4>;
@@ -84,7 +84,7 @@
 			0x0 0x40FFE000 0x2000   /* configuration space */
 			0x0 0x11300000 0x1000>; /* I/A space */
 		reg-names = "elbi", "soc", "phy", "phyudbg", "sysreg_iocc", "sysreg", "dbi", "pcs", "config", "ia";
-		interrupts = <GIC_SPI INTREQ__PCIE_GEN3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__PCIE_GEN3 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "msi";
 		#interrupt-cells = <1>;
 		samsung,syscon-phandle = <&pmu_system_controller>;
@@ -124,7 +124,7 @@
 	sysmmu_pcie: sysmmu@11280000 {
 		compatible = "samsung,pcie-sysmmu";
 		reg = <0x0 0x11280000 0x10000>;
-		interrupts = <0 INTREQ__SYSMMU_HSI1_S1_NONSECURE IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_HSI1_S1_NONSECURE IRQ_TYPE_LEVEL_HIGH 0>;
 		qos = <15>;
 		port-name = "PCIe";
 		#iommu-cells = <0>;

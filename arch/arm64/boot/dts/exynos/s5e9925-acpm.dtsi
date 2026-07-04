@@ -30,7 +30,7 @@
 		compatible = "samsung,exynos-acpm-ipc";
 		#address-cells = <2>;
 		#size-cells = <1>;
-		interrupts = <GIC_SPI INTREQ__MAILBOX_APM2AP IRQ_TYPE_LEVEL_HIGH>;	/* AP2APM MAILBOX SPI NUM*/
+		interrupts = <GIC_SPI INTREQ__MAILBOX_APM2AP IRQ_TYPE_LEVEL_HIGH 0>;	/* AP2APM MAILBOX SPI NUM*/
 		reg = <0x0 0x15900000 0x1000>,		/* AP2APM MAILBOX */
 			<0x0 0x2060000 0x50000>;	/* APM SRAM */
 		initdata-base = <0xf800>;

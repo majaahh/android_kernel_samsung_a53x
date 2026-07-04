@@ -14,6 +14,7 @@
 		ontime {
 			top-app		= <1>;
 			foreground	= <1>;
+			midground   = <1>;
 
 			domain0 {
 				cpus = "0-3";
@@ -50,6 +51,7 @@
 			htask-cnt		= <2>;
 			top-app			= <1>;
 			foreground		= <1>;
+			midground 		= <1>;
 		};
 
 		fclamp {

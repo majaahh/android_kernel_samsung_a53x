@@ -119,11 +119,6 @@
 			reg = <0 0xFBC00000 0x400000>;
 		};
 
-		log_llc: log_llc {
-			compatible = "exynos,llc";
-			reg = <0 0xFC000000 0x800000>;
-		};
-
 		log_ppc: log_ppc {
 			compatible = "exynos,ppc";
 			reg = <0 0xFC800000 0x100000>;

@@ -20,8 +20,8 @@
 	sysmmu_d_aud: sysmmu@0x18D50000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x18D50000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_AUD_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_AUD_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_AUD_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_AUD_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x18D60000>;
 		qos = <15>;
@@ -40,8 +40,8 @@
 	sysmmu_d0_brp: sysmmu@0x17430000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x17430000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D0_BRP_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D0_BRP_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D0_BRP_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D0_BRP_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x17440000>;
 		qos = <15>;
@@ -63,8 +63,8 @@
 	sysmmu_d1_brp: sysmmu@0x17530000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x17530000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D1_BRP_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D1_BRP_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D1_BRP_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D1_BRP_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x17540000>;
 		qos = <15>;
@@ -85,8 +85,8 @@
 	sysmmu_d2_brp: sysmmu@0x17570000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x17570000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D2_BRP_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D2_BRP_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D2_BRP_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D2_BRP_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x17580000>;
 		qos = <15>;
@@ -106,8 +106,8 @@
 	sysmmu_d0_csis: sysmmu@0x17170000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x17170000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D0_CSIS_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D0_CSIS_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D0_CSIS_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D0_CSIS_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x17160000>;
 		qos = <15>;
@@ -129,8 +129,8 @@
 	sysmmu_d1_csis: sysmmu@0x171A0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x171A0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D1_CSIS_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D1_CSIS_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D1_CSIS_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D1_CSIS_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x17190000>;
 		qos = <15>;
@@ -155,8 +155,8 @@
 	sysmmu_d2_csis: sysmmu@0x171D0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x171D0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D2_CSIS_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D2_CSIS_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D2_CSIS_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D2_CSIS_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x171C0000>;
 		qos = <15>;
@@ -177,8 +177,8 @@
 	sysmmu_d_cstat: sysmmu@0x18540000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x18540000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D_CSTAT_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D_CSTAT_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D_CSTAT_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D_CSTAT_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x18550000>;
 		qos = <15>;
@@ -258,8 +258,8 @@
 	sysmmu_sdma0: sysmmu@0x16040000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x16040000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_SDMA0_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_SDMA0_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_SDMA0_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_SDMA0_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x16050000>;
 		qos = <15>;
@@ -274,8 +274,8 @@
 	sysmmu_sdma1: sysmmu@0x16070000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x16070000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_SDMA1_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_SDMA1_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_SDMA1_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_SDMA1_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x16080000>;
 		qos = <15>;
@@ -290,8 +290,8 @@
 	sysmmu_sdma2: sysmmu@0x160A0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x160A0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_SDMA2_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_SDMA2_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_SDMA2_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_SDMA2_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x160B0000>;
 		qos = <15>;
@@ -306,8 +306,8 @@
 	sysmmu_sdma3: sysmmu@0x160D0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x160D0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_SDMA3_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_SDMA3_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_SDMA3_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_SDMA3_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x160E0000>;
 		qos = <15>;
@@ -322,8 +322,8 @@
 	sysmmu_ipdnc: sysmmu@0x16100000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x16100000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_IPDNC_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_IPDNC_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_IPDNC_O_INTERRUPT_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_IPDNC_O_INTERRUPT_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x16110000>;
 		qos = <15>;
@@ -343,8 +343,8 @@
 	sysmmu_d0_dpuf0: sysmmu@0x1AC40000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x1AC40000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D0_DPUF0_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D0_DPUF0_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D0_DPUF0_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D0_DPUF0_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x1AC60000>;
 		qos = <15>;
@@ -371,8 +371,8 @@
 	sysmmu_d1_dpuf0: sysmmu@0x1AC50000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x1AC50000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D1_DPUF0_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D1_DPUF0_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D1_DPUF0_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D1_DPUF0_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x1AC70000>;
 		qos = <15>;
@@ -398,8 +398,8 @@
 	sysmmu_d0_dpuf1: sysmmu@0x1AE40000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x1AE40000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D0_DPUF1_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D0_DPUF1_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D0_DPUF1_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D0_DPUF1_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x1AE60000>;
 		qos = <15>;
@@ -426,8 +426,8 @@
 	sysmmu_d1_dpuf1: sysmmu@0x1AE50000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x1AE50000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D1_DPUF1_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D1_DPUF1_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D1_DPUF1_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D1_DPUF1_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x1AE70000>;
 		qos = <15>;
@@ -452,8 +452,8 @@
 	sysmmu_d_lme: sysmmu@0x176A0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x176A0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D_LME_S1_NONSECURE IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D_LME_S1_SECURE IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D_LME_S1_NONSECURE IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D_LME_S1_SECURE IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x176B0000>;
 		qos = <15>;
@@ -482,8 +482,8 @@
 	sysmmu_d_m2m: sysmmu@0x18A00000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x18A00000 0x9000>;
-		interrupts = <0 INTREQ__M2M__SYSMMU_D_M2M_PM_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__M2M__SYSMMU_D_M2M_PM_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__M2M__SYSMMU_D_M2M_PM_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__M2M__SYSMMU_D_M2M_PM_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x18A10000>;
 		qos = <15>;
@@ -514,8 +514,8 @@
 	sysmmu_d0_mcsc: sysmmu@0x15C70000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x15C70000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D0_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D0_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D0_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D0_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x15C80000>;
 		qos = <15>;
@@ -530,8 +530,8 @@
 	sysmmu_d1_mcsc: sysmmu@0x15CA0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x15CA0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D1_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D1_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D1_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D1_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x15CB0000>;
 		qos = <15>;
@@ -555,8 +555,8 @@
 	sysmmu_d2_mcsc: sysmmu@0x15CD0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x15CD0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D2_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D2_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D2_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D2_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x15CE0000>;
 		qos = <15>;
@@ -577,8 +577,8 @@
 	sysmmu_d3_mcsc: sysmmu@0x15D00000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x15D00000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D3_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D3_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D3_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D3_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x15D10000>;
 		qos = <15>;
@@ -597,8 +597,8 @@
 	sysmmu_d4_mcsc: sysmmu@0x15D30000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x15D30000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D4_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D4_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D4_MCSC_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D4_MCSC_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x15D40000>;
 		qos = <15>;
@@ -627,9 +627,8 @@
 	sysmmu_d0_mfc0: sysmmu@0x18670000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x18670000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_MFC0D0_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_MFC0D0_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH>;
-		sysmmu,async-fault;
+		interrupts = <0 INTREQ__SYSMMU_MFC0D0_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_MFC0D0_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x18680000>;
 		qos = <15>;
@@ -642,9 +641,8 @@
 	sysmmu_d1_mfc0: sysmmu@0x186A0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x186A0000 0xA000>;
-		interrupts = <0 INTREQ__SYSMMU_MFC0D1_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_MFC0D1_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH>;
-		sysmmu,async-fault;
+		interrupts = <0 INTREQ__SYSMMU_MFC0D1_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_MFC0D1_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x186B0000>;
 		qos = <15>;
@@ -661,9 +659,8 @@
 	sysmmu_d0_mfc1: sysmmu@0x18870000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x18870000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_MFC1D0_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_MFC1D0_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH>;
-		sysmmu,async-fault;
+		interrupts = <0 INTREQ__SYSMMU_MFC1D0_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_MFC1D0_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x18880000>;
 		qos = <15>;
@@ -676,9 +673,8 @@
 	sysmmu_d1_mfc1: sysmmu@0x188A0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x188A0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_MFC1D1_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_MFC1D1_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH>;
-		sysmmu,async-fault;
+		interrupts = <0 INTREQ__SYSMMU_MFC1D1_interrupt_s1_ns IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_MFC1D1_interrupt_s1_s IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x188B0000>;
 		qos = <15>;
@@ -691,8 +687,8 @@
 	sysmmu_d0_yuvp: sysmmu@0x18070000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x18070000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D0_YUVP_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D0_YUVP_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D0_YUVP_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D0_YUVP_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x18080000>;
 		qos = <15>;
@@ -712,8 +708,8 @@
 	sysmmu_d1_yuvp: sysmmu@0x180A0000 {
 		compatible = "samsung,sysmmu-v8";
 		reg = <0 0x180A0000 0x9000>;
-		interrupts = <0 INTREQ__SYSMMU_D1_YUVP_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-				<0 INTREQ__SYSMMU_D1_YUVP_S1_S IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__SYSMMU_D1_YUVP_S1_NS IRQ_TYPE_LEVEL_HIGH 0>,
+				<0 INTREQ__SYSMMU_D1_YUVP_S1_S IRQ_TYPE_LEVEL_HIGH 0>;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x180B0000>;
 		qos = <15>;

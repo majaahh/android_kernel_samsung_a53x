@@ -12,6 +12,7 @@
 			system-background	= <SCHED_POLICY_EFF>;
 			nnapi-hal		= <SCHED_POLICY_EFF>;
 			camera-daemon		= <SCHED_POLICY_EFF>;
+			midground = <SCHED_POLICY_EFF>;
 		};
 
 		/* weight (%) applied to active cpu's efficiency */
@@ -25,6 +26,7 @@
 			system-background	= <1280 200  25>;
 			nnapi-hal		= <1280 200  25>;
 			camera-daemon		= <1280 200  25>;
+			midground = <100 100 100>;
 		};
 
 		/* weight (%) applied to idle cpu's efficiency */
@@ -38,6 +40,7 @@
 			system-background	= <2560  400   50>;
 			nnapi-hal		= <2560  400   50>;
 			camera-daemon		= <2560  400   50>;
+			midground = <250 1000 1000>;
 		};
 
 		frt {	   			/* LIT MED BIG */

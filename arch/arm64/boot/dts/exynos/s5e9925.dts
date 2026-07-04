@@ -73,6 +73,229 @@
 			contexthub0 = &contexthub_0;
 		};
 
+		exynos-migov {
+			compatible = "samsung,exynos-migov";
+			status = "okay";
+
+			version = <1000>;
+			window-period = < 100 >;
+			window-number = < 30 >;
+			mo-id = < 39 40 41 42 > ;
+			frame-src = < 0 >;      /* 0: use frame-done, 1: use frame-done and  missed-frame */
+			max-fps = < 600 >;
+			dt-up-step = < 10 >;
+			dt-down-step =  < 10 >;
+			active-pct-thr = < 50 >;
+			valid-freq-delta-pct = < 50 >;
+			min-sensitivity = < 10 >;
+			cpu-bottleneck-thr = < 270 >;
+			gpu-bottleneck-thr = < 800 >;
+			mif-bottleneck-thr = < 4800 >;
+			hp-minlock-fps-delta-pct-thr = < 375 >;
+			hp-minlock-power-upper-thr = < 3000 >;
+			hp-minlock-power-lower-thr = < 2500 >;
+			dyn-mo-control = < 0 >;
+
+			/* FPS */
+			dt-ctrl-en = < 1 >;
+			dt-over-thr = < 10 >;
+			dt-under-thr = < 100 >;
+			dpat-upper-thr = < 9000000 >;
+			dpat-lower-thr = < 0 >;
+			dpat-lower-cnt-thr = < 1 >;
+			dpat-up-step = < 10 >;
+			dpat-down-step = < 10 >;
+			inc-perf-temp-thr = < 65 >;
+			inc-perf-power-thr = < 0 >;
+			inc-perf-thr = < 0 >;
+			dec-perf-thr = < (-1000) >;
+			fragutil-thr = < 50 >;
+			gpu-freq-thr = < 403000 >;
+			heavy-gpu-ms-thr = < 50 >;
+			runtime-thr-0 = < (-200) >;
+			runtime-thr-1 = < (-450) >;
+			runtime-thr-2 = < (-50) >;
+			runtime-thr-3 = < (-50) >;
+			runtime-thr-4 = < (-250) >;
+			runtime-thr-5 = < (-10) >;
+			pid-cpu = <1000 600 400>;
+			pid-gpu = <1000 200 800>;
+			pid-util = <1000 200 500>;
+
+			cl0 {
+				pm-qos-cpu = < 0 >;
+				max = < 200 >;
+				min = < (-100) >;
+				up-step = < 2 >;
+				down-step = < 5 >;
+				default-step = < 10 >;
+				pm-qos-min-freq = < 0 >;
+				pm-qos-max-freq = < 1344000 >;
+				hp-minlock-low-limit = < 2002000 >;
+				lp-minlock-low-limit = < 0 >;
+				pid-util-max = <800>;
+				pid-util-min = <600>;
+				pid-util-lpmax = <900>;
+				pid-util-lpmin = <700>;
+			};
+			cl1 {
+				pm-qos-cpu = < 4 >;
+				max = < 200 >;
+				min = < (-100) >;
+				up-step = < 2 >;
+				down-step = < 5 >;
+				default-step = < 10 >;
+				pm-qos-max-freq = < 2304000 >;
+				hp-minlock-low-limit = < 1976000 >;
+				lp-minlock-low-limit = < 0 >;
+				pid-util-max = <800>;
+				pid-util-min = <600>;
+				pid-util-lpmax = <900>;
+				pid-util-lpmin = <700>;
+			};
+			cl2 {
+				pm-qos-cpu = < 7 >;
+				max = < 200 >;
+				min = < (-100) >;
+				up-step = < 2 >;
+				down-step = < 5 >;
+				default-step = < 10 >;
+				pm-qos-max-freq = < 2304000 >;
+				hp-minlock-low-limit = < 1976000 >;
+				lp-minlock-low-limit = < 0 >;
+				pid-util-max = <900>;
+				pid-util-min = <700>;
+				pid-util-lpmax = <950>;
+				pid-util-lpmin = <650>;
+			};
+			gpu {
+				pm-qos-min-class = < PM_QOS_GPU_THROUGHPUT_MIN >;
+				max = < 150 >;
+				min = < (-100) >;
+				up-step = < 2 >;
+				down-step = < 5 >;
+				default-step = < 2 >;
+				pm-qos-max-class = < PM_QOS_GPU_THROUGHPUT_MAX >;
+				pm-qos-max-freq = < 949000 >;
+				pm-qos-min-freq = < 0 >;
+				q0-empty-pct-thr = < 0 >;
+				q1-empty-pct-thr = < 0 >;
+				active-pct-thr = < 100 >;
+			};
+			mif {
+				pm-qos-min-class = < PM_QOS_BUS_THROUGHPUT >;
+				max = < 200 >;
+				min = < (-50) >;
+				up-step = < 2 >;
+				down-step = < 5 >;
+				default-step = < 10 >;
+				pm-qos-max-class = < PM_QOS_BUS_THROUGHPUT_MAX >;
+				freq-stats0-mode-min-freq = < 1716000 >;
+				pm-qos-max-freq = < 3172000 >;
+				pm-qos-min-freq = < 845000 >;
+				freq-stats0-thr = < 4500 >;
+				freq-stats0-updown-delta-pct-thr = < 200 >;
+				hp-minlock-low-limit = < 2730000 >;
+				pid-util-max = <980>;
+				pid-util-min = <920>;
+				pid-util-lpmax = <980>;
+				pid-util-lpmin = <940>;
+			};
+		};
+
+		exynos-cpu-profiler {
+			compatible = "samsung,exynos-cpu-profiler";
+			status = "okay";
+
+			#define CPU_CL0 "0-3"
+			#define CPU_CL1 "4-6"
+			#define CPU_CL2 "7"
+
+			cpu_domain0: domain@0 {
+				/* necessary data */
+				sibling-cpus = CPU_CL0;
+				cal-id = <ACPM_DVFS_CPUCL0>;
+
+				/* un-necessary data */
+				profiler-id = <MIGOV_CL0>;
+				power-coefficient = <217>;
+				static-power-coefficient = <6>;
+			};
+			cpu_domain1: domain@1 {
+				/* necessary data */
+				sibling-cpus = CPU_CL1;
+				cal-id = <ACPM_DVFS_CPUCL1>;
+
+				/* un-necessary data */
+				profiler-id = <MIGOV_CL1>;
+				power-coefficient = <540>;
+				static-power-coefficient = <150>;
+				tz-name = "MID";
+			};
+			cpu_domain3: domain@2 {
+				/* necessary data */
+				sibling-cpus = CPU_CL2;
+				cal-id = <ACPM_DVFS_CPUCL2>;
+
+				/* un-necessary data */
+				profiler-id = <MIGOV_CL2>;
+				power-coefficient = <859>;
+				static-power-coefficient = <599>;
+				tz-name = "BIG";
+			};
+		};
+
+		exynos-gpu-profiler {
+			compatible = "samsung,exynos-gpu-profiler";
+			status = "okay";
+
+			/* necessary data */
+			cal-id = <ACPM_DVFS_G3D>;
+
+			/* un-necessary data */
+			profiler-id = <MIGOV_GPU>;
+			power-coefficient = <8220>;
+			static-power-coefficient = <0>;
+			tz-name = "G3D";
+		};
+
+		exynos-mif-profiler {
+			compatible = "samsung,exynos-mif-profiler";
+			status = "okay";
+
+			/* necessary data */
+			cal-id = <ACPM_DVFS_MIF>;
+
+			/* un-necessary data */
+			profiler-id = <MIGOV_MIF>;
+			devfreq-type = <DEVFREQ_MIF>;
+			power-coefficient = <70110000>;
+			static-power-coefficient = <535>;
+		};
+
+		scsc_wifibt: scsc_wifibt {
+			compatible = "samsung,scsc_wifibt";
+			memory-region = <&wifibt_if>;
+			gpios = <&gpa3 3 1>;
+			wlbt,clk_gpio = <&wlbt_clk_pinctrl 0 15>;
+			wlbt,wakeup_gpio = <&gpa3 5 15>;
+			interrupts = <0 18 4 0 0 63 4 0 0 64 4 0 0 195 4 0 0 196 4 0>;
+			interrupt-names = "ALIVE", "MBOX_WLAN", "MBOX_WPAN", "CFG_REQ", "WDOG";
+			samsung,syscon-phandle = <&pmu_system_controller>;
+			pci_ch_num = <0>;
+			acpm-ipc-channel = <2>;
+			cpu_table_napi = <0 0 4 4 0 0 5 5 0 0 5 5>;
+			cpu_table_rps = "00", "00", "40", "40";
+			threshold_table_napi = <0 50>;
+			threshold_table_rps = <0 300>;
+		};
+
+		wpan: slsi_wpan {
+			compatible = "samsung,slsi-wpan";
+			status = "okay";
+			bt2ap-wakeup-gpio = <&gpa4 3 15>;
+		};
+
 		fixed-rate-clocks {
 			oscclk {
 				compatible = "samsung,s5e9925-oscclk";
@@ -81,18 +304,32 @@
 		};
 
 		chosen: chosen {
-			bootargs = "clocksource=arch_sys_counter clk_ignore_unused firmware_class.path=/vendor/firmware rcupdate.rcu_expedited=1 printk.devkmsg=on allow_mismatched_32bit_el0 s3c2410_wdt.tmr_atboot=1 cpif.cp_btl=on swiotlb=noforce cgroup.memory=nokmem coherent_pool=8M kasan=off loop.max_part=7 kfence.sample_interval=0";
+			bootargs = "clocksource=arch_sys_counter clk_ignore_unused firmware_class.path=/vendor/firmware rcupdate.rcu_expedited=1 printk.devkmsg=on allow_mismatched_32bit_el0 s3c2410_wdt.tmr_atboot=1 swiotlb=noforce cgroup.memory=nokmem coherent_pool=8M kasan=off loop.max_part=7";
 			linux,initrd-start = <0x84000000>;
 			linux,initrd-end = <0x84FFFFFF>;
 		};
 
 		gic:interrupt-controller@10200000 {
 			compatible = "arm,gic-v3";
-			#interrupt-cells = <3>;
+			#interrupt-cells = <4>;
 			interrupt-controller;
 			reg = <0x0 0x10200000 0x10000>,         /* GICD */
 			      <0x0 0x10240000 0x200000>;        /* GICR * 8 */
-			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH 0>;
+
+			ppi-partitions {
+				ppi_cluster0: interrupt-partition-0 {
+					affinity = <194 195 196 197>;
+				};
+
+				ppi_cluster1: interrupt-partition-1 {
+					affinity = <198 199 200>;
+				};
+
+				ppi_cluster2: interrupt-partition-2 {
+					affinity = <201>;
+				};
+			};
 		};
 
 		gic_vh: gic_vh {
@@ -201,7 +438,7 @@
 		/* WAKEUP_STAT,      WAKEUP2_STAT*/
 		wakeup_stat_offset = <0x3b50>,         <0x3b54>;
 		wakeup_int_en_offset = <0x3b44>,         <0x3b64>;
-		wakeup_int_en = <0x000fff6f>,         <0x180C>;
+		wakeup_int_en = <0x000fff6f>,         <0x180D>;
 		usbl2_wakeup_int_en = <0x0>, <0xC>;
 		eint_wakeup_mask_offset = <0x60C>,	<0x610>;
 		wakeup-stat-eint = <13>;
@@ -317,18 +554,18 @@
 				#interrupt-cells = <1>;
 				#address-cells = <0>;
 				#size-cells = <0>;
-				interrupt-map = <0 &gic 0 INTREQ__MCT_G0 IRQ_TYPE_LEVEL_HIGH>,
-					<1 &gic 0 INTREQ__MCT_G1 IRQ_TYPE_LEVEL_HIGH>,
-					<2 &gic 0 INTREQ__MCT_G2 IRQ_TYPE_LEVEL_HIGH>,
-					<3 &gic 0 INTREQ__MCT_G3 IRQ_TYPE_LEVEL_HIGH>,
-					<4 &gic 0 INTREQ__MCT_L0 IRQ_TYPE_LEVEL_HIGH>,
-					<5 &gic 0 INTREQ__MCT_L1 IRQ_TYPE_LEVEL_HIGH>,
-					<6 &gic 0 INTREQ__MCT_L2 IRQ_TYPE_LEVEL_HIGH>,
-					<7 &gic 0 INTREQ__MCT_L3 IRQ_TYPE_LEVEL_HIGH>,
-					<8 &gic 0 INTREQ__MCT_L4 IRQ_TYPE_LEVEL_HIGH>,
-					<9 &gic 0 INTREQ__MCT_L5 IRQ_TYPE_LEVEL_HIGH>,
-					<10 &gic 0 INTREQ__MCT_L6 IRQ_TYPE_LEVEL_HIGH>,
-					<11 &gic 0 INTREQ__MCT_L7 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-map = <0 &gic 0 INTREQ__MCT_G0 IRQ_TYPE_LEVEL_HIGH 0>,
+					<1 &gic 0 INTREQ__MCT_G1 IRQ_TYPE_LEVEL_HIGH 0>,
+					<2 &gic 0 INTREQ__MCT_G2 IRQ_TYPE_LEVEL_HIGH 0>,
+					<3 &gic 0 INTREQ__MCT_G3 IRQ_TYPE_LEVEL_HIGH 0>,
+					<4 &gic 0 INTREQ__MCT_L0 IRQ_TYPE_LEVEL_HIGH 0>,
+					<5 &gic 0 INTREQ__MCT_L1 IRQ_TYPE_LEVEL_HIGH 0>,
+					<6 &gic 0 INTREQ__MCT_L2 IRQ_TYPE_LEVEL_HIGH 0>,
+					<7 &gic 0 INTREQ__MCT_L3 IRQ_TYPE_LEVEL_HIGH 0>,
+					<8 &gic 0 INTREQ__MCT_L4 IRQ_TYPE_LEVEL_HIGH 0>,
+					<9 &gic 0 INTREQ__MCT_L5 IRQ_TYPE_LEVEL_HIGH 0>,
+					<10 &gic 0 INTREQ__MCT_L6 IRQ_TYPE_LEVEL_HIGH 0>,
+					<11 &gic 0 INTREQ__MCT_L7 IRQ_TYPE_LEVEL_HIGH 0>;
 			};
 		};
 
@@ -350,18 +587,18 @@
 				#interrupt-cells = <1>;
 				#address-cells = <0>;
 				#size-cells = <0>;
-				interrupt-map = <0 &gic 0 INTREQ__MCT_ALIVE_IRQ_0 IRQ_TYPE_LEVEL_HIGH>,
-					<1 &gic 0 INTREQ__MCT_ALIVE_IRQ_1 IRQ_TYPE_LEVEL_HIGH>,
-					<2 &gic 0 INTREQ__MCT_ALIVE_IRQ_2 IRQ_TYPE_LEVEL_HIGH>,
-					<3 &gic 0 INTREQ__MCT_ALIVE_IRQ_3 IRQ_TYPE_LEVEL_HIGH>,
-					<4 &gic 0 INTREQ__MCT_ALIVE_IRQ_4 IRQ_TYPE_LEVEL_HIGH>,
-					<5 &gic 0 INTREQ__MCT_ALIVE_IRQ_5 IRQ_TYPE_LEVEL_HIGH>,
-					<6 &gic 0 INTREQ__MCT_ALIVE_IRQ_6 IRQ_TYPE_LEVEL_HIGH>,
-					<7 &gic 0 INTREQ__MCT_ALIVE_IRQ_7 IRQ_TYPE_LEVEL_HIGH>,
-					<8 &gic 0 INTREQ__MCT_ALIVE_IRQ_8 IRQ_TYPE_LEVEL_HIGH>,
-					<9 &gic 0 INTREQ__MCT_ALIVE_IRQ_9 IRQ_TYPE_LEVEL_HIGH>,
-					<10 &gic 0 INTREQ__MCT_ALIVE_IRQ_10 IRQ_TYPE_LEVEL_HIGH>,
-					<11 &gic 0 INTREQ__MCT_ALIVE_IRQ_11 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-map = <0 &gic 0 INTREQ__MCT_ALIVE_IRQ_0 IRQ_TYPE_LEVEL_HIGH 0>,
+					<1 &gic 0 INTREQ__MCT_ALIVE_IRQ_1 IRQ_TYPE_LEVEL_HIGH 0>,
+					<2 &gic 0 INTREQ__MCT_ALIVE_IRQ_2 IRQ_TYPE_LEVEL_HIGH 0>,
+					<3 &gic 0 INTREQ__MCT_ALIVE_IRQ_3 IRQ_TYPE_LEVEL_HIGH 0>,
+					<4 &gic 0 INTREQ__MCT_ALIVE_IRQ_4 IRQ_TYPE_LEVEL_HIGH 0>,
+					<5 &gic 0 INTREQ__MCT_ALIVE_IRQ_5 IRQ_TYPE_LEVEL_HIGH 0>,
+					<6 &gic 0 INTREQ__MCT_ALIVE_IRQ_6 IRQ_TYPE_LEVEL_HIGH 0>,
+					<7 &gic 0 INTREQ__MCT_ALIVE_IRQ_7 IRQ_TYPE_LEVEL_HIGH 0>,
+					<8 &gic 0 INTREQ__MCT_ALIVE_IRQ_8 IRQ_TYPE_LEVEL_HIGH 0>,
+					<9 &gic 0 INTREQ__MCT_ALIVE_IRQ_9 IRQ_TYPE_LEVEL_HIGH 0>,
+					<10 &gic 0 INTREQ__MCT_ALIVE_IRQ_10 IRQ_TYPE_LEVEL_HIGH 0>,
+					<11 &gic 0 INTREQ__MCT_ALIVE_IRQ_11 IRQ_TYPE_LEVEL_HIGH 0>;
 			};
 		};
 #endif
@@ -370,40 +607,40 @@
 	pinctrl_0: pinctrl@15850000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x15850000 0x1000>;
-		interrupts = <GIC_SPI EXT_INTA0_OUT0 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT2 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT4 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT6 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA0_OUT7 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT0 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT2 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT4 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT6 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA1_OUT7 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT0 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT2 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT4 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT6 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA2_OUT7 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT0 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT1 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT2 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT3 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT4 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT5 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT6 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA3_OUT7 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA4_OUT0 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI EXT_INTA4_OUT1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI EXT_INTA0_OUT0 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT2 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT4 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT6 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA0_OUT7 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT0 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT2 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT4 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT6 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA1_OUT7 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT0 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT2 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT4 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT6 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA2_OUT7 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT0 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT1 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT2 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT3 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT4 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT5 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT6 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA3_OUT7 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA4_OUT0 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI EXT_INTA4_OUT1 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		wakeup-interrupt-controller {
 			compatible = "samsung,exynos7-wakeup-eint";
@@ -416,43 +653,43 @@
 	pinctrl_1: pinctrl@14E30000{
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x14E30000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__EXT_INTM00 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM01 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM02 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM03 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM04 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM05 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM06 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM07 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM08 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM09 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM10 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM11 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM12 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM13 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM14 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM15 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM16 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM17 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM18 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM19 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM20 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM21 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM22 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM23 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM24 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM25 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM26 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM27 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM28 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM29 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM30 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM31 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM34 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM35 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM36 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM37 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__EXT_INTM38 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__EXT_INTM00 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM01 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM02 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM03 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM04 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM05 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM06 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM07 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM08 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM09 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM10 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM11 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM12 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM13 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM14 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM15 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM16 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM17 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM18 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM19 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM20 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM21 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM22 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM23 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM24 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM25 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM26 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM27 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM28 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM29 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM30 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM31 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM34 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM35 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM36 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM37 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__EXT_INTM38 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		wakeup-interrupt-controller {
 			compatible = "samsung,exynos-cmgp-wakeup-eint";
@@ -464,42 +701,42 @@
 	pinctrl_2: pinctrl@11240000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x11240000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__GPIO_HSI1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPIO_HSI1 IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	/* UFS */
 	pinctrl_3: pinctrl@11040000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x11040000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__GPIO_UFS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPIO_UFS IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	/* HSI1UFS */
 	pinctrl_4: pinctrl@11060000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x11060000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__GPIO_HSI1UFS IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPIO_HSI1UFS IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	/* PERIC0 */
 	pinctrl_5: pinctrl@10430000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x10430000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__GPIO_PERIC0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPIO_PERIC0 IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	/* PERIC1 */
 	pinctrl_6: pinctrl@10730000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x10730000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__GPIO_PERIC1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPIO_PERIC1 IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	/* PERIC2 */
 	pinctrl_7: pinctrl@11C30000 {
 		compatible = "samsung,s5e9925-pinctrl";
 		reg = <0x0 0x11C30000 0x1000>;
-		interrupts = <GIC_SPI INTREQ__GPIO_PERIC2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__GPIO_PERIC2 IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	/* VTS */
@@ -563,7 +800,7 @@
 		pdma0: pdma0@1A4E0000 {
 			compatible = "arm,pl330", "arm,primecell";
 			reg = <0x0 0x1A4E0000 0x1000>;
-			interrupts = <GIC_SPI INTREQ__PDMA IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI INTREQ__PDMA IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&clock UMUX_CLKCMU_NOCL1B_NOC1>;
 			clock-names = "apb_pclk";
 			#dma-cells = <1>;
@@ -718,10 +955,8 @@
 
 	exynos-sci {
 		compatible = "samsung,exynos-sci";
-		memory-region = <&log_llc>;
-		interrupts = <GIC_SPI INTREQ__CPUCL0_COREFAULTIRQ_0 IRQ_TYPE_LEVEL_HIGH>, /* corr */
-			     <GIC_SPI INTREQ__CPUCL0_COREFAULTIRQ_1 IRQ_TYPE_LEVEL_HIGH>; /* uncorr */
-		nr_irq = <2>;
+		interrupts = <GIC_SPI INTREQ__PPMU_WOW_GLUE_O_INTREQ__WOW_DVFS_SCI_GIC IRQ_TYPE_LEVEL_HIGH 0>;
+		nr_irq = <1>;
 		acpm-ipc-channel = <9>;
 		use_init_llc_region = <1>;
 		initial_llc_region = <1>;	/* LLC_REGION_CPU */
@@ -744,7 +979,7 @@
 			    "LLC_REGION_MFC0_DPB",
 			    "LLC_REGION_MFC1_DPB",
 			    "LLC_REGION_GDC",
-			    "LLC_REGION_MIGOV",
+			    "LLC_REGION_PROFILER",
 			    "LLC_REGION_GPU",
 			    "LLC_REGION_NPU0",
 			    "LLC_REGION_NPU1",
@@ -801,10 +1036,10 @@
 	watchdog_cl0@10050000 {
 		compatible = "samsung,s5e9925-v1-wdt";
 		reg = <0x0 0x10050000 0x100>;
-		interrupts = <GIC_SPI INTREQ__WDT0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__WDT0 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock OSCCLK2>, <&clock GATE_WDT0_QCH>;
 		clock-names = "rate_watchdog", "gate_watchdog";
-		timeout-sec = <60>;
+		timeout-sec = <80>;
 		shutdown_wdt_timeout = <30>;
 		samsung,syscon-phandle = <&pmu_system_controller>;
 		index = <0>; /* if little cluster then index is 0*/
@@ -814,10 +1049,10 @@
 	watchdog_cl1@10060000 {
 		compatible = "samsung,s5e9925-v2-wdt";
 		reg = <0x0 0x10060000 0x100>;
-		interrupts = <GIC_SPI INTREQ__WDT1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__WDT1 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock OSCCLK2>, <&clock GATE_WDT1_QCH>;
 		clock-names = "rate_watchdog", "gate_watchdog";
-		timeout-sec = <60>;
+		timeout-sec = <80>;
 		shutdown_wdt_timeout = <30>;
 		samsung,syscon-phandle = <&pmu_system_controller>;
 		index = <1>; /* if little cluster then index is 0*/
@@ -831,193 +1066,12 @@
 		status = "okay";
 	};
 
-	exynos-migov {
-		compatible = "samsung,exynos-migov";
-		status = "okay";
-
-		window-period = < 100 >;
-		window-number = < 30 >;
-		active-pct-thr = < 50 >;
-		valid-freq-delta-pct = < 50 >;
-		min-sensitivity = < 10 >;
-		cpu-bottleneck-thr = < 270 >;
-		gpu-bottleneck-thr = < 800 >;
-		gpu-ar-bottleneck-thr = < 750 >;
-		mif-bottleneck-thr = < 4800 >;
-		hp-minlock-fps-delta-pct-thr = < 375 >;
-		hp-minlock-power-upper-thr = < 3000 >;
-		hp-minlock-power-lower-thr = < 2500 >;
-		dyn-mo-control = < 0 >;
-		mo-id = < 39 40 41 42 > ;
-
-		/* FPS */
-		frame-src = < 0 >;      /* 0: use frame-done, 1: use frame-done and  missed-frame */
-		max-fps = < 600 >;
-		dt-ctrl-en = < 1 >;
-		dt-over-thr = < 10 >;
-		dt-under-thr = < 100 >;
-		dt-up-step = < 10 >;
-		dt-down-step =  < 10 >;
-		dpat-upper-thr = < 9000000 >;
-		dpat-lower-thr = < 0 >;
-		dpat-lower-cnt-thr = < 1 >;
-		dpat-up-step = < 10 >;
-		dpat-down-step = < 10 >;
-		inc-perf-temp-thr = < 65 >;
-		inc-perf-power-thr = < 0 >;
-		inc-perf-thr = < 0 >;
-		dec-perf-thr = < (-1000) >;
-		fragutil-thr = < 50 >;
-		gpu-freq-thr = < 403000 >;
-		heavy-gpu-ms-thr = < 50 >;
-		runtime-thr-0 = < (-200) >;
-		runtime-thr-1 = < (-450) >;
-		runtime-thr-2 = < (-50) >;
-		runtime-thr-3 = < (-50) >;
-		runtime-thr-4 = < (-250) >;
-		runtime-thr-5 = < (-10) >;
-
-		cl0 {
-			max = < 200 >;
-			min = < (-100) >;
-			up-step = < 2 >;
-			down-step = < 5 >;
-			default-step = < 10 >;
-			pm-qos-cpu = < 0 >;
-			pm-qos-min-freq = < 0 >;
-			pm-qos-max-freq = < 1344000 >;
-			hp-minlock-low-limit = < 2002000 >;
-			lp-minlock-low-limit = < 0 >;
-		};
-		cl1 {
-			max = < 200 >;
-			min = < (-100) >;
-			up-step = < 2 >;
-			down-step = < 5 >;
-			default-step = < 10 >;
-			pm-qos-cpu = < 4 >;
-			pm-qos-max-freq = < 2304000 >;
-			hp-minlock-low-limit = < 1976000 >;
-			lp-minlock-low-limit = < 0 >;
-		};
-		cl2 {
-			max = < 200 >;
-			min = < (-100) >;
-			up-step = < 2 >;
-			down-step = < 5 >;
-			default-step = < 10 >;
-			pm-qos-cpu = < 7 >;
-			pm-qos-max-freq = < 2304000 >;
-			hp-minlock-low-limit = < 1976000 >;
-			lp-minlock-low-limit = < 0 >;
-		};
-		gpu {
-			max = < 100 >;
-			min = < (-100) >;
-			up-step = < 2 >;
-			down-step = < 5 >;
-			default-step = < 2 >;
-			pm-qos-max-class = < PM_QOS_GPU_THROUGHPUT_MAX >;
-			pm-qos-min-class = < PM_QOS_GPU_THROUGHPUT_MIN >;
-			pm-qos-max-freq = < 949000 >;
-			pm-qos-min-freq = < 0 >;
-			q0-empty-pct-thr = < 0 >;
-			q1-empty-pct-thr = < 0 >;
-			active-pct-thr = < 100 >;
-		};
-		mif {
-			max = < 200 >;
-			min = < 0 >;
-			up-step = < 2 >;
-			down-step = < 5 >;
-			default-step = < 10 >;
-			pm-qos-min-class = < PM_QOS_BUS_THROUGHPUT >;
-			pm-qos-max-class = < PM_QOS_BUS_THROUGHPUT_MAX >;
-			freq-stats0-mode-min-freq = < 1716000 >;
-			pm-qos-max-freq = < 3172000 >;
-			pm-qos-min-freq = < 845000 >;
-			freq-stats0-thr = < 4500 >;
-			freq-stats0-updown-delta-pct-thr = < 200 >;
-			hp-minlock-low-limit = < 2730000 >;
-		};
-	};
-
-	exynos-cpu-profiler {
-		compatible = "samsung,exynos-cpu-profiler";
-		status = "okay";
-
-		#define CPU_CL0 "0-3"
-		#define CPU_CL1 "4-6"
-		#define CPU_CL2 "7"
-
-		cpu_domain0: domain@0 {
-			/* necessary data */
-			sibling-cpus = CPU_CL0;
-			cal-id = <ACPM_DVFS_CPUCL0>;
-
-			/* un-necessary data */
-			migov-id = <MIGOV_CL0>;
-			power-coefficient = <217>;
-			static-power-coefficient = <6>;
-		};
-		cpu_domain1: domain@1 {
-			/* necessary data */
-			sibling-cpus = CPU_CL1;
-			cal-id = <ACPM_DVFS_CPUCL1>;
-
-			/* un-necessary data */
-			migov-id = <MIGOV_CL1>;
-			power-coefficient = <540>;
-			static-power-coefficient = <150>;
-			tz-name = "MID";
-		};
-		cpu_domain2: domain@2 {
-			/* necessary data */
-			sibling-cpus = CPU_CL2;
-			cal-id = <ACPM_DVFS_CPUCL2>;
-
-			/* un-necessary data */
-			migov-id = <MIGOV_CL2>;
-			power-coefficient = <859>;
-			static-power-coefficient = <599>;
-			tz-name = "BIG";
-		};
-	};
-
-	exynos-gpu-profiler {
-		compatible = "samsung,exynos-gpu-profiler";
-		status = "okay";
-
-		/* necessary data */
-		cal-id = <ACPM_DVFS_G3D>;
-
-		/* un-necessary data */
-		migov-id = <MIGOV_GPU>;
-		power-coefficient = <8220>;
-		static-power-coefficient = <0>;
-		tz-name = "G3D";
-	};
-
-	exynos-mif-profiler {
-		compatible = "samsung,exynos-mif-profiler";
-		status = "okay";
-
-		/* necessary data */
-		cal-id = <ACPM_DVFS_MIF>;
-
-		/* un-necessary data */
-		migov-id = <MIGOV_MIF>;
-		devfreq-type = <DEVFREQ_MIF>;
-		power-coefficient = <95150000>;
-		static-power-coefficient = <535>;
-	};
-
 	contexthub_0: contexthub {
 		compatible = "samsung,exynos-nanohub";
 		memory-region = <&contexthub_rmem>;
 		/* INTREQ MAILBOX_AP2CHUB */
-		interrupts = <GIC_SPI INTREQ__MAILBOX_CHUB2AP IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__WDT_CHUB IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__MAILBOX_CHUB2AP IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__WDT_CHUB IRQ_TYPE_LEVEL_HIGH 0>;
 		reg =	<0x0 0x14CC0000 0x200>,
 			<0x0 0x02800000 0x180000>,
 			<0x0 0x148F0000 0x100>,
@@ -1074,7 +1128,7 @@
 	/* TEEGRIS */
 	teegris {
 		compatible = "samsung,teegris";
-		interrupts =  <GIC_SPI INTREQ__TEEGRIS_EVENT IRQ_TYPE_LEVEL_HIGH>,
-		   				<GIC_SPI INTREQ__TEEGRIS_PANIC IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI INTREQ__TEEGRIS_EVENT IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI INTREQ__TEEGRIS_PANIC IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 };

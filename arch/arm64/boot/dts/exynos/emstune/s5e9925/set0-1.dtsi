@@ -5,6 +5,7 @@
 		sched_policy {
 			foreground 		= <SCHED_POLICY_PERF>;
 			top-app			= <SCHED_POLICY_PERF>;
+			midground 		= <SCHED_POLICY_PERF>;
 		};
 
 		/* Boosting margin applied to frequency selection */
@@ -20,6 +21,7 @@
 		ontime {
 			foreground 	= <1>;
 			top-app		= <1>;
+			midground   = <1>;
 
 			domain0 {
 				cpus = "0-3";
@@ -39,5 +41,10 @@
 		};
 
 		ecs { };
+
+		prefer_cpu {
+			top-app = "4-7";
+			small-task = "0-6";
+		};
 	};
 };

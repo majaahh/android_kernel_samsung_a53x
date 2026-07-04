@@ -9,6 +9,7 @@
 		ontime {
 			foreground	= <1>;
 			top-app		= <1>;
+			midground   = <1>;
 
 			domain0 {
 				cpus = "0-3";
@@ -55,6 +56,7 @@
 			up-rate-limit-freq	= < 1152000 2304000 2112000 >;
 			pelt-margin		= <  6   6   6 >;
 			pelt-margin-freq	= < 1152000 2304000 2112000 >;
+			dis-buck-share = <1 1 1>;
 		};
 	};
 };

@@ -20,7 +20,7 @@
 		compatible = "samsung,exynos8890-jpeg";
 		dma-coherent;
 		reg = <0x0 0x18940000 0x1000>;
-		interrupts = <0 INTREQ__M2M__JPEG0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__M2M__JPEG0 IRQ_TYPE_LEVEL_HIGH 0>;
 		iommus = <&sysmmu_d_m2m>;
 		samsung,iommu-group=<&iommu_group_mscl_smfc>;
 		smfc,int_qos_minlock = <800000>;
@@ -30,7 +30,7 @@
 		compatible = "samsung,exynos8890-jpeg";
 		dma-coherent;
 		reg = <0x0 0x18950000 0x1000>;
-		interrupts = <0 INTREQ__M2M__JPEG1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__M2M__JPEG1 IRQ_TYPE_LEVEL_HIGH 0>;
 		iommus = <&sysmmu_d_m2m>;
 		samsung,iommu-group=<&iommu_group_mscl_smfc>;
 		smfc,int_qos_minlock = <800000>;
@@ -39,7 +39,7 @@
 	scaler_0: scaler@18960000 {
 		compatible = "samsung,exynos5-scaler";
 		reg = <0x0 0x18960000 0x3000>;
-		interrupts = <0 INTREQ__M2M__M2M IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__M2M__M2M IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&clock GATE_M2M_QCH>;
 		clock-names = "gate";
 		itmon,master = "MSCL";
@@ -83,7 +83,7 @@
 		compatible = "samsung,exynos-jsqz";
 		//dma-coherent;
 		reg = <0x0 0x18980000 0x0200>;
-		interrupts = <0 INTREQ__M2M__JSQZ IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__M2M__JSQZ IRQ_TYPE_LEVEL_HIGH 0>;
 		//clocks = <&clock GATE_JSQZ_QCH>;
 		//clock-names = "gate";
 		iommus = <&sysmmu_d_m2m>;
@@ -94,8 +94,8 @@
 	mcfrc: mcfrc@0x18A50000 {
 		compatible = "samsung,exynos-mcfrc";
 		reg = <0x0 0x18A50000 0x1000>;
-		interrupts = <0 INTREQ__FRC_MC_DONE IRQ_TYPE_LEVEL_HIGH>,
-					<0 INTREQ__FRC_MC_DBL_ERR IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 INTREQ__FRC_MC_DONE IRQ_TYPE_LEVEL_HIGH 0>,
+					<0 INTREQ__FRC_MC_DBL_ERR IRQ_TYPE_LEVEL_HIGH 0>;
 		//clocks = <&clock GATE_FRC_MC_QCH>;
 		//clock-names = "gate";
 		iommus = <&sysmmu_d_m2m>;

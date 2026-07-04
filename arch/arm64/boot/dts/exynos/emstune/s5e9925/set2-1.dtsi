@@ -12,6 +12,7 @@
 			system-background	= <100 100 100>;
 			nnapi-hal		= <100 100 100>;
 			camera-daemon		= <100 100 100>;
+			midground = <100 100 100>;
 		};
 
 		/* weight (%) applied to idle cpu's efficiency */
@@ -25,11 +26,17 @@
 			system-background	= <200  200  200>;
 			nnapi-hal		= <200  200  200>;
 			camera-daemon		= <200  200  200>;
+			midground = <250 1000 1000>;
 		};
 
 		/* Boosting margin for waking up task */
 		wakeboost {			/* LIT MED BIG */
 			top-app			= < 40  40  40>;
+		};
+
+		prefer_cpu {
+			top-app = "4-7";
+			small-task = "0-6";
 		};
 	};
 };

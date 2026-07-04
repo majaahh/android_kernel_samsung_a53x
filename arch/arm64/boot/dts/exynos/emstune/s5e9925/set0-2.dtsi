@@ -5,16 +5,18 @@
 		sched_policy {
 			foreground 		= <SCHED_POLICY_PERF>;
 			top-app			= <SCHED_POLICY_PERF>;
+			midground       = <SCHED_POLICY_PERF>;
 		};
 
 		frt {	   			/* LIT MED BIG */
-			active-ratio 		= < 25   3   5>;
+			active-ratio 		= < 25   3   100>;
 		};
 
 		/* Ontime Migration */
 		ontime {
 			foreground 	= <1>;
 			top-app		= <1>;
+			midground   = <1>;
 
 			domain0 {
 				cpus = "0-3";
@@ -41,6 +43,7 @@
 
 			pinning-mask	= "4-7";
 			qjump		= <0>;
+			suppress    = <1>;
 		};
 
 		ntu {
@@ -53,11 +56,11 @@
 			system-background	= <0>;
 			nnapi-hal		= <0>;
 			camera-daemon		= <0>;
+			midground = <0>;
 		};
 
 		prefer_cpu {
 			top-app		= "4-7";
-			foreground	= "4-7";
 		};
 	};
 };

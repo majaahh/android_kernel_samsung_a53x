@@ -22,10 +22,10 @@
 		samsung,iommu-group = <&iommu_group_npu>;
 
 		interrupts =
-			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_4 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_5 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_6 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_1 IRQ_TYPE_LEVEL_HIGH>;
+			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_4 IRQ_TYPE_LEVEL_HIGH 0>,
+			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_5 IRQ_TYPE_LEVEL_HIGH 0>,
+			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_6 IRQ_TYPE_LEVEL_HIGH 0>,
+			<GIC_SPI INTREQ__FROM_DNC_TO_HOST_NS_1 IRQ_TYPE_LEVEL_HIGH 0>;
 
 		samsung,npusys-corenum = <3>;
 		/* refer to npu-system.h for memory names
@@ -65,15 +65,15 @@
 			<0 0x19400000 0x300000>,
 			<0 0x17DD0000 0x10000>,
 
-			<0 0x31000000 0x1000000>,
+			<0 0x31000000 0x200000>,
 			<0 0x32000000 0x500000>,
-			<0 0x33000000 0x1000000>,
+			<0 0x33000000 0x500000>,
 			<2 0x34000000 0x1000000>,
 			<0 0x35800000 0x100000>,
-			<0 0x36000000 0x500000>,
+			<0 0x36000000 0x200000>,
 			<0 0x36500000 0x1000>,
 			<0 0x36501000 0x7000>,
-			<0 0x36508000 0x200000>,
+			<0 0x36508000 0x100000>,
 			<0 0x40000000 0x40000000>;
 		samsung,npumem-names =
 				"sfrcmutop",	"SFR",
@@ -109,15 +109,15 @@
 				"idpsram",	"SFR",
 				"htunpus",	"SFR",
 
-				"fwmbox",	"",
-				"fwunittest",	"",
+				"fwmbox",	"fwmbox",
+				"fwunittest",	"fwunittest",
 				"ivp_pm",	"dsp_ivp_pm.bin",
-				"llc",		"",
-				"dl_out",	"",
-				"dsp_mem",	"",
-				"dhcp",		"",
+				"llc",		"llc",
+				"dl_out",	"dl_out",
+				"dsp_mem",	"dsp_mem",
+				"dhcp",		"dhcp",
 				"ivp_dm",	"dsp_ivp_dm.bin",
-				"fwlog",	"",
+				"fwlog",	"fwlog",
 				"CHUNK_IMB",	"IMB";
 
 		/* examples of memory area init
@@ -457,11 +457,11 @@
 			"INT",
 			"MIF";
 		samsung,npudvfs-normal-clock =
-			<0	0>,
+			<0	267000>,
 			<1	935000>,
-			<0	0>,
+			<0	267000>,
 			<1	1066000>,
-			<0	0>,
+			<0	332000>,
 			<1	1066000>,
 			<0	0>,
 			<0	0>;

@@ -79,6 +79,10 @@
 		enc_idr_flag = <1 0x210611>;
 		/* Encoder min quality mode */
 		min_quality_mode = <1 0x210705>;
+		/* Encoder time stamp delta */
+		enc_ts_delta = <1 2166823>;
+		/* Encoder I limit RC mode */
+		wfd_rc_mode = <1 2167337>;
 
 		/* AV1 Decoder */
 		support_av1_dec = <1>;
@@ -93,8 +97,6 @@
 		stride_align = <256>;
 		/* Decoder stride calculation type (new: 1, old: 0) */
 		stride_type = <1>;
-		/* Encoder time stamp delta */
-		enc_ts_delta = <1 0x211027>;
 
 		/* Formats */
 		support_10bit = <1>;
@@ -214,7 +216,7 @@
 		int_freq_fw_verify = <400000>;
 
 		/* Encoder timing info disable */
-		enc_timing_dis = <0>;
+		enc_timing_dis = <1>;
 
 		/* Sub nodes for MFC core */
 		#address-cells = <2>;
@@ -227,7 +229,7 @@
 			compatible = "samsung,exynos-mfc-core";
 			id = <0>;
 			reg = <0x0 0x186D0000 0x10000>;
-			interrupts = <0 INTREQ__MFC0 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <0 INTREQ__MFC0 IRQ_TYPE_LEVEL_HIGH 0>;
 			clock-names = "aclk_mfc";
 			clocks = <&clock CLK_MFC0_BASE>;
 			iommus = <&sysmmu_d0_mfc0>, <&sysmmu_d1_mfc0>;
@@ -444,7 +446,7 @@
 			compatible = "samsung,exynos-mfc-core";
 			id = <1>;
 			reg = <0x0 0x188D0000 0x10000>;
-			interrupts = <0 INTREQ__MFC1 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <0 INTREQ__MFC1 IRQ_TYPE_LEVEL_HIGH 0>;
 			clock-names = "aclk_mfc";
 			clocks = <&clock CLK_MFC1_BASE>;
 			iommus = <&sysmmu_d0_mfc1>, <&sysmmu_d1_mfc1>;
