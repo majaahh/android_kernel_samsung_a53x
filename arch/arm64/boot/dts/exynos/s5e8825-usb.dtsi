@@ -140,16 +140,10 @@
 		hs_tune_param = <&usb_hs_tune>;
 	};
 
-	usb_notifier {
-		compatible = "samsung,usb-notifier";
+	origin_usb_notifier {
+		compatible = "samsung,origin-usb-notifier";
 		udc = <&udc>;
 		status = "okay";
-	};
-
-	ifconn {
-		status = "okay";
-		compatible = "samsung,ifconn";
-                ifconn,usbpd = "s2mf301";
-                ifconn,muic = "s2mf301-muic";
+		disable_host_wakelock;
 	};
 };

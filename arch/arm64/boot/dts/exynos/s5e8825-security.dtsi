@@ -151,6 +151,11 @@
 		dun-swap = /bits/ 8 <0>;
 	};
 
+	/* Flash Memory Protector Simulator */
+	fmp-simulator {
+		compatible = "samsung,exynos-fmp-simulator";
+	};
+
 	/* CryptoManager */
 	cryptomanager {
 		compatible = "samsung,exynos-cm";

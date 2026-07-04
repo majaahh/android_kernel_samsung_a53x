@@ -21,6 +21,15 @@
 		compatible = "samsung,ems";
 		status = "okay";
 
+		pe-list {
+			list@0 {
+				cpus = "0-5", "6-7";
+			};
+			list@1 {
+				cpus = "6-7", "0-5";
+			};
+		};
+
 		cpu-selection-domain {
 			ananke {
 				cpus = "0-5";
@@ -64,6 +73,8 @@
 		};
 
 		ecs {
+			default-gov = <0>;
+
 			domain0 {
 				cpus = "6-7";
 
@@ -74,6 +85,20 @@
 				stage1 {
 					cpus = "6-7";
 				};
+			};
+		};
+
+		ecs_dynamic {
+			default-gov = <1>;
+
+			domain0 {
+				cpus = "0-5";
+				default-cpus = "0-3";
+			};
+
+			domain1 {
+				cpus = "6-7";
+				default-cpus = "6-7";
 			};
 		};
 

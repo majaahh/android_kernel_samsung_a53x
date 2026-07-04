@@ -21,7 +21,7 @@
 		samsung,iommu-group = <&iommu_group_npu>;
 		#dma-address-cells = <1>;
 		#dma-size-cells = <1>;
-		dma-window = <0x80000000 0x60000000>;
+		dma-window = <0x60000000 0x90000000>;
 	//	memory-region = <&dsp_shmem>;
 
 		interrupts =
@@ -94,6 +94,9 @@
 			<1	0x800	0xF1000000	0xF1000000	0>,
 			<1	0x800	0xF1000000	0xF1000000	0>,
 			<1	0x0	0x00000000	0xFFFFFFFF	0>;
+
+		samsung,npucmd-cpupc-sfr = "sfrnpus";
+		samsung,npucmd-cpupc-data = <0 0x11050C 0 0xFFFFFFFF 0>;
 
 		samsung,npucmd-hwacgen-sfr =
 			"sfrblknpus",

@@ -19,6 +19,8 @@
 		             <GIC_SPI INTREQ__G3D_IRQMMU IRQ_TYPE_LEVEL_HIGH>,
 		             <GIC_SPI INTREQ__G3D_IRQGPU IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "JOB", "MMU", "GPU";
+		clock-names = "gpu_clock";
+		clocks = <&clock MOUT_CLKCMU_G3D_BUS_USER>;
 		g3d_cmu_cal_id = <ACPM_DVFS_G3D>;
 		//system-coherency = <0>;
 		power-domains = <&pd_g3d>;
@@ -29,15 +31,15 @@
 		gpu_dvfs_table_size = <9 8>; /*<row col>*/
 		/*  8 columns      freq  down   up  stay  mif    little  middle   big  */
 		gpu_dvfs_table = <
-			897000    78  100   5  1794000  1066000       0       0
-			806000    78   95   5  1539000  1066000       0       0
-			702000    78   95   5  1352000  1066000       0       0
-			611000    78   95   5  1352000  1066000       0       0
-			507000    78   95   1  1014000  1066000       0       0
-			403000    78   90   1  1014000       0       0       0
-			312000    78   85   1   845000       0       0       0
-			208000    78   85   1   676000       0       0       0
-			104000     0   85   1   676000       0       0       0 >;
+			897000 	78  100  5  1794000  1056000  0  0
+			806000 	78  95   5  1539000  1056000  0  0
+			702000 	78  95   5  1352000  1056000  0  0
+			611000 	78  95   5  1352000  1056000  0  0
+			507000  70  90   3  1014000  1056000  0  0
+			403000  60  80   3  1014000  0        0  0
+			312000  50  70   2  845000   0        0  0
+			208000  30  60   2  676000   0        0  0
+			104000  0   40   1  676000   0        0  0>;
 		gpu_sustainable_info = <403000 95 0 0 0>;
 		gpu_pmqos_cpu_cluster_num = <3>;
 		gpu_pmu_status_reg_offset = <0x2804>;

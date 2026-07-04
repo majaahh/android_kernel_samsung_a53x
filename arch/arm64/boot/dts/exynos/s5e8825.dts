@@ -237,7 +237,7 @@
 		/* WAKEUP_STAT,      WAKEUP2_STAT in PMU registers*/
 		wakeup_stat_offset = <0x3b50>,		<0x3b54>;
 		wakeup_int_en_offset = <0x3b44>,	<0x3b64>;
-		wakeup_int_en = <0x001fff6e>,		<0x2e70>;
+		wakeup_int_en = <0x001fff6e>,		<0x2e78>;
 		usbl2_wakeup_int_en = <0x0>,		<0x30>;
 		eint_wakeup_mask_offset = <0x60C>;
 		wakeup-stat-eint = <12>;

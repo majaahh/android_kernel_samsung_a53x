@@ -225,6 +225,9 @@
 		interrupts = <GIC_SPI INTREQ__DPU_DSIM0 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dsim";
 
+		iommus = <&sysmmu_d0_dpuf0>, <&sysmmu_d1_dpuf0>;
+		samsung,iommu-group = <&iommu_group_dpu>;
+
 		phys = <&mipi_phy_dsim0_m4s0 0>;
 		phy-names = "dsim_dphy";
 
@@ -304,8 +307,9 @@
 		svsync_time_us = <2000>;
 
 		/* BTS */
-		ppc = <2>;			/* pixel per clock */
+		ppc = <1>;			/* pixel per clock */
 		ppc_rotator = <2>;		/* rotator ppc */
+		ppc_rotator_wr = <4>;		/* rotator ppc wr */
 		ppc_scaler = <2>;		/* scaler ppc */
 		delay_comp = <4>;		/* line delay for sajc or sbwc : DMA */
 		delay_scaler = <3>;		/* line delay for scaler : DPP */
@@ -425,8 +429,9 @@
 		//cycle_per_line = <8>;   /* 4ppc */
 
 		/* BTS */
-		ppc = <2>;			/* pixel per clock */
+		ppc = <1>;			/* pixel per clock */
 		ppc_rotator = <2>;		/* rotator ppc */
+		ppc_rotator_wr = <4>;		/* rotator ppc wr */
 		ppc_scaler = <2>;		/* scaler ppc */
 		delay_comp = <4>;		/* line delay for sajc or sbwc : DMA */
 		delay_scaler = <3>;		/* line delay for scaler : DPP */

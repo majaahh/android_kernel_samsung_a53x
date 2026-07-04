@@ -123,7 +123,7 @@
 		sel-scanmode-bit = <25>;
 		dbgsel-sw-bit = <4>;
 		pmu-rst-seq = <0x0500>;
-		pmu-rst-seq-safe-mode-bit = <8>;
+		pmu-rst-seq-safe-mode-bit = <31>;
 		status = "ok";
 	};
 
