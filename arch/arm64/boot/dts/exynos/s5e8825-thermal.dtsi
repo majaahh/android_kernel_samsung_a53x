@@ -475,6 +475,56 @@
 			polling-delay-passive = <0>;
 			polling-delay = <0>;
 			thermal-sensors = <&tmuctrl_5>;
+
+			trips {
+				cp-alert0 {
+					temperature = <0x4e20>;
+					hysteresis = <0x1388>;
+					type = "active";
+				};
+
+				cp-alert1 {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "passive";
+				};
+
+				cp-alert2 {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "passive";
+				};
+
+				cp-alert3 {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "passive";
+				};
+
+				cp-alert4 {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "passive";
+				};
+
+				cp-alert5 {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "passive";
+				};
+
+				cp-alert6 {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "passive";
+				};
+
+				cp-hot {
+					temperature = <0x1d4c0>;
+					hysteresis = <0x1388>;
+					type = "hot";
+				};
+			};
 		};
 	};
 	smc_info: mcinfo@1c030000 {

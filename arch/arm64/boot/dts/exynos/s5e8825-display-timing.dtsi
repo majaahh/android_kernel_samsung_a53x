@@ -18,7 +18,7 @@
 					0x0 0x0 0x0 0x0
 					0x0 0x0
 					>;
-				hs-clk = <1108>;
+				hs-clk = <1100>;
 				esc-clk = <20>;
 				cmd_underrun_cnt = <7397>;
 			    };
@@ -31,7 +31,7 @@
 					0x0 0x0 0x0 0x0
 					0x0 0x0
 					>;
-				hs-clk = <1108>;
+				hs-clk = <1100>;
 				esc-clk = <20>;
 				cmd_underrun_cnt = <7397>;
 			    };
@@ -44,7 +44,7 @@
 					0x0 0x0 0x0 0x0
 					0x0 0x0
 					>;
-				hs-clk = <1108>;
+				hs-clk = <1100>;
 				esc-clk = <20>;
 				cmd_underrun_cnt = <2107>;
 			    };
@@ -57,7 +57,7 @@
 					0x0 0x0 0x0 0x0
 					0x0 0x0
 					>;
-				hs-clk = <1108>;
+				hs-clk = <511>;
 				esc-clk = <20>;
 				cmd_underrun_cnt = <4357>;
 			    };
@@ -70,7 +70,7 @@
 					0x0 0x0 0x0 0x0
 					0x0 0x0
 					>;
-				hs-clk = <1108>;
+				hs-clk = <511>;
 				esc-clk = <20>;
 				cmd_underrun_cnt = <4357>;
 			    };
@@ -84,7 +84,7 @@
 					0x0 0x0 0x0 0x0
 					0x0 0x0
 					>;
-				hs-clk = <1108>;
+				hs-clk = <894>;
 				esc-clk = <20>;
 				cmd_underrun_cnt = <5195>;
 			    };

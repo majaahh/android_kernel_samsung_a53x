@@ -19,11 +19,6 @@
 		ppmpu-limit = <0x9 0x80000000>;
 	};
 
-	system_dma_heap {
-		compatible = "samsung,dma-heap-system";
-		dma-heap,name = "system";
-	};
-
 	crypto_dma_heap {
 		compatible = "samsung,dma-heap-cma";
 		memory-region = <&crypto>;
@@ -31,57 +26,70 @@
 		dma-heap,alignment = <0x10000>;
 	};
 
+	crypto_uncached_dma_heap {
+		compatible = "samsung,dma-heap-cma";
+		memory-region = <&crypto>;
+		dma-heap,uncached;
+		dma-heap,name = "crypto-uncached";
+	};
+
 	video_stream_dma_heap {
 		compatible = "samsung,dma-heap-cma";
 		memory-region = <&vstream>;
-		dma-heap,name = "system-secure-vstream";
+		dma-heap,name = "system-secure-vstream-secure";
 		dma-heap,secure;
+		dma-heap,secure_sysmmu;
 		dma-heap,protection_id = <3>;
 		dma-heap,alignment = <0x10000>;
 	};
 
 	video_frame_dma_heap {
-		compatible = "samsung,dma-heap-carveout";
+		compatible = "samsung,dma-heap-carveout-secure";
 		memory-region = <&vframe>;
 		dma-heap,name = "vframe";
 		dma-heap,secure;
+		dma-heap,secure_sysmmu;
 		dma-heap,protection_id = <5>;
 		dma-heap,alignment = <0x10000>;
 	};
 
 	video_scaler_dma_heap {
-		compatible = "samsung,dma-heap-carveout";
+		compatible = "samsung,dma-heap-carveout-secure";
 		memory-region = <&vscaler>;
 		dma-heap,name = "vscaler";
 		dma-heap,secure;
+		dma-heap,secure_sysmmu;
 		dma-heap,protection_id = <6>;
 		dma-heap,alignment = <0x10000>;
 	};
 
 	gpu_buffer_dma_heap {
-		compatible = "samsung,dma-heap-carveout";
+		compatible = "samsung,dma-heap-carveout-secure";
 		memory-region = <&gpu_buffer>;
 		dma-heap,name = "system-secure-gpu_buffer";
 		dma-heap,secure;
+		dma-heap,secure_sysmmu;
 		dma-heap,protection_id = <9>;
 		dma-heap,alignment = <0x10000>;
 	};
 
 	secure_camera_dma_heap {
-		compatible = "samsung,dma-heap-carveout";
+		compatible = "samsung,dma-heap-carveout-secure";
 		memory-region = <&secure_camera>;
 		dma-heap,name = "secure_camera";
 		dma-heap,untouchable;
 		dma-heap,secure;
+		dma-heap,secure_sysmmu;
 		dma-heap,protection_id = <11>;
 		dma-heap,alignment = <0x10000>;
 	};
 
 	tui_dma_heap {
-		compatible = "samsung,dma-heap-cma";
+		compatible = "samsung,dma-heap-cma-secure";
 		memory-region = <&tui>;
 		dma-heap,name = "tui";
 		dma-heap,secure;
+		dma-heap,secure_sysmmu;
 		dma-heap,protection_id = <20>;
 		dma-heap,alignment = <0x10000>;
 	};
