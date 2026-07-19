@@ -34,44 +34,48 @@
 			no-map;
 		};
 
-		header: header {
-			compatible = "header";
-			reg = <0 DSS_HEADER_ADDR DSS_HEADER_SIZE>;
-			no-map;
-		};
-		log_kernel: log_kernel {
-			compatible = "log_kernel";
-			reg = <0 DSS_KERNEL_ADDR DSS_KERNEL_SIZE>;
-		};
-		log_platform: log_platform {
-			compatible = "log_platform";
-			reg = <0 DSS_PLATFORM_ADDR DSS_PLATFORM_SIZE>;
-		};
-		log_s2d: log_s2d {
-			compatible = "log_s2d";
-			reg = <0 DSS_S2D_ADDR DSS_S2D_SIZE>;
-		};
-		log_first: log_first {
-			compatible = "log_first";
-			reg = <0 DSS_FIRST_ADDR DSS_FIRST_SIZE>;
-		};
-		log_arrdumpreset: log_arrdumpreset {
-			compatible = "log_arrdumpreset";
-			reg = <0 DSS_ARRAYRESET_ADDR DSS_ARRAYRESET_SIZE>;
-		};
-		log_arrdumppanic: log_arrdumppanic {
-			compatible = "log_arrdumppanic";
-			reg = <0 DSS_ARRAYPANIC_ADDR DSS_ARRAYPANIC_SIZE>;
-			status = "no";
-		};
-		log_kevents: log_kevents {
-			compatible = "log_kevents";
-			reg = <0 DSS_KEVENTS_ADDR DSS_KEVENTS_SIZE>;
-		};
-		log_kevents_small: log_kevents_small {
-			compatible = "log_kevents";
-			reg = <0 DSS_KEVENTS_ADDR 0xA6000>;
-			status = "no";
+		dss_rmem: debug_snapshot {
+			#address-cells = <2>;
+			#size-cells = <1>;
+			header: header {
+				compatible = "header";
+				reg = <0 DSS_HEADER_ADDR DSS_HEADER_SIZE>;
+				no-map;
+			};
+			log_kernel: log_kernel {
+				compatible = "log_kernel";
+				reg = <0 DSS_KERNEL_ADDR DSS_KERNEL_SIZE>;
+			};
+			log_platform: log_platform {
+				compatible = "log_platform";
+				reg = <0 DSS_PLATFORM_ADDR DSS_PLATFORM_SIZE>;
+			};
+			log_s2d: log_s2d {
+				compatible = "log_s2d";
+				reg = <0 DSS_S2D_ADDR DSS_S2D_SIZE>;
+			};
+			log_first: log_first {
+				compatible = "log_first";
+				reg = <0 DSS_FIRST_ADDR DSS_FIRST_SIZE>;
+			};
+			log_arrdumpreset: log_arrdumpreset {
+				compatible = "log_arrdumpreset";
+				reg = <0 DSS_ARRAYRESET_ADDR DSS_ARRAYRESET_SIZE>;
+			};
+			log_arrdumppanic: log_arrdumppanic {
+				compatible = "log_arrdumppanic";
+				reg = <0 DSS_ARRAYPANIC_ADDR DSS_ARRAYPANIC_SIZE>;
+				status = "no";
+			};
+			log_kevents: log_kevents {
+				compatible = "log_kevents";
+				reg = <0 DSS_KEVENTS_ADDR DSS_KEVENTS_SIZE>;
+			};
+			log_kevents_small: log_kevents_small {
+				compatible = "log_kevents";
+				reg = <0 DSS_KEVENTS_ADDR 0xA6000>;
+				status = "no";
+			};
 		};
 
 		debug_kinfo_reserved: debug_kinfo_reserved@effff000 {
