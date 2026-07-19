@@ -25,25 +25,40 @@
 		iommus = <&sysmmu_d0_mfc0>;
 		samsung,iommu-group = <&iommu_group_mfc>;
 		samsung,iommu-reserved-map = <0x0 0x0 0x10000000>,
-				<0x0 0x10000000 0x100000>;
+				<0x0 0x10000000 0x100000>,
+				<0x0 0x80000000 0x100000>;
 
 		samsung,tzmp;
 
 		/* for F/W buffer */
 		memory-region = <&mfc_fw_rmem>;
 
+		dma_bit_mask = <0x20>;
+
 		/* MFC version */
 		ip_ver = <0x1420>;
 
+		drm_regs = <0x0>;
+
 		/* Debug mode (disable needs sysmmu,async-fault) */
-		debug_mode = <0>;
+		debug_mode = <0x0>;
+
+		max_num_drm_inst = <0x2>;
 
 		/* NAL-Q size */
-		nal_q_entry_size = <768>;
-		nal_q_dump_size = <376>;
+		nal_q_entry_size = <0x0>;
+		nal_q_dump_size = <0x0>;
+		nal_q_dpb_size = <0x0>;
 
 		/* Features <on/off version> */
 		nal_q = <0 0x0>;
+		nal_q_ll = <0>;
+		nal_q_dpb = <0>;
+		nal_q_batch_dec = <0>;
+		nal_q_batch_enc = <0>;
+		batch_drm = <0>;
+		batch_num = <0>;
+		nal_q_mode1 = <0>;
 		skype = <1 0x0>;
 		black_bar = <1 0x0>;
 		color_aspect_dec = <1 0x0>;
@@ -73,44 +88,58 @@
 		enc_idr_flag = <1 0x210614>;
 		/* Encoder min quality mode */
 		min_quality_mode = <1 0x241024>;
+		enc_capability = <1 0x220524>;
 		/* Encoder time stamp delta */
 		enc_ts_delta = <0 0x211027>;
 		/* Encoder I limit RC mode */
 		wfd_rc_mode = <0 0>;
+		max_i_frame_size = <0 0x220615>;
+		hevc_pic_output_flag = <1 0x221205>;
 
 		/* AV1 Decoder */
 		support_av1_dec = <0>;
 		/* Support AV1 Film Grain Feature */
 		av1_film_grain = <0 0x200717>;
 
-		/* Default 10bit format for decoding (1: P010, 0: 8+2) */
-		P010_decoding = <1>;
+		internal_fmt_comp = <0>;
+		P010_decoding = <0>;
 		/* Dithering option for 8bit display device */
 		dithering_enable = <0>;
 		/* Decoder stride align (default: 16, AMD GPU: 256) */
 		stride_align = <16>;
 		/* Decoder stride calculation type (new: 1, old: 0) */
 		stride_type = <0>;
+		stream_buf_limit = <0>;
+		support_8K_cavlc = <0>;
 
 		/* Formats */
 		support_10bit = <0>;
 		support_422 = <0>;
 		support_rgb = <0>;
 
+		support_check_res = <3>;
+
 		/* SBWC */
-		support_sbwc = <1>;
+		support_sbwc = <0>;
 		support_sbwcl = <0>;
 		support_sbwcl40 = <0>;
+		support_sbwclh = <0>;
+		support_sbwc_gpu = <0>;
 
 		/* SBWC decoder max resolution */
-		sbwc_dec_max_width = <1920>;
-		sbwc_dec_max_height = <1088>;
+		sbwc_dec_max_width = <0>;
+		sbwc_dec_max_height = <0>;
 		sbwc_dec_max_inst_num = <0>;
-		sbwc_dec_max_framerate = <60>;
+		sbwc_dec_max_framerate = <0>;
 		sbwc_dec_hdr10_off = <0>;
+
+		support_fg_shadow = <0>;
+		support_hwapg = <0>;
+		support_hwacg = <0>;
 
 		/* HDR10+ num max window */
 		max_hdr_win = <0>;
+		hdr10_plus_profile = <0>;
 
 		/* error type for sync_point display */
 		/* (1: concealment display, 2: error display, 3: error no display) */
@@ -127,60 +156,29 @@
 				0xF790 0xFA34 0xFA38 0xFA3C 0xFDD4
 				0xFDDC 0xFB54 0xFB58 0xFBA8 0xFD40
 				0xFD48 0xFD4C 0xFD50 0xFD80>;
-
 		enc_param_val = <0x80 0x80 0x0 0x4000 0x3FD00
 				0x0 0x0 0x2710 0x3E8 0x50D211
 				0x0 0x3011 0x0 0x0 0x1D
 				0xF4240 0x33003300 0x2 0x1>;
 
 		/* BW <peak, read, write> : KB/UHD frame */
-		bw_enc_h264		= <73114 48320 23788>;
-		bw_enc_hevc		= <61440 39141 21211>;
-		bw_enc_hevc_10bit	= <0 0 0>;
-		bw_enc_vp8		= <73728 48361 24416>;
-		bw_enc_vp9		= <0 0 0>;
-		bw_enc_vp9_10bit	= <0 0 0>;
-		bw_enc_mpeg4		= <0 0 0>;
-		bw_dec_h264		= <70452 38216 23634>;
-		bw_dec_hevc		= <63079 31942 20484>;
-		bw_dec_hevc_10bit	= <0 0 0>;
-		bw_dec_vp8		= <50074 26976 22324>;
-		bw_dec_vp9		= <0 0 0>;
-		bw_dec_vp9_10bit	= <0 0 0>;
-		bw_dec_av1		= <0 0 0>;
-		bw_dec_av1_10bit	= <0 0 0>;
-		bw_dec_mpeg4		= <0 0 0>;
-
-		/* BW <peak, read, write> : KB/UHD frame. For SBWC format */
-		/* It is valid when only support_sbwc = <1> */
-		sbwc_bw_enc_h264	= <0 0 0>;
-		sbwc_bw_enc_hevc	= <0 0 0>;
-		sbwc_bw_enc_hevc_10bit	= <0 0 0>;
-		sbwc_bw_enc_vp8		= <0 0 0>;
-		sbwc_bw_enc_vp9		= <0 0 0>;
-		sbwc_bw_enc_vp9_10bit	= <0 0 0>;
-		sbwc_bw_enc_mpeg4	= <0 0 0>;
-		sbwc_bw_dec_h264	= <0 0 0>;
-		sbwc_bw_dec_hevc	= <0 0 0>;
-		sbwc_bw_dec_hevc_10bit	= <0 0 0>;
-		sbwc_bw_dec_vp8		= <0 0 0>;
-		sbwc_bw_dec_vp9		= <0 0 0>;
-		sbwc_bw_dec_vp9_10bit	= <0 0 0>;
-		sbwc_bw_dec_mpeg4	= <0 0 0>;
+		bw_enc_h264		= <45456 56112 11170>;
+		bw_enc_hevc		= <46756 52766 9763>;
+		bw_enc_vp8		= <64000 67318 22518>;
+		bw_dec_h264		= <32605 34381 21263>;
+		bw_dec_hevc		= <29973 28851 17538>;
+		bw_dec_vp8		= <28672 30468 22324>;
+		bw_dec_vp9		= <18351 18947 16877>;
 
 		/* QoS bitrate */
-		num_mfc_freq = <8>;
-		mfc_freqs = <133000 200000 266000 333000 400000 444000 533000 666000>;
-		/* spec: H264(240M) VP8(80M) */
-		max_Kbps = <245760 81920>;
+		num_mfc_freq = <6>;
+		mfc_freqs = <83000 148000 333000 444000 533000 666000>;
 		/* QoS weight (%) */
-		dynamic_weight = <0>;
+		dynamic_weight = <1>;
 		qos_weight_h264_hevc = <100>;
 		qos_weight_vp8_vp9 = <100>;
-		qos_weight_av1 = <70>;
 		qos_weight_other_codec = <25>;
 		qos_weight_3plane = <80>;
-		qos_weight_10bit = <75>;
 		qos_weight_422 = <70>;
 		qos_weight_bframe = <50>;
 		qos_weight_num_of_ref = <60>;
@@ -195,6 +193,10 @@
 		/* MFC IOVA threshold (MB) */
 		iova_threshold = <1700>;
 
+		enc_rgb_csc_by_fw = <1>;
+		support_enc_mode1 = <0>;
+		support_mv_hevc = <0>;
+
 		/* need control for mfc idle clock */
 		idle_clk_ctrl = <1>;
 
@@ -208,13 +210,39 @@
 		memlog_size = <0x80000>;
 		memlog_sfr_size = <0x1000>;
 
-		/* Encoder timing info disable */
-		enc_timing_dis = <1>;
+		scheduler = <0>;
+		pbs_num_prio = <0>;
 
 		/* Sub nodes for MFC core */
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
+
+		reg_h264_loop_filter_disable = <0x2150>;
+
+		mfc_resource {
+			H264_dec {
+				info = <0x0 0x0 0x14000>;
+			};
+			HEVC_dec {
+				info = <0x11 0x0 0x14000>;
+			};
+			VP8_dec {
+				info = <0xe 0x0 0x8000>;
+			};
+			VP9_dec {
+				info = <0x12 0x0 0x8000>;
+			};
+			H264_enc {
+				info = <0x14 0x0 0x14000>;
+			};
+			HEVC_enc {
+				info = <0x1a 0x0 0x14000>;
+			};
+			VP8_enc {
+				info = <0x19 0x0 0x8000>;
+			};
+		};
 
 		/* MFC core device */
 		mfc_core0: MFC-0 {
@@ -227,10 +255,10 @@
 			clocks = <&clock GATE_MFC_QCH>;
 			iommus = <&sysmmu_d0_mfc0>;
 			samsung,iommu-group = <&iommu_group_mfc>;
-			samsung,iommu-reserved-map = <0x0 0x10000000 0x100000>;
+			samsung,iommu-reserved-map = <0x0 0x10000000 0x100000>,
+				<0x0 0x80000000 0x100000>;
 
 			samsung,tzmp;
-			samsung,imgloader-s2mpu-support;
 			/* MFC version */
 			ip_ver = <0x1420>;
 
@@ -253,6 +281,7 @@
 			mfc_freq_control = <1>;
 			mo_control = <1>;
 			bw_control = <1>;
+			pm_qos_id = <0x16>;
 
 			/* Sub nodes for sysmmu, hwfc and mmcache */
 			#address-cells = <2>;
@@ -264,6 +293,7 @@
 			#dma-address-cells = <1>;
 			#dma-size-cells = <1>;
 			dma-window = <0x0 0xC0000000>;
+			gdc_otf = <0x0>;
 
 			iommu {
 			        reg = <0x0 0x12E70000 0x9000>;
@@ -344,6 +374,7 @@
 			/* QoS table for performance boost mode */
 			mfc_perf_boost_table {
 				num_cluster = <2>;
+				num_cpu = <0x0 0x2 0x7>;
 				freq_cluster = <2002000 2400000>;
 				freq_mfc = <666000>;
 				freq_int = <666000>;

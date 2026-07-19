@@ -21,7 +21,11 @@
 		interrupts = <0 INTREQ__JPEG0 IRQ_TYPE_LEVEL_HIGH>;
 		iommus = <&sysmmu_d0_m2m>;
 		samsung,iommu-group=<&iommu_group_mscl_smfc>;
-		smfc,int_qos_minlock = <800000>;
+		core_dvfs_class = <0xb>;
+		smfc,int_qos_minlock = "", "\f5";
+		smfc,mif_qos_minlock = <1014000>;
+		smfc_bpc = <16>;
+		smfc_core_clk = "", "\f5";
 	};
 
 	scaler_0: scaler@12C80000 {

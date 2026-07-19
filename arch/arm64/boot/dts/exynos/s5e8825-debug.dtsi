@@ -9,20 +9,33 @@
 
 	dss: dss {
 		compatible = "samsung,debug-snapshot";
+		samsung,syscon-phandle = <&pmu_system_controller>;
 		panic_to_wdt = <0>;
 		last_kmsg = <1>;
 		hold-key = <KEY_VOLUMEDOWN>;
 		trigger-key = <KEY_POWER>;
+		scratch-disable = <0>;
 		scratch-offset = <0x810>; /* SYSIP_DAT0 */
 		scratch-bit = <6>;
+		console_kmsg = <0>;
 		freq_names = "LIT", "MID", "BIG", "INT", "MIF", "CAM",
 				"DISP", "INTCAM", "AUD", "MFC0", "NPU", "DSU",
 				"DNC", "CSIS", "ISP", "MFC1", "DSP", "ALIVE",
 				"CHUB", "VTS", "HSI0", "G3D";
 		memory-region = <&header>, <&log_kernel>, <&log_s2d>,
-				<&log_first>, <&log_arrdumpreset>,
+				<&log_first>, <&log_arrdumprst>,
 				<&log_arrdumppanic>, <&log_platform>,
 				<&log_kevents>, <&log_backtrace>, <&log_kevents_small>;
+
+		built-in-wdt {
+			compatible = "samsung,s3c2410-dss-builtin-wdt";
+			wdt_base = <0x10060000>;
+		};
+	};
+
+	getcpustate {
+		compatible = "samsung,exynos-getcpustate";
+		core_pmustatus_offset = <0x1004 0x1084 0x1104 0x1184 0x1204 0x1284 0x1504 0x1584>;
 	};
 
 	dss-debug-kinfo {
@@ -69,6 +82,24 @@
 		big_cpu_start = <0x6>;
 	};
 
+	exynos-ssld {
+		compatible = "samsung,exynos-ssld";
+		nr_idx = <0x80>;
+	};
+
+	samsung,memlogger {
+		compatible = "samsung,memlogger";
+		memory-region = <&memlog_mem>;
+		samsung,bl-node = <&memlog_bl_base>;
+	};
+
+	samsung,memlog_policy {
+		samsung,log-level = <4>;
+		samsung,file-default-status = <1>;
+		samsung,mem-constraint = <0>;
+		samsung,mem-to-file-allow = <1>;
+	};
+
 	exynos-ecc-handler {
 		compatible = "samsung,exynos-ecc-handler";
 		interrupts = <GIC_SPI INTREQ__CPUCL0_ERRIRQ_0 IRQ_TYPE_LEVEL_HIGH>,
@@ -91,6 +122,7 @@
 			"Core7, Uncorrectable errors in the L1 tag or dirty or L2 tag RAMs";
 		interrupt-affinity = <0xff>, <0x1>, <0x2>, <0x4>, <0x8>,
 				<0x10>, <0x20>, <0x40>, <0x80>;
+		policy = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
 	};
 
 	coresight {
@@ -129,6 +161,8 @@
 
 	exynos-ehld {
 		compatible = "samsung,exynos-ehld";
+		status = "okay";
+		cpu-end = <0x3 0x7>;
 		reg = <0 0x10880000 0x1000>,
 			<0 0x10890000 0x1000>,
 			<0 0x10860000 0x1000>,

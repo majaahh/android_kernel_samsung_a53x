@@ -1,5 +1,2 @@
 / {
-    wlbt_hw_ver: wlbt_hw_ver {
-        compatible = "exynos,wlbt_hw_ver";
-    };
 };

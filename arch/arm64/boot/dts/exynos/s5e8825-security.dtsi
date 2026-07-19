@@ -92,9 +92,10 @@
 	};
 
 	/* tbase */
-	tee {
-		compatible = "samsung,exynos-tee";
-		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_EDGE_RISING>;
+	teegris {
+		compatible = "samsung,teegris";
+		interrupts = <GIC_SPI INTREQ__TEEGRIS_EVENT IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__TEEGRIS_PANIC IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	tee-tui {
@@ -159,8 +160,14 @@
 	/* CryptoManager */
 	cryptomanager {
 		compatible = "samsung,exynos-cm";
+		cryptomanager-ver = "CryptoManagerV60";
 		sysreg_addr = <0x12821508>;
 		ap_addr = <0x12960000>;
 		cp_addr = <0x12970000>;
+	};
+
+	sdm {
+		compatible = "samsung,exynos-sdm";
+		sdm_enable = "true";
 	};
 };

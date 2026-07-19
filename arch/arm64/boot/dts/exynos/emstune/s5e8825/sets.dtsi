@@ -20,7 +20,3 @@
 #include "set4.dtsi"
 #include "set4-1.dtsi"
 #include "set4-2.dtsi"
-/* Camera mode */
-#include "set5.dtsi"
-#include "set5-1.dtsi"
-#include "set5-2.dtsi"

@@ -233,6 +233,7 @@
 
 		dsim_mode = <&dsim_modes>;
 		dsi-burst-cmd = <1>;
+		frequency-hopping;
 
 		/* rmem region define is moved to model dtsi */
 #if 0
@@ -364,8 +365,6 @@
 
 		partial-update;
 		hibernation;
-		recovery-enable;
-		recovery-modes = "force", "dsim", "customer";
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
@@ -374,17 +373,6 @@
 		te_eint {
 			/* NWEINT_GPG0_PEND */
 			reg = <0x0 0x10040A10 0x4>;
-		};
-		recovery-condition { /* child */
-			dsim {
-				max-recovery = <10>; /* max count */
-			};
-
-			customer {
-				max-recovery = <10>;
-				refresh-panel; /* including panel refresh */
-				reset-vblank;
-			};
 		};
 	};
 

@@ -21,15 +21,6 @@
 		compatible = "samsung,ems";
 		status = "okay";
 
-		pe-list {
-			list@0 {
-				cpus = "0-5", "6-7";
-			};
-			list@1 {
-				cpus = "6-7", "0-5";
-			};
-		};
-
 		cpu-selection-domain {
 			ananke {
 				cpus = "0-5";
@@ -73,7 +64,6 @@
 		};
 
 		ecs {
-			default-gov = <0>;
 
 			domain0 {
 				cpus = "6-7";
@@ -85,20 +75,6 @@
 				stage1 {
 					cpus = "6-7";
 				};
-			};
-		};
-
-		ecs_dynamic {
-			default-gov = <1>;
-
-			domain0 {
-				cpus = "0-5";
-				default-cpus = "0-3";
-			};
-
-			domain1 {
-				cpus = "6-7";
-				default-cpus = "6-7";
 			};
 		};
 
@@ -184,22 +160,6 @@
 				level2 {
 					base = <&set4>;
 					set = <&set4_2>;
-				};
-			};
-			mode5 {
-				desc = "camera";
-
-				level0 {
-					base = <&set5>;
-					set = <&set5>;
-				};
-				level1 {
-					base = <&set5>;
-					set = <&set5_1>;
-				};
-				level2 {
-					base = <&set5>;
-					set = <&set5_2>;
 				};
 			};
 		};

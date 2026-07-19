@@ -26,9 +26,9 @@
 #include <dt-bindings/soc/samsung/exynos-migov.h>
 #include "s5e8825-pinctrl.dtsi"
 #include "s5e8825-power.dtsi"
+#include "s5e8825-rmem.dtsi"
 #include "s5e8825-sysmmu.dtsi"
 #include "s5e8825-usi.dtsi"
-#include "s5e8825-rmem.dtsi"
 #include "s5e8825-dma-heap.dtsi"
 #include "s5e8825-acpm.dtsi"
 #include "s5e8825-ufs.dtsi"
@@ -54,8 +54,6 @@
 
 / {
 	compatible = "samsung,armv8", "samsung,s5e8825";
-	dtb-hw_rev = <0>; 
-	dtb-hw_rev_end = <255>;
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <1>;
@@ -74,8 +72,13 @@
 
 	};
 
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x80000000>;
+	};
+
 	chosen:chosen {
-		bootargs = "printk.devkmsg=on clk_ignore_unused clocksource=arch_sys_counter firmware_class.path=/vendor/firmware rcupdate.rcu_expedited=1 s3c2410_wdt.tmr_atboot=1 swiotlb=noforce loop.max_part=7 allow_file_spec_access";
+		bootargs = "console=ram printk.devkmsg=on clk_ignore_unused clocksource=arch_sys_counter firmware_class.path=/vendor/firmware rcupdate.rcu_expedited=1 s3c2410_wdt.tmr_atboot=1 cpif.cp_btl=on swiotlb=noforce loop.max_part=7 arm64.nomte s3c2410_wdt_ext.tmr_atboot=1 memblock_memsize=procfs fault_around_bytes=4096 kswapd_cpumask=0x3f kcompactd_cpumask=0x3f raise_min_free_kbytes=false transparent_hugepage=never cgroup.memory=nokmem,nosocket";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x84FFFFFF>;
 	};
@@ -569,6 +572,11 @@
 		status = "okay";
 	};
 
+	sdm {
+		compatible = "samsung,exynos-sdm";
+		sdm_enable = "true";
+	};
+
 	exynos-cpu-profiler {
 		compatible = "samsung,exynos-cpu-profiler";
 		status = "okay";
@@ -878,6 +886,7 @@
 
 	contexthub_0: contexthub {
 		compatible = "samsung,exynos-nanohub";
+		status = "okay";
 		memory-region = <&contexthub_rmem>;
 		/* INTREQ MAILBOX_AP2CHUB */
 		interrupts = <GIC_SPI INTREQ__MAILBOX_CHUB2AP IRQ_TYPE_LEVEL_HIGH>,
@@ -952,12 +961,5 @@
 		clocks = <&clock DOUT_CLKCMU_PERI_MMC_CARD>, <&clock GATE_MMC_CARD_QCH>;
 		clock-names = "ciu", "ciu_gate";
 		status = "disabled";
-	};
-
-	/* TEEGRIS */
-	teegris {
-		compatible = "samsung,teegris";
-		interrupts =  <GIC_SPI INTREQ__TEEGRIS_EVENT IRQ_TYPE_LEVEL_HIGH>,
-						<GIC_SPI INTREQ__TEEGRIS_PANIC IRQ_TYPE_LEVEL_HIGH>;
 	};
 };

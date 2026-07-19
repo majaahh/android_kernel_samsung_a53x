@@ -1,26 +1,27 @@
 / {
 	/* game mode - app boost */
 	set3_2: set@0302{
+		sched_policy {
+			root = <0>;
+			foreground = <4>;
+			background = <0>;
+			top-app = <4>;
+			rt = <0>;
+			system = <0>;
+			system-background = <0>;
+			nnapi-hal = <0>;
+			camera-daemon = <0>;
+		};
+
 		frt {	   			/* LIT BIG */
 			active-ratio 		= < 25   5>;
 		};
 
 		tex {
-			top-app		= <1>;
-			prio		= <112>;
-		};
-
-		gsc {
-			up_threshold = <0>;
-
-			monitor-group {
-				top-app = <1>;
-				foreground = <1>;
-			};
-		};
-
-		should_spread {
-			enabled = <1>;
+			top-app = <1>;
+			prio = <110>;
+			pinning-mask = "6-7";
+			qjump = <0>;
 		};
 	};
 };

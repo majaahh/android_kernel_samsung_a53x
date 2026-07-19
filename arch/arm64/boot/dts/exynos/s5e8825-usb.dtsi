@@ -18,13 +18,18 @@
 / {
 	exynos-usb-audio-offloading {
 		compatible = "exynos-usb-audio-offloading";
+		abox = <&abox>;
+		samsung,abox-gic = <&abox_gic>;
+		phys = <&usbdrd_phy0 0>;
+		phy-names = "usb2-phy";
 	};
 
 	udc: usb@13200000 {
 		compatible = "samsung,exynos-dwusb";
 		clocks = <&clock DOUT_CLKCMU_USB_BUS>,
 			<&clock DOUT_CLKCMU_USB_USB20DRD>;
-		clock-names = "aclk", "sclk";
+		clock-names = "bus", "sclk";
+		sclk_rate = <26000000>;
 		reg = <0x0 0x13200000 0x10000>;
 		#address-cells = <2>;
 		#size-cells = <1>;
@@ -55,32 +60,25 @@
 
 		usbdrd_dwc3: dwc3 {
 			compatible = "synopsys,dwc3";
-			clocks = <&clock DOUT_CLKCMU_USB_BUS>,
-				<&clock DOUT_CLKCMU_USB_USB20DRD>;
-			clock-names = "aclk", "sclk";
+			clocks = <&clock DOUT_CLKCMU_USB_USB20DRD>;
+			clock-names = "ref";
 			reg = <0x0 0x13200000 0x10000>;
 			interrupts = <GIC_SPI INTREQ__USB20DRD_GIC0 IRQ_TYPE_LEVEL_HIGH>;
-			dr_mode = "peripheral";
+			dr_mode = "otg";
+			usb-role-switch;
+			num-hc-interrupters = <2>;
 			phys = <&usbdrd_phy0 0>;
 			phy-names = "usb2-phy";
-			/* support usb audio offloading: 1, if not: 0 */
 			usb_audio_offloading = <1>;
-			/* pm qos hsi0 minlock */
-//			usb-pm-qos-hsi0 = <200000>;
 			usb3-lpm-capable;
-			snps,usb2-gadget-lpm-disable;
 			snps,quirk-frame-length-adjustment = <0x20>;
 
 			snps,usb3_lpm_capable;
 			snps,has-lpm-erratum;
-			snps,lpm-nyet-threshold = <0>;
-
-			/*
-			 * dis-u2-freeclk-exists-quirk, dis_u2_susphy_quirk are alternative.
-			 * One of them should be selected
-			 */
+			abox = <&abox>;
+			samsung,abox-gic = <&abox_gic>;
 			snps,dis-u2-freeclk-exists-quirk;
-			/*snps,dis_u2_susphy_quirk;*/
+			snps,gfladj-refclk-lpm-sel-quirk;
 		};
 	};
 
@@ -90,7 +88,7 @@
 		interrupts = <GIC_SPI INTREQ__USB2_REMOTE_WAKEUP_GIC IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI INTREQ__USB2_REMOTE_CONNECT_GIC IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clock OSCCLK>, <&clock DOUT_CLKCMU_USB_BUS>;
-		clock-names = "oscclk", "aclk";
+		clock-names = "oscclk", "bus";
 		samsung,pmu-syscon = <&pmu_system_controller>;
 		power-domains = <&pd_usb>;
 		pmu_mask = <0x0>;
@@ -138,12 +136,5 @@
 		ranges;
 		use_default_tune_val = <0x1>;
 		hs_tune_param = <&usb_hs_tune>;
-	};
-
-	origin_usb_notifier {
-		compatible = "samsung,origin-usb-notifier";
-		udc = <&udc>;
-		status = "okay";
-		disable_host_wakelock;
 	};
 };

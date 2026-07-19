@@ -54,10 +54,11 @@
 		samsung,wlbt_hcf = <&wlbt_hw_ver>;
 	};
 
-	//scsc_bt_qos {
-	//	compatible = "samsung,scsc_bt_qos";
-	//	bluetooth_qos = <1600000  421000 133000  507000
-	//	                      10  666000 400000 1150000
-	//	                      20 1000000 533000 2210000>;
-	//};
+	scsc_bt_virtual_serial: scsc_bt_virtual_serial {
+		compatible = "samsung,scsc_bt_virtual_serial";
+
+		bluetooth {
+			compatible = "samsung,scsc_bt";
+		};
+	};
 };

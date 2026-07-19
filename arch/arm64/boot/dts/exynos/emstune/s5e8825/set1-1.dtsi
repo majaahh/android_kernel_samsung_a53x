@@ -1,12 +1,44 @@
 / {
 	/* power-scenario mode - touch boost */
 	set1_1: set@0101 {
-		frt {	   			/* LIT BIG */
-			active-ratio 		= < 25   5>;
+		sched_policy {
+			root = <1>;
+			foreground = <1>;
+			background = <0>;
+			top-app = <1>;
+			rt = <1>;
+			system = <1>;
+			system-background = <1>;
+			nnapi-hal = <1>;
+			camera-daemon = <1>;
 		};
 
-		ecs_dynamic {
-			dynamic-busy-ratio = <50 50>;
+		active_weight {
+			root = <1280 25>;
+			foreground = <100 100>;
+			background = <1280 25>;
+			top-app = <100 100>;
+			rt = <1280 25>;
+			system = <1280 25>;
+			system-background = <1280 25>;
+			nnapi-hal = <1280 25>;
+			camera-daemon = <1280 25>;
+		};
+
+		idle_weight {
+			root = <2560 50>;
+			foreground = <250 1000>;
+			background = <2560 50>;
+			top-app = <250 1000>;
+			rt = <2560 50>;
+			system = <2560 50>;
+			system-background = <2560 50>;
+			nnapi-hal = <2560 50>;
+			camera-daemon = <2560 50>;
+		};
+
+		frt {	   			/* LIT BIG */
+			active-ratio 		= < 25   5>;
 		};
 	};
 };

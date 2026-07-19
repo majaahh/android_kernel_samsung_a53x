@@ -1,59 +1,29 @@
 / {
 	/* normal mode - app boost */
 	set0_2: set@0002 {
+		sched_policy {
+			root = <0>;
+			foreground = <4>;
+			background = <0>;
+			top-app = <4>;
+			rt = <0>;
+			system = <0>;
+			system-background = <0>;
+			nnapi-hal = <0>;
+			camera-daemon = <0>;
+		};
+
 		frt {	   			/* LIT BIG */
 			active-ratio 		= < 25   5>;
 		};
 
-		ontime {
-			domain0 {
-				cpus = "0-5";
-				lower-boundary = <0>;
-				upper-boundary = <21>;
-			};
-
-			domain1 {
-				cpus = "6-7";
-				lower-boundary = <8>;
-				upper-boundary = <66>;
-			};
-		};
-
 		ecs { };
-		ecs_dynamic { };
 
 		tex {
 			top-app		= <1>;
-			prio		= <112>;
-		};
-
-		gsc {
-			up_threshold = <0>;
-
-			monitor-group {
-				top-app = <1>;
-				foreground = <1>;
-			};
-		};
-
-		should_spread {
-			enabled = <1>;
-		};
-
-		cpuidle_gov {
-			expired-ratio = <50 50>;
-		};
-
-		ntu {
-			root		= <0>;
-			foreground	= <0>;
-			background	= <0>;
-			top-app		= <0>;
-			rt		= <0>;
-			system		= <0>;
-			system-background = <0>;
-			nnapi-hal	= <0>;
-			camera-daemon	= <0>;
+			prio		= <110>;
+			pinning-mask	= "6-7";
+			qjump		= <0>;
 		};
 	};
 };

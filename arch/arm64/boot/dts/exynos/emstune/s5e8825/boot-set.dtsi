@@ -1,19 +1,52 @@
 / {
-	/* booting exclusive set */
 	boot_set: boot_set {
-		/* Boosting margin applied to frequency selection */
-		freqboost {			/* LIT BIG */
-			top-app			= <  5   5>;
+		sched_policy {
+			root = <5>;
+			foreground = <5>;
+			background = <5>;
+			top-app = <5>;
+			rt = <5>;
+			system = <5>;
+			system-background = <5>;
+			nnapi-hal = <5>;
+			camera-daemon = <5>;
 		};
 
-		frt {	   			/* LIT BIG */
-			active-ratio 		= < 25   5>;
+		active_weight {
+			root = <65 100>;
+			foreground = <65 100>;
+			background = <65 100>;
+			top-app = <65 100>;
+			rt = <65 100>;
+			system = <65 100>;
+			system-background = <65 100>;
+			nnapi-hal = <65 100>;
+			camera-daemon = <65 100>;
 		};
 
-		/* Ontime Migration */
+		idle_weight {
+			root = <130 200>;
+			foreground = <130 200>;
+			background = <130 200>;
+			top-app = <130 200>;
+			rt = <130 200>;
+			system = <130 200>;
+			system-background = <130 200>;
+			nnapi-hal = <130 200>;
+			camera-daemon = <130 200>;
+		};
+
+		freqboost {
+			top-app = <5 5>;
+		};
+
+		frt {
+			active-ratio = <25 5>;
+		};
+
 		ontime {
-			foreground	= <1>;
-			top-app		= <1>;
+			top-app = <1>;
+			foreground = <1>;
 
 			domain0 {
 				cpus = "0-5";
@@ -27,9 +60,21 @@
 			};
 		};
 
-
 		ecs { };
-		ecs_dynamic { };
+
+		tex {
+			top-app = <1>;
+			prio = <110>;
+			pinning-mask = "6-7";
+			qjump = <0>;
+		};
+
+		stt {
+			boost-step = <20>;
+			htask-cnt = <2>;
+			top-app = <1>;
+			foreground = <1>;
+		};
 
 		fclamp {
 			monitor-group {
