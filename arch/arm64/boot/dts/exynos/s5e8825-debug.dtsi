@@ -23,7 +23,7 @@
 				"DNC", "CSIS", "ISP", "MFC1", "DSP", "ALIVE",
 				"CHUB", "VTS", "HSI0", "G3D";
 		memory-region = <&header>, <&log_kernel>, <&log_s2d>,
-				<&log_first>, <&log_arrdumprst>,
+				<&log_first>, <&log_arrdumpreset>,
 				<&log_arrdumppanic>, <&log_platform>,
 				<&log_kevents>, <&log_backtrace>, <&log_kevents_small>;
 

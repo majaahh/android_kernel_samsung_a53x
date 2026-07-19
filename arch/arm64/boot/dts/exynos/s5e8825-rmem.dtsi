@@ -55,8 +55,8 @@
 			compatible = "log_first";
 			reg = <0 DSS_FIRST_ADDR DSS_FIRST_SIZE>;
 		};
-		log_arrdumprst: log_arrdumprst {
-			compatible = "log_arrdumprst";
+		log_arrdumpreset: log_arrdumpreset {
+			compatible = "log_arrdumpreset";
 			reg = <0 DSS_ARRAYRESET_ADDR DSS_ARRAYRESET_SIZE>;
 		};
 		log_arrdumppanic: log_arrdumppanic {
