@@ -522,6 +522,7 @@ static int abox_core_load_firmware(struct abox_core *core,
 	struct device *dev = core->dev;
 	int ret;
 
+#ifdef SND_SOC_SAMSUNG_SUPPORTS_MULTIPLE_VARIANTS
 	ret = request_firmware_direct(&fw->firmware, fw->name, core->dev);
 	if (ret == 0 && fw->firmware && fw->firmware->size == 0) {
 		release_firmware(fw->firmware);
@@ -530,6 +531,9 @@ static int abox_core_load_firmware(struct abox_core *core,
 	}
 	if (ret < 0)
 		ret = request_firmware(&fw->firmware, fw->name, core->dev);
+#else
+	ret = request_firmware(&fw->firmware, fw->name, core->dev);
+#endif
 	if (ret >= 0) {
 		/* Validate firmware - reject empty files */
 		if (!fw->firmware || fw->firmware->size == 0) {

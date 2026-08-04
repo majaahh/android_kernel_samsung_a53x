@@ -2711,6 +2711,7 @@ static int abox_ext_bin_request(struct device *dev,
 	mutex_lock(&efw->lock);
 
 	release_firmware(efw->firmware);
+#ifdef SND_SOC_SAMSUNG_SUPPORTS_MULTIPLE_VARIANTS
 	ret = request_firmware_direct(&efw->firmware, efw->name, dev);
 	if (ret == 0 && efw->firmware && efw->firmware->size == 0) {
 		release_firmware(efw->firmware);
@@ -2719,6 +2720,9 @@ static int abox_ext_bin_request(struct device *dev,
 	}
 	if (ret < 0)
 		ret = request_firmware(&efw->firmware, efw->name, dev);
+#else
+	ret = request_firmware(&efw->firmware, efw->name, dev);
+#endif
 	if (ret == -ENOENT)
 		abox_warn(dev, "%s doesn't exist\n", efw->name);
 	else if (ret < 0)
@@ -2845,6 +2849,7 @@ static int abox_ext_bin_name_put(struct snd_kcontrol *kcontrol,
 	if (res)
 		abox_warn(dev, "%s: size=%u, res=%zu\n", __func__, size, res);
 
+#ifdef SND_SOC_SAMSUNG_SUPPORTS_MULTIPLE_VARIANTS
 	ret = request_firmware_direct(&test, name, dev);
 	if (ret == 0 && test && test->size == 0) {
 		release_firmware(test);
@@ -2853,6 +2858,9 @@ static int abox_ext_bin_name_put(struct snd_kcontrol *kcontrol,
 	}
 	if (ret < 0)
 		ret = request_firmware(&test, name, dev);
+#else
+	ret = request_firmware(&test, name, dev);
+#endif
 	release_firmware(test);
 	if (ret >= 0) {
 		strlcpy(efw->name, name, sizeof(efw->name));
