@@ -36,3 +36,19 @@ obj-$(CONFIG_BPF_LSM)			+= bpf/
 # Object integrity file lists
 subdir-$(CONFIG_INTEGRITY)		+= integrity
 obj-$(CONFIG_INTEGRITY)			+= integrity/
+
+# DEFEX
+obj-$(CONFIG_SECURITY_DEFEX)		+= samsung/defex_lsm/
+
+# KNOX ZT
+obj-$(CONFIG_KZT) += kzt/
+
+# KNOX DAR
+obj-$(CONFIG_SDP) += sdp/
+obj-$(CONFIG_SDP) += sdp/built-in.a
+
+# FIVE
+obj-$(CONFIG_FIVE)			+= samsung/five/
+# PROCA
+obj-$(CONFIG_PROCA)			+= samsung/proca/
+obj-$(CONFIG_GAF)			+= samsung/proca/gaf/
