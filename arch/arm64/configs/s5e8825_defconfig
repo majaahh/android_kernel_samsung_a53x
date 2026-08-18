@@ -7145,6 +7145,7 @@ CONFIG_SENSORS_FINGERPRINT_LSI=y
 # CONFIG_MUIC_SUPPORT_PRSWAP is not set
 # CONFIG_SIDO_OVP is not set
 # CONFIG_USDM_PANEL is not set
+# CONFIG_MCD_PANEL is not set
 
 #
 # USB PDIC common configs
