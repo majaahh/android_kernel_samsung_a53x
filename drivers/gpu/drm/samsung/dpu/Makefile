@@ -24,8 +24,8 @@ else
 hdr-dir := $(dpu-dir)
 endif
 
-subdir-ccflags-y			:= -I$(srctree)/$(src)			\
-					   -I$(srctree)/$(src)/$(dpu-dir)	\
+subdir-ccflags-y			:= -I$(srctree)/$(src)/$(dpu-dir)	\
+					   -I$(srctree)/$(src)			\
 					   -I$(srctree)/$(src)/include		\
 					   -I$(srctree)/$(src)/cal_common	\
 					   -I$(srctree)/$(src)/$(cal-dir)
