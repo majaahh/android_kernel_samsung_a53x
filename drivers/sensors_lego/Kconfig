@@ -38,6 +38,36 @@ config SENSORS_ISG6320_WIFI
 	  This option enables grip sensors using
 	  IMAGIS ISG6320_WIFI device driver for grip wifi.
 
+config SENSORS_SX9380
+	depends on I2C
+	tristate "SX9380 driver"
+	default n
+	help
+	  Say Y here if you use sx9380.
+	  This option enables grip sensors using
+	  SemTech sx9380 device driver.
+	  Say N here if you do not use sx938x.
+
+config SENSORS_SX9380_SUB
+	depends on I2C
+	tristate "SX9380 sub driver"
+	default n
+	help
+	  Say Y here if you use sx9380 sub.
+	  This option enables grip sensors using
+	  SemTech sx9380 sub device driver.
+	  Say N here if you do not use sx938x sub.
+
+config SENSORS_SX9380_SUB2
+	depends on I2C
+	tristate "SX9380 sub2 driver"
+	default n
+	help
+	  Say Y here if you use sx9380 sub2.
+	  This option enables grip sensors using
+	  SemTech sx9380 sub2 device driver.
+	  Say N here if you do not use sx938x sub2.
+
 config SENSORS_SUPPORT_SLSI
 	tristate "Need to set if the driver is working based on Exynos Chip Set"
 	default n
