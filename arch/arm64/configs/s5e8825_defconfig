@@ -345,6 +345,7 @@ CONFIG_ARCH_SPRD=y
 # end of Platform selection
 
 # CONFIG_SEC_A26XS_PROJECT is not set
+# CONFIG_SEC_A53X_PROJECT is not set
 
 #
 # Kernel Features

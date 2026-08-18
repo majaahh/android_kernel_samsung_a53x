@@ -4,3 +4,9 @@ config SEC_A26XS_PROJECT
 	bool "Samsung A26XS Project"
 	help
 	  Support for Samsung A26XS Project
+
+config SEC_A53X_PROJECT
+	default n
+	bool "Samsung A53X Project"
+	help
+	  Support for Samsung A53X Project
