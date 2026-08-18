@@ -344,6 +344,8 @@ CONFIG_ARCH_SPRD=y
 # CONFIG_ARCH_ZYNQMP is not set
 # end of Platform selection
 
+CONFIG_SEC_A26XS_PROJECT=y
+
 #
 # Kernel Features
 #

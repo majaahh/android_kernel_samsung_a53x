@@ -357,6 +357,7 @@ config KASAN_SHADOW_OFFSET
 	default 0xffffffffffffffff
 
 source "arch/arm64/Kconfig.platforms"
+source "arch/arm64/Kconfig.projects"
 
 menu "Kernel Features"
 
